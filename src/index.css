@@ -1,0 +1,223 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Libre+Baskerville:wght@400;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Brand palette (HSL)
+       Navy: #1C3A57, Gold: #C9A961, Petrol: #2C5F7C, Dark: #0F1419, Bg: #F5F5F5
+    */
+    --background: 0 0% 96%;
+    --foreground: 210 30% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 25% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 25% 12%;
+
+    /* Azul padrão solicitado: #2c3e50 */
+    --primary: 210 29% 24%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 42 46% 58%;
+    --secondary-foreground: 210 25% 12%;
+
+    --muted: 210 20% 92%;
+    --muted-foreground: 215 14% 42%;
+
+    /* Premium surfaces (pós-hero) — institucional azul, bem sutil */
+    --surface: 210 26% 97%;
+    --surface-2: 210 22% 94%;
+    /* Gold highlight (detalhe, não massa) */
+    --highlight: 42 55% 90%;
+
+    /* Accent (brilho) — puxa para o ciano/azul do logo */
+    --accent: 190 75% 38%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 210 18% 86%;
+    --input: 210 18% 86%;
+    --ring: 207 51% 23%;
+
+    /* Slightly more premium rounding */
+    --radius: 0.75rem;
+
+    /* Premium shadows (semantic tokens) */
+    --shadow-card: 0 10px 26px -18px hsl(var(--foreground) / 0.28);
+    --shadow-card-hover: 0 18px 40px -22px hsl(var(--foreground) / 0.34);
+
+    /* Gradients (areas de atuação) — padronizado em variações do azul #2c3e50 */
+    --grad-civil-from: 210 29% 20%;
+    --grad-civil-to: 210 29% 28%;
+
+    --grad-previdenciario-from: 210 29% 22%;
+    --grad-previdenciario-to: 210 29% 30%;
+
+    --grad-trabalhista-from: 210 29% 18%;
+    --grad-trabalhista-to: 210 29% 26%;
+
+    --grad-criminal-from: 210 29% 16%;
+    --grad-criminal-to: 210 29% 24%;
+
+    --grad-familia-from: 210 29% 24%;
+    --grad-familia-to: 210 29% 32%;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 210 26% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 42 46% 58%;
+    --primary-foreground: 210 26% 8%;
+
+    --secondary: 210 18% 14%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --surface: 210 18% 12%;
+    --surface-2: 210 16% 14%;
+    --highlight: 42 28% 18%;
+
+    --accent: 201 48% 33%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 210 18% 18%;
+    --input: 210 18% 18%;
+    --ring: 42 46% 58%;
+
+    --shadow-card: 0 14px 32px -22px hsl(var(--foreground) / 0.35);
+    --shadow-card-hover: 0 22px 48px -28px hsl(var(--foreground) / 0.45);
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Premium borders (subtle, consistent) */
+  .border-premium {
+    @apply border border-border/70;
+  }
+
+  .bg-surface {
+    background-color: hsl(var(--surface));
+  }
+
+  .bg-surface-2 {
+    background-color: hsl(var(--surface-2));
+  }
+
+  .bg-highlight {
+    background-color: hsl(var(--highlight));
+  }
+
+  /* Divisor editorial mais suave que um border-y “duro” */
+  .section-divider-y {
+    @apply border-y border-border/50;
+  }
+
+  .bg-hero {
+    background-image:
+      radial-gradient(1200px 800px at 18% 18%, hsl(var(--accent) / 0.14), transparent 58%),
+      radial-gradient(900px 700px at 85% 25%, hsl(var(--secondary) / 0.10), transparent 62%),
+      /* Vignette + legibilidade do texto (mais forte à esquerda) */
+      linear-gradient(90deg, hsl(var(--foreground) / 0.86), hsl(var(--foreground) / 0.62) 42%, hsl(var(--foreground) / 0.28) 72%, transparent);
+  }
+
+  .bg-hero-photo {
+    background-image: url("/images/hero-bg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  /* Ajuste de enquadramento no mobile para priorizar rosto/logo */
+  @media (max-width: 640px) {
+    .bg-hero-photo {
+      background-position: 60% 20%;
+    }
+  }
+
+  .text-hero {
+    background-image: linear-gradient(90deg, hsl(var(--secondary)), hsl(var(--secondary) / 0.75));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .bg-area-civil {
+    background-image: linear-gradient(135deg, hsl(var(--grad-civil-from)), hsl(var(--grad-civil-to)));
+  }
+  .bg-area-previdenciario {
+    background-image: linear-gradient(135deg, hsl(var(--grad-previdenciario-from)), hsl(var(--grad-previdenciario-to)));
+  }
+  .bg-area-trabalhista {
+    background-image: linear-gradient(135deg, hsl(var(--grad-trabalhista-from)), hsl(var(--grad-trabalhista-to)));
+  }
+  .bg-area-criminal {
+    background-image: linear-gradient(135deg, hsl(var(--grad-criminal-from)), hsl(var(--grad-criminal-to)));
+  }
+  .bg-area-familia {
+    background-image: linear-gradient(135deg, hsl(var(--grad-familia-from)), hsl(var(--grad-familia-to)));
+  }
+
+  .bg-cta-navy {
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  }
+
+  .bg-cta-gold {
+    background-image: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--secondary) / 0.85));
+  }
+}

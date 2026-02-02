@@ -1,0 +1,178 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+
+import { site } from "@/config/site";
+import { buildMailToUrl, buildWhatsAppUrl } from "@/lib/contact-links";
+
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Send } from "lucide-react";
+
+const schema = z.object({
+  name: z.string().trim().min(2, "Informe seu nome").max(100, "Máx. 100 caracteres"),
+  email: z.string().trim().email("E-mail inválido").max(255, "Máx. 255 caracteres"),
+  phone: z
+    .string()
+    .trim()
+    .min(8, "Informe um telefone")
+    .max(30, "Máx. 30 caracteres"),
+  area: z.string().trim().min(1, "Selecione uma área"),
+  message: z.string().trim().min(10, "Descreva brevemente seu caso").max(1200, "Máx. 1200 caracteres"),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+function safeOpen(url: string) {
+  const win = window.open(url, "_blank", "noopener,noreferrer");
+  if (!win) window.location.href = url;
+}
+
+export function ContactForm() {
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      area: "",
+      message: "",
+    },
+    mode: "onTouched",
+  });
+
+  const onSubmit = (values: FormValues) => {
+    // Nunca enviar inputs sem encoding/validação. Aqui tudo já está validado.
+    const body = [
+      `Olá! Gostaria de agendar uma consulta.`,
+      "",
+      `Nome: ${values.name}`,
+      `E-mail: ${values.email}`,
+      `Telefone: ${values.phone}`,
+      `Área: ${values.area}`,
+      "",
+      `Mensagem: ${values.message}`,
+    ].join("\n");
+
+    // Opção 1 (MVP): WhatsApp com fallback para e-mail
+    try {
+      safeOpen(buildWhatsAppUrl(body));
+      toast.success("Abrindo WhatsApp para enviar sua mensagem…");
+    } catch {
+      safeOpen(buildMailToUrl("Contato pelo site", body));
+      toast.message("Abrindo seu e-mail para enviar a mensagem…");
+    }
+  };
+
+  return (
+    <div className="rounded-xl border bg-card p-6 shadow-sm md:p-8">
+      <div className="mb-6">
+        <h3 className="font-serif text-2xl font-semibold tracking-tight">Agende sua avaliação inicial</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Preencha o formulário e retornaremos em breve. Atendimento: {site.contact.hours}.
+        </p>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Para sua segurança, evite enviar dados sensíveis ou documentos por aqui. Após o contato, orientaremos o melhor
+          canal para encaminhamento.
+        </p>
+      </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome completo</FormLabel>
+                <FormControl>
+                  <Input placeholder="Digite seu nome" autoComplete="name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>E-mail</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="seu@email.com" autoComplete="email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone</FormLabel>
+                  <FormControl>
+                    <Input type="tel" placeholder="(00) 00000-0000" autoComplete="tel" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="area"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Área de interesse</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma área" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Direito Civil">Direito Civil</SelectItem>
+                    <SelectItem value="Direito Previdenciário">Direito Previdenciário</SelectItem>
+                    <SelectItem value="Direito Trabalhista">Direito Trabalhista</SelectItem>
+                    <SelectItem value="Direito Criminal">Direito Criminal</SelectItem>
+                    <SelectItem value="Direito de Família">Direito de Família</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="message"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Descreva seu caso</FormLabel>
+                <FormControl>
+                  <Textarea rows={6} placeholder="Conte-nos sobre sua situação jurídica…" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <Button type="submit" className="w-full">
+            <Send className="size-4" aria-hidden="true" />
+            Solicitar avaliação inicial
+          </Button>
+        </form>
+      </Form>
+    </div>
+  );
+}
