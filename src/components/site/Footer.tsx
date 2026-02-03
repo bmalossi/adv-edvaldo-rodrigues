@@ -75,6 +75,16 @@ export function Footer() {
                   Contato
                 </NavLink>
               </li>
+              <li>
+                <NavLink to="/termos-de-uso" className="text-muted-foreground hover:text-foreground">
+                  Termos de uso
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/politica-de-privacidade" className="text-muted-foreground hover:text-foreground">
+                  Política de privacidade
+                </NavLink>
+              </li>
             </ul>
           </nav>
 

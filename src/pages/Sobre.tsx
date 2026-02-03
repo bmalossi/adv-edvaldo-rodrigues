@@ -48,7 +48,7 @@ export default function Sobre() {
 
         <AnimateInView delay={0.1}>
           <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <p className="font-serif text-xl font-semibold">Credenciais (placeholder)</p>
+            <p className="font-serif text-xl font-semibold">Credenciais</p>
             <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
               <li>Formação e especializações</li>
               <li>Experiência profissional</li>

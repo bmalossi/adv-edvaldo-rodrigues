@@ -3,7 +3,7 @@ export const site = {
     name: "Edvaldo Rodrigues",
     subtitle: "Advocacia",
     fullName: "Edvaldo Rodrigues Ferreira",
-    oab: "OAB/SP XXXXX",
+    oab: "OAB/SP nº 465.818",
   },
   contact: {
     // Use apenas dígitos: 55 + DDD + número

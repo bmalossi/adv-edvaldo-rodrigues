@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Send } from "lucide-react";
 
 import { useState } from "react";
@@ -25,6 +26,7 @@ const schema = z.object({
     .max(30, "Máx. 30 caracteres"),
   area: z.string().trim().min(1, "Selecione uma área"),
   message: z.string().trim().min(10, "Descreva brevemente seu caso").max(1200, "Máx. 1200 caracteres"),
+  acceptLGPD: z.boolean().refine((val) => val === true, "Você deve aceitar os termos para continuar"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -46,6 +48,7 @@ export function ContactForm() {
       phone: "",
       area: "",
       message: "",
+      acceptLGPD: false,
     },
     mode: "onTouched",
   });
@@ -210,6 +213,29 @@ export function ContactForm() {
                   <Textarea rows={6} placeholder="Conte-nos sobre sua situação jurídica…" {...field} />
                 </FormControl>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="acceptLGPD"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-muted/50">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="text-xs font-normal text-muted-foreground cursor-pointer">
+                    Ao enviar seus dados, você aceita receber mensagens de contato e concorda com nossos{" "}
+                    <a href="/termos-de-uso" className="underline hover:text-foreground">Termos de Uso</a> e{" "}
+                    <a href="/politica-de-privacidade" className="underline hover:text-foreground">Política de Privacidade</a> conforme a LGPD.
+                  </FormLabel>
+                  <FormMessage className="text-[10px]" />
+                </div>
               </FormItem>
             )}
           />
