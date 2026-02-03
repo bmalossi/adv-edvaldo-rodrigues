@@ -13,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Send } from "lucide-react";
 
+import { useState } from "react";
+
 const schema = z.object({
   name: z.string().trim().min(2, "Informe seu nome").max(100, "Máx. 100 caracteres"),
   email: z.string().trim().email("E-mail inválido").max(255, "Máx. 255 caracteres"),
@@ -33,6 +35,8 @@ function safeOpen(url: string) {
 }
 
 export function ContactForm() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -45,26 +49,49 @@ export function ContactForm() {
     mode: "onTouched",
   });
 
-  const onSubmit = (values: FormValues) => {
-    // Nunca enviar inputs sem encoding/validação. Aqui tudo já está validado.
-    const body = [
-      `Olá! Gostaria de agendar uma consulta.`,
-      "",
-      `Nome: ${values.name}`,
-      `E-mail: ${values.email}`,
-      `Telefone: ${values.phone}`,
-      `Área: ${values.area}`,
-      "",
-      `Mensagem: ${values.message}`,
-    ].join("\n");
+  const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
 
-    // Opção 1 (MVP): WhatsApp com fallback para e-mail
     try {
-      safeOpen(buildWhatsAppUrl(body));
-      toast.success("Abrindo WhatsApp para enviar sua mensagem…");
-    } catch {
-      safeOpen(buildMailToUrl("Contato pelo site", body));
-      toast.message("Abrindo seu e-mail para enviar a mensagem…");
+      // 1. Enviar para o Webhook
+      const response = await fetch("https://webhook.automab.dev/webhook/v1/forms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao enviar para o webhook");
+      }
+
+      toast.success("Dados enviados com sucesso!");
+
+      // 2. Fallback WhatsApp (Opcional - mantendo a experiência original como confirmação adicional)
+      const body = [
+        `Olá! Acabei de enviar o formulário pelo site.`,
+        "",
+        `Nome: ${values.name}`,
+        `E-mail: ${values.email}`,
+        `Telefone: ${values.phone}`,
+        `Área: ${values.area}`,
+        "",
+        `Mensagem: ${values.message}`,
+      ].join("\n");
+
+      try {
+        safeOpen(buildWhatsAppUrl(body));
+      } catch {
+        safeOpen(buildMailToUrl("Contato pelo site", body));
+      }
+
+      form.reset();
+    } catch (error) {
+      console.error("Erro na submissão:", error);
+      toast.error("Ocorreu um erro ao enviar sua mensagem. Por favor, tente novamente.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -167,9 +194,18 @@ export function ContactForm() {
             )}
           />
 
-          <Button type="submit" className="w-full">
-            <Send className="size-4" aria-hidden="true" />
-            Solicitar avaliação inicial
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Enviando...
+              </span>
+            ) : (
+              <>
+                <Send className="size-4" aria-hidden="true" />
+                Solicitar avaliação inicial
+              </>
+            )}
           </Button>
         </form>
       </Form>
