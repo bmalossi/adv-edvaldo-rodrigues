@@ -36,6 +36,7 @@ function safeOpen(url: string) {
 
 export function ContactForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -66,9 +67,7 @@ export function ContactForm() {
         throw new Error("Erro ao enviar para o webhook");
       }
 
-      toast.success("Dados enviados com sucesso!");
-
-      // 2. Fallback WhatsApp (Opcional - mantendo a experiência original como confirmação adicional)
+      // 2. Abrir WhatsApp em nova aba
       const body = [
         `Olá! Acabei de enviar o formulário pelo site.`,
         "",
@@ -80,12 +79,12 @@ export function ContactForm() {
         `Mensagem: ${values.message}`,
       ].join("\n");
 
-      try {
-        safeOpen(buildWhatsAppUrl(body));
-      } catch {
-        safeOpen(buildMailToUrl("Contato pelo site", body));
-      }
+      const waUrl = buildWhatsAppUrl(body);
+      window.open(waUrl, "_blank", "noopener,noreferrer");
 
+      // 3. Sucesso!
+      setIsSuccess(true);
+      toast.success("Dados enviados com sucesso!");
       form.reset();
     } catch (error) {
       console.error("Erro na submissão:", error);
@@ -94,6 +93,27 @@ export function ContactForm() {
       setIsSubmitting(false);
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center rounded-xl border bg-card p-6 text-center shadow-sm md:p-8">
+        <div className="mb-4 rounded-full bg-highlight/20 p-4">
+          <Send className="size-8 text-secondary" />
+        </div>
+        <h3 className="font-serif text-2xl font-semibold tracking-tight text-foreground">Enviado com sucesso!</h3>
+        <p className="mt-4 max-w-sm text-muted-foreground">
+          Logo o Dr. Edvaldo Rodrigues atenderá a sua solicitação. Caso já queira adiantar algo, a janela do WhatsApp foi aberta em uma nova aba.
+        </p>
+        <Button
+          variant="outline"
+          className="mt-8"
+          onClick={() => setIsSuccess(false)}
+        >
+          Enviar outra mensagem
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border bg-card p-6 shadow-sm md:p-8">
