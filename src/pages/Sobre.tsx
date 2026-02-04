@@ -10,21 +10,30 @@ export default function Sobre() {
     <div className="container py-12">
       <AnimateInView>
         <header className="max-w-3xl">
-          <h1 className="font-serif text-4xl font-semibold tracking-tight">Sobre {site.brand.name}</h1>
+          <h1 className="font-serif text-4xl font-semibold tracking-tight">Sobre o Advogado</h1>
           <p className="mt-3 text-muted-foreground">
-            {site.brand.fullName} — {site.brand.oab}. Atendimento responsável, com foco em clareza e estratégia.
+            {site.brand.fullName}, advogado regularmente inscrito na {site.brand.oab}, com atuação abrangente e estratégica nas principais áreas do Direito, sempre pautado pela ética, responsabilidade e compromisso com o resultado.
           </p>
         </header>
       </AnimateInView>
 
-      <div className="mt-10 grid gap-10 md:grid-cols-2 md:items-start">
+      <div className="mt-10 max-w-3xl">
         <AnimateInView delay={0.05}>
           <div className="space-y-4 text-muted-foreground">
             <p>
-              Somos uma equipe de assessoria jurídica que tem como objetivo principal prestar serviços especializados nas áreas em que a empresa necessitar com o objetivo de prevenir gastos e danos, diminuir erros e falhas por falta de conhecimento jurídico bem como procurar formas de tornar a área jurídica da empresa benéfica e satisfatória.
+              Minha atuação é marcada por uma visão técnica, analítica e prática do Direito, construída a partir da vivência diária em processos judiciais e extrajudiciais, acompanhando de perto cada etapa das demandas confiadas ao escritório.
             </p>
             <p>
-              Atuamos de forma consultiva e preventiva, auxiliando empresas a se adequarem à legislação vigente e a evitarem litígios. Além disso, oferecemos assessoria em processos judiciais, sempre buscando as melhores soluções para nossos clientes.
+              Atuo de forma personalizada, entendendo que cada caso possui suas particularidades e exige uma estratégia jurídica própria.
+            </p>
+            <p>
+              Possuo experiência nas áreas Trabalhista, Cível, Família e Sucessões, Previdenciária, Criminal, Empresarial, Tributária, Imobiliária e Direito Militar, o que me permite oferecer uma assessoria jurídica completa, integrada e segura, tanto para pessoas físicas quanto jurídicas.
+            </p>
+            <p>
+              Acredito que advocacia vai muito além de petições e processos: trata-se de orientar, proteger direitos e oferecer soluções jurídicas claras, com transparência e responsabilidade.
+            </p>
+            <p>
+              Meu compromisso é atuar com seriedade, técnica e dedicação, mantendo o cliente sempre informado, seguro e amparado juridicamente, buscando não apenas resolver conflitos, mas evitar que eles aconteçam.
             </p>
 
             <div className="pt-2">
@@ -43,17 +52,6 @@ export default function Sobre() {
                 <Link to="/contato">Entre em contato</Link>
               </Button>
             </div>
-          </div>
-        </AnimateInView>
-
-        <AnimateInView delay={0.1}>
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <p className="font-serif text-xl font-semibold">Credenciais</p>
-            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-              <li>Formação e especializações</li>
-              <li>Experiência profissional</li>
-              <li>Participações e certificações</li>
-            </ul>
           </div>
         </AnimateInView>
       </div>

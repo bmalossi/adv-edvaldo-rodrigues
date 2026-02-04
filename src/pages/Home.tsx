@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { practiceAreas } from "@/content/areas";
+import { practiceAreas, type PracticeArea } from "@/content/areas";
 import { AreaCard } from "@/components/site/AreaCard";
 import { Button } from "@/components/ui/button";
 import { ContactForm } from "@/components/site/ContactForm";
@@ -11,7 +12,8 @@ import { TestimonialsSection } from "@/components/site/TestimonialsSection";
 import { MapCard } from "@/components/site/MapCard";
 import { ParallaxCard } from "@/components/site/ParallaxCard";
 import { AnimateInView } from "@/components/site/AnimateInView";
-import fotoSobre from "@/assets/foto-sobre.png";
+import { AreaDetailDialog } from "@/components/site/AreaDetailDialog";
+import fotoSobre from "@/assets/foto-sobre.webp";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -20,6 +22,7 @@ const fadeUp = {
 
 export default function Home() {
   const reduce = useReducedMotion();
+  const [selectedArea, setSelectedArea] = useState<PracticeArea | null>(null);
 
   return (
     <div>
@@ -94,8 +97,7 @@ export default function Home() {
             <div>
               <h2 className="font-serif text-3xl font-semibold tracking-tight">Sobre</h2>
               <p className="mt-4 text-muted-foreground">
-                {site.brand.fullName} atua com postura ética e profissional, buscando soluções responsáveis e alinhadas ao
-                seu objetivo.
+                Minha atuação é marcada por uma visão técnica, analítica e prática do Direito, construída a partir da vivência diária em processos judiciais e extrajudiciais, acompanhando de perto cada etapa das demandas confiadas ao escritório.
               </p>
               <p className="mt-4 text-muted-foreground">
                 Aqui você encontra um atendimento direto, com foco no que importa: clareza, prazos e estratégia.
@@ -150,7 +152,12 @@ export default function Home() {
           <AnimateInView delay={0.05}>
             <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {practiceAreas.map((a) => (
-                <AreaCard key={a.key} area={a} ctaTo="/areas-de-atuacao" ctaLabel="Ver detalhes" />
+                <AreaCard
+                  key={a.key}
+                  area={a}
+                  ctaLabel="Saber mais"
+                  onClick={() => setSelectedArea(a)}
+                />
               ))}
             </div>
           </AnimateInView>
@@ -184,16 +191,16 @@ export default function Home() {
               <ContactForm />
             </AnimateInView>
             <aside className="space-y-4">
+              <ParallaxCard amplitude={14}>
+                <MapCard />
+              </ParallaxCard>
+
               <ParallaxCard amplitude={10}>
                 <div className="rounded-xl border-premium bg-card p-6 shadow-card transition-shadow duration-300 hover:shadow-card-hover">
                   <p className="font-serif text-lg font-semibold">Atendimento</p>
                   <p className="mt-2 text-sm text-muted-foreground">{site.contact.hours}</p>
                   <p className="mt-4 text-sm text-muted-foreground">{site.contact.addressLine}</p>
                 </div>
-              </ParallaxCard>
-
-              <ParallaxCard amplitude={14}>
-                <MapCard />
               </ParallaxCard>
 
               <ParallaxCard amplitude={8}>
@@ -206,6 +213,12 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <AreaDetailDialog
+        area={selectedArea}
+        open={!!selectedArea}
+        onOpenChange={(open) => !open && setSelectedArea(null)}
+      />
     </div>
   );
 }

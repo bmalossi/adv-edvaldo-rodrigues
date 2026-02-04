@@ -1,11 +1,15 @@
-import { practiceAreas } from "@/content/areas";
+import { useState } from "react";
+import { practiceAreas, type PracticeArea } from "@/content/areas";
 import { AreaCard } from "@/components/site/AreaCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { AnimateInView } from "@/components/site/AnimateInView";
+import { AreaDetailDialog } from "@/components/site/AreaDetailDialog";
 
 export default function AreasAtuacao() {
+  const [selectedArea, setSelectedArea] = useState<PracticeArea | null>(null);
+
   return (
     <div className="container py-12">
       <AnimateInView>
@@ -20,7 +24,12 @@ export default function AreasAtuacao() {
       <AnimateInView delay={0.05}>
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {practiceAreas.map((a) => (
-            <AreaCard key={a.key} area={a} ctaLabel="Agendar consulta" ctaTo="/contato" />
+            <AreaCard
+              key={a.key}
+              area={a}
+              ctaLabel="Ver detalhes"
+              onClick={() => setSelectedArea(a)}
+            />
           ))}
         </div>
       </AnimateInView>
@@ -28,7 +37,7 @@ export default function AreasAtuacao() {
       <section className="mt-14">
         <AnimateInView>
           <div>
-            <h2 className="font-serif text-2xl font-semibold tracking-tight">Como ajudamos</h2>
+            <h2 className="font-serif text-2xl font-semibold tracking-tight">Como posso te ajudar</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Clique no serviço de sua necessidade para saber mais detalhes.
             </p>
@@ -41,13 +50,21 @@ export default function AreasAtuacao() {
               <AccordionItem key={a.key} value={a.key}>
                 <AccordionTrigger className="font-medium">{a.title}</AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>Atendimento com análise inicial, levantamento de documentos e definição de estratégia.</p>
-                    <ul className="list-disc space-y-1 pl-5">
-                      {a.bullets.map((b) => (
-                        <li key={b}>{b}</li>
-                      ))}
-                    </ul>
+                  <div className="space-y-4 text-sm text-muted-foreground">
+                    <p className="whitespace-pre-wrap">{a.content}</p>
+                    <div className="pt-2">
+                      <p className="font-semibold text-foreground mb-2">Principais serviços:</p>
+                      <ul className="list-disc space-y-1 pl-5">
+                        {a.bullets.map((b) => (
+                          <li key={b}>{b}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="pt-4">
+                      <Button onClick={() => setSelectedArea(a)} size="sm" variant="outline">
+                        Ver detalhes completos
+                      </Button>
+                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -63,6 +80,12 @@ export default function AreasAtuacao() {
           </div>
         </AnimateInView>
       </section>
+
+      <AreaDetailDialog
+        area={selectedArea}
+        open={!!selectedArea}
+        onOpenChange={(open) => !open && setSelectedArea(null)}
+      />
     </div>
   );
 }

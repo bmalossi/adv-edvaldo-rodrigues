@@ -20,17 +20,16 @@ export default function Contato() {
           <ContactForm />
         </AnimateInView>
         <aside className="space-y-4">
-            <ParallaxCard amplitude={10}>
-              <div className="rounded-xl border-premium bg-highlight p-6 text-foreground shadow-card">
-                <p className="font-serif text-lg font-semibold">Horário de atendimento</p>
-                <p className="mt-2 text-sm text-muted-foreground">{site.contact.hours}</p>
-                <p className="mt-4 text-sm text-muted-foreground">{site.contact.addressLine}</p>
-              </div>
-            </ParallaxCard>
+          <ParallaxCard amplitude={14}>
+            <MapCard />
+          </ParallaxCard>
 
-            <ParallaxCard amplitude={14}>
-              <MapCard />
-            </ParallaxCard>
+          <ParallaxCard amplitude={10}>
+            <div className="rounded-xl border-premium bg-highlight p-6 text-foreground shadow-card">
+              <p className="font-serif text-lg font-semibold">Horário de atendimento</p>
+              <p className="mt-2 text-sm text-muted-foreground">{site.contact.hours}</p>
+            </div>
+          </ParallaxCard>
 
           <ParallaxCard amplitude={9}>
             <div className="rounded-xl border-premium bg-card p-6 shadow-card transition-shadow duration-300 hover:shadow-card-hover">

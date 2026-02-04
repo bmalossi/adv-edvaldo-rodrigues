@@ -72,6 +72,15 @@ All colors MUST be HSL.
     --grad-familia-from: 210 29% 24%;
     --grad-familia-to: 210 29% 32%;
 
+    --grad-empresarial-from: 210 29% 12%;
+    --grad-empresarial-to: 210 29% 20%;
+
+    --grad-tributario-from: 210 29% 14%;
+    --grad-tributario-to: 210 29% 22%;
+
+    --grad-militar-from: 210 29% 8%;
+    --grad-militar-to: 210 29% 16%;
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -146,6 +155,7 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
+
   /* Premium borders (subtle, consistent) */
   .border-premium {
     @apply border border-border/70;
@@ -177,7 +187,7 @@ All colors MUST be HSL.
   }
 
   .bg-hero-photo {
-    background-image: url("/images/hero-bg.jpg");
+    background-image: url("/images/hero-bg.svg");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -200,17 +210,33 @@ All colors MUST be HSL.
   .bg-area-civil {
     background-image: linear-gradient(135deg, hsl(var(--grad-civil-from)), hsl(var(--grad-civil-to)));
   }
+
   .bg-area-previdenciario {
     background-image: linear-gradient(135deg, hsl(var(--grad-previdenciario-from)), hsl(var(--grad-previdenciario-to)));
   }
+
   .bg-area-trabalhista {
     background-image: linear-gradient(135deg, hsl(var(--grad-trabalhista-from)), hsl(var(--grad-trabalhista-to)));
   }
+
   .bg-area-criminal {
     background-image: linear-gradient(135deg, hsl(var(--grad-criminal-from)), hsl(var(--grad-criminal-to)));
   }
+
   .bg-area-familia {
     background-image: linear-gradient(135deg, hsl(var(--grad-familia-from)), hsl(var(--grad-familia-to)));
+  }
+
+  .bg-area-empresarial {
+    background-image: linear-gradient(135deg, hsl(var(--grad-empresarial-from)), hsl(var(--grad-empresarial-to)));
+  }
+
+  .bg-area-tributario {
+    background-image: linear-gradient(135deg, hsl(var(--grad-tributario-from)), hsl(var(--grad-tributario-to)));
+  }
+
+  .bg-area-militar {
+    background-image: linear-gradient(135deg, hsl(var(--grad-militar-from)), hsl(var(--grad-militar-to)));
   }
 
   .bg-cta-navy {
