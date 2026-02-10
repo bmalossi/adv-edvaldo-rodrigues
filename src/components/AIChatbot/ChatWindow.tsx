@@ -29,6 +29,32 @@ const ChatWindow = ({
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const [isConfirmingPhone, setIsConfirmingPhone] = useState(false);
     const [phoneInput, setPhoneInput] = useState("");
+    const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
+    // Dynamic height adjustment for mobile (keyboard handling)
+    useEffect(() => {
+        if (typeof window === "undefined" || !window.visualViewport) return;
+
+        const handleVisualViewportChange = () => {
+            // Only apply on mobile (where md: breakpoint is not active)
+            if (window.innerWidth < 768) {
+                setViewportHeight(window.visualViewport?.height || window.innerHeight);
+            } else {
+                setViewportHeight(null);
+            }
+        };
+
+        window.visualViewport.addEventListener("resize", handleVisualViewportChange);
+        window.visualViewport.addEventListener("scroll", handleVisualViewportChange);
+
+        // Initial set
+        handleVisualViewportChange();
+
+        return () => {
+            window.visualViewport?.removeEventListener("resize", handleVisualViewportChange);
+            window.visualViewport?.removeEventListener("scroll", handleVisualViewportChange);
+        };
+    }, []);
 
     // Auto-scroll to bottom when new messages arrive
     useEffect(() => {
@@ -69,6 +95,10 @@ const ChatWindow = ({
             <div
                 className="fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-slide-in-right
           bottom-0 left-0 right-0 top-0 md:bottom-24 md:right-8 md:top-auto md:left-auto md:h-[600px] md:w-[400px]"
+                style={{
+                    height: viewportHeight ? `${viewportHeight}px` : undefined,
+                    maxHeight: viewportHeight ? `${viewportHeight}px` : "100dvh"
+                }}
                 role="dialog"
                 aria-label={language === "pt" ? "Janela de chat" : "Chat window"}
                 aria-modal="true"
