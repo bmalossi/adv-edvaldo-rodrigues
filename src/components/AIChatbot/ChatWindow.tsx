@@ -56,11 +56,21 @@ const ChatWindow = ({
         };
     }, []);
 
-    // Auto-scroll to bottom when new messages arrive
+    // Auto-scroll to bottom when new messages arrive or bot is typing
     useEffect(() => {
-        if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-        }
+        const scrollToBottom = () => {
+            if (messagesContainerRef.current) {
+                const container = messagesContainerRef.current;
+                container.scrollTo({
+                    top: container.scrollHeight,
+                    behavior: "smooth"
+                });
+            }
+        };
+
+        // Execution with a small delay to ensure DOM is ready
+        const timeoutId = setTimeout(scrollToBottom, 100);
+        return () => clearTimeout(timeoutId);
     }, [messages, isTyping]);
 
     const handleReactivateClick = () => {
