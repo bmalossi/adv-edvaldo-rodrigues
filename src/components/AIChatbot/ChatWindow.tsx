@@ -71,7 +71,7 @@ const ChatWindow = ({
         // Execution with a small delay to ensure DOM is ready
         const timeoutId = setTimeout(scrollToBottom, 100);
         return () => clearTimeout(timeoutId);
-    }, [messages, isTyping]);
+    }, [messages, isTyping, viewportHeight]);
 
     const handleReactivateClick = () => {
         setIsConfirmingPhone(true);

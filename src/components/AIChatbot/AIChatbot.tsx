@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { MessageCircle } from "lucide-react";
 import { useChatbot } from "@/hooks/useChatbot";
 import ChatWindow from "./ChatWindow";
+import { useEffect } from "react";
 
 interface AIChatbotProps {
     language?: "pt" | "en";
@@ -9,6 +10,17 @@ interface AIChatbotProps {
 
 const AIChatbot = ({ language = "pt" }: AIChatbotProps) => {
     const { messages, isOpen, isTyping, isFinished, toggleChat, sendMessage, reactivateChat } = useChatbot(language);
+
+    // Auto-open chat after 3 seconds on first load
+    useEffect(() => {
+        if (!isOpen) {
+            const timer = setTimeout(() => {
+                toggleChat();
+            }, 3000);
+
+            return () => clearTimeout(timer);
+        }
+    }, []);
 
     return (
         <>
