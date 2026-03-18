@@ -36,8 +36,8 @@ export const useChatbot = (language: "pt" | "en" = "pt"): UseChatbotReturn => {
     const [webhookLeadSent, setWebhookLeadSent] = useState(false);
     const { toast } = useToast();
 
-    // Webhook configuration (will be configurable via env/secrets later)
-    const WEBHOOK_URL = "https://webhook.automab.dev/webhook/chatbot-adv/site"; // TODO: Update with actual webhook URL
+    // Webhook configuration (now via env)
+    const WEBHOOK_URL = import.meta.env.VITE_WEBHOOK_URL;
 
     // Persist sessionId to localStorage whenever it changes
     useEffect(() => {
@@ -49,11 +49,9 @@ export const useChatbot = (language: "pt" | "en" = "pt"): UseChatbotReturn => {
         const recoverExistingSession = async () => {
             if (!sessionId) return;
 
-            const { data, error } = await supabase
-                .from("chatbot_conversations")
-                .select("*")
-                .eq("session_id", sessionId)
-                .single();
+            const { data, error } = await supabase.rpc("get_conversation_by_session_id", {
+                sid: sessionId
+            });
 
             if (data && !error) {
                 const sessionData = data as any;
@@ -194,24 +192,24 @@ export const useChatbot = (language: "pt" | "en" = "pt"): UseChatbotReturn => {
         const messagesToSave = finalMessages || messages;
 
         try {
-            // @ts-ignore - chatbot_conversations table type not yet in generated types
-            const { error } = await supabase.from("chatbot_conversations").upsert({
-                session_id: sessionId,
-                nome: dataToSave.nome,
-                email: dataToSave.email,
-                telefone: dataToSave.telefone,
-                mensagem_inicial: messagesToSave.find((m) => m.role === "user")?.content,
-                historico_conversa: messagesToSave.map((m) => ({
-                    role: m.role,
-                    content: m.content,
-                    timestamp: m.timestamp.toISOString(),
-                })),
-                dados_coletados: dataToSave,
-                status: status,
-                origem: "advogado-website",
-                dispositivo: navigator.userAgent,
-            }, {
-                onConflict: 'session_id'
+            // Use the secure RPC instead of direct table access
+            const { error } = await supabase.rpc("save_chatbot_conversation", {
+                payload: {
+                    session_id: sessionId,
+                    nome: dataToSave.nome,
+                    email: dataToSave.email,
+                    telefone: dataToSave.telefone,
+                    mensagem_inicial: messagesToSave.find((m) => m.role === "user")?.content,
+                    historico_conversa: messagesToSave.map((m) => ({
+                        role: m.role,
+                        content: m.content,
+                        timestamp: m.timestamp.toISOString(),
+                    })),
+                    dados_coletados: dataToSave,
+                    status: status,
+                    origem: "advogado-website",
+                    dispositivo: navigator.userAgent
+                }
             });
 
             if (error) throw error;

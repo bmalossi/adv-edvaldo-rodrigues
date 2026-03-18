@@ -66,6 +66,11 @@ export function Footer() {
                 </NavLink>
               </li>
               <li>
+                <NavLink to="/calculadora" className="text-muted-foreground hover:text-foreground">
+                  Calculadora
+                </NavLink>
+              </li>
+              <li>
                 <NavLink to="/sobre" className="text-muted-foreground hover:text-foreground">
                   Sobre
                 </NavLink>

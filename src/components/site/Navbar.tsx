@@ -2,7 +2,8 @@ import { NavLink } from "@/components/NavLink";
 import { site } from "@/config/site";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Phone } from "lucide-react";
+import { Menu, Phone, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
 import { BrandLogo } from "@/components/site/BrandLogo";
 import { useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -10,6 +11,7 @@ import { useEffect, useState } from "react";
 const links = [
   { to: "/", label: "Home" },
   { to: "/areas-de-atuacao", label: "Áreas" },
+  { to: "/calculadora", label: "Calculadora" },
   { to: "/sobre", label: "Sobre" },
   { to: "/contato", label: "Contato" },
 ] as const;
@@ -78,6 +80,14 @@ export function Navbar() {
                 Consulta Agora
               </NavLink>
             </Button>
+
+            <Link
+              to="/admin"
+              className="text-primary-foreground/20 hover:text-amber-500 transition-colors"
+              title="Acesso Administrativo"
+            >
+              <Settings className="size-4" />
+            </Link>
 
             <Sheet>
               <SheetTrigger asChild>

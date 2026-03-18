@@ -9,7 +9,23 @@ interface NavLinkCompatProps extends Omit<NavLinkProps, "className"> {
 }
 
 const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
-  ({ className, activeClassName, pendingClassName, to, ...props }, ref) => {
+  ({ className, activeClassName, pendingClassName, to, children, ...props }, ref) => {
+    const isStaticOrExternal =
+      typeof to === "string" && (to.endsWith(".html") || to.startsWith("http"));
+
+    if (isStaticOrExternal) {
+      return (
+        <a
+          ref={ref}
+          href={to as string}
+          className={cn(className)}
+          {...(props as any)}
+        >
+          {typeof children === "function" ? children({ isActive: false, isPending: false } as any) : children}
+        </a>
+      );
+    }
+
     return (
       <RouterNavLink
         ref={ref}
@@ -18,7 +34,9 @@ const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
           cn(className, isActive && activeClassName, isPending && pendingClassName)
         }
         {...props}
-      />
+      >
+        {children}
+      </RouterNavLink>
     );
   },
 );
