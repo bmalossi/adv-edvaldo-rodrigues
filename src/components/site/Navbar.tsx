@@ -18,7 +18,7 @@ const links = [
 
 export function Navbar() {
   const { pathname } = useLocation();
-  const isHome = pathname === "/";
+  const isTranslucent = pathname === "/" || pathname === "/calculadora";
 
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -33,7 +33,7 @@ export function Navbar() {
     <header className="fixed top-0 z-50 w-full bg-transparent">
       <div
         className={
-          isHome
+          isTranslucent
             ? isScrolled
               ? "border-b border-primary-foreground/10 bg-foreground/45 backdrop-blur-md supports-[backdrop-filter]:bg-foreground/35"
               : "border-b border-transparent bg-gradient-to-b from-foreground/55 to-transparent backdrop-blur-sm"
@@ -44,7 +44,7 @@ export function Navbar() {
           <NavLink to="/" className="flex items-center gap-3">
             <div
               className={
-                isHome
+                isTranslucent
                   ? "grid size-10 place-items-center rounded-xl border border-primary-foreground/10 bg-background/5"
                   : "grid size-10 place-items-center rounded-xl border border-border/60 bg-card/60 backdrop-blur"
               }
@@ -59,11 +59,11 @@ export function Navbar() {
                 key={l.to}
                 to={l.to}
                 className={
-                  isHome
+                  isTranslucent
                     ? "text-sm font-medium text-primary-foreground/80 transition-colors hover:text-primary-foreground"
                     : "text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
                 }
-                activeClassName={isHome ? "text-primary-foreground" : "text-foreground"}
+                activeClassName={isTranslucent ? "text-primary-foreground" : "text-foreground"}
               >
                 {l.label}
               </NavLink>
@@ -92,9 +92,9 @@ export function Navbar() {
             <Sheet>
               <SheetTrigger asChild>
                 <Button
-                  variant={isHome ? "ghost" : "outline"}
+                  variant={isTranslucent ? "ghost" : "outline"}
                   size="icon"
-                  className={isHome ? "md:hidden text-primary-foreground hover:bg-background/10" : "md:hidden"}
+                  className={isTranslucent ? "md:hidden text-primary-foreground hover:bg-background/10" : "md:hidden"}
                   aria-label="Abrir menu"
                 >
                   <Menu className="size-5" aria-hidden="true" />

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { site } from "@/config/site";
+import { ArrowLeft, ChevronDown, Info, Loader2 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalculadoraCLT } from "@/components/calculadora/CalculadoraCLT";
@@ -17,46 +19,58 @@ export default function Calculadora() {
     return (
         <div className="min-h-screen bg-surface pb-24">
             {/* Hero Section */}
-            <section className="relative overflow-hidden bg-muted/40 border-b border-border">
-                {/* Subtle background decoration */}
-                <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
-                    <div
-                        className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-primary/10 to-cta-gold/10 opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"
-                        style={{
-                            clipPath:
-                                "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)",
-                        }}
-                    />
+            <section className="relative overflow-hidden bg-slate-950">
+                <div className="relative">
+                    <div className="absolute inset-0 bg-calculadora-photo opacity-60" aria-hidden="true" />
+                    <div className="absolute inset-0 bg-hero" aria-hidden="true" />
+                    <div className="container relative flex min-h-[60svh] items-center pb-20 pt-28 sm:pb-24 sm:pt-32">
+                        <div className="max-w-3xl">
+                            <motion.div
+                                className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-primary-foreground/70"
+                                variants={fadeUp}
+                                initial={reduce ? false : "hidden"}
+                                animate={reduce ? false : "visible"}
+                                custom={0}
+                            >
+                                <span className="rounded-full border border-primary-foreground/15 bg-background/10 px-3 py-1">
+                                    {site.brand.oab}
+                                </span>
+                                <span className="text-primary-foreground/40">•</span>
+                                <span>{site.contact.city}</span>
+                            </motion.div>
+
+                            <motion.h1
+                                className="mt-5 font-serif text-3xl font-semibold leading-tight tracking-tight text-primary-foreground sm:text-4xl md:text-5xl"
+                                variants={fadeUp}
+                                initial={reduce ? false : "hidden"}
+                                animate={reduce ? false : "visible"}
+                                custom={1}
+                            >
+                                Calculadora de
+                                <span className="block text-hero">Rescisão</span>
+                            </motion.h1>
+
+                            <motion.p
+                                className="mt-6 max-w-2xl text-sm leading-relaxed text-primary-foreground/80 sm:text-base"
+                                variants={fadeUp}
+                                initial={reduce ? false : "hidden"}
+                                animate={reduce ? false : "visible"}
+                                custom={2}
+                            >
+                                Faça a simulação dos seus direitos trabalhistas ou avalie os riscos de contratação PJ baseados na legislação vigente.
+                            </motion.p>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="container relative pt-12 pb-16 sm:pt-20 sm:pb-24">
-                    <div className="mx-auto max-w-2xl text-center">
-                        <motion.h1
-                            className="font-serif text-3xl font-semibold leading-tight tracking-tight sm:text-4xl md:text-5xl"
-                            variants={fadeUp}
-                            initial={reduce ? false : "hidden"}
-                            animate={reduce ? false : "visible"}
-                            custom={0}
-                        >
-                            Calculadora de <span className="text-cta-gold">Rescisão</span>
-                        </motion.h1>
-
-                        <motion.p
-                            className="mt-6 text-sm leading-relaxed text-muted-foreground sm:text-base"
-                            variants={fadeUp}
-                            initial={reduce ? false : "hidden"}
-                            animate={reduce ? false : "visible"}
-                            custom={1}
-                        >
-                            Faça a simulação dos seus direitos trabalhistas ou avalie os riscos de contratação PJ baseados na legislação vigente.
-                        </motion.p>
-                    </div>
+                <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 text-primary-foreground/60">
+                    <ChevronDown className="size-6 animate-bounce" aria-hidden="true" />
                 </div>
             </section>
 
             {/* Main Content Area */}
             <section className="container mt-8 sm:-mt-10 relative z-10">
-                <AnimateInView delay={0.2} threshold={0}>
+                <AnimateInView delay={0.2}>
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-4xl mx-auto flex flex-col items-center">
 
                         <TabsList className="mb-8 grid w-full max-w-[400px] grid-cols-2 bg-background border shadow-sm">

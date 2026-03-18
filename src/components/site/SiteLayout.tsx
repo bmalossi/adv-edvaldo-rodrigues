@@ -5,12 +5,12 @@ import { useLocation } from "react-router-dom";
 
 export function SiteLayout() {
   const { pathname } = useLocation();
-  const isHome = pathname === "/";
+  const isTranslucent = pathname === "/" || pathname === "/calculadora";
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className={isHome ? "" : "pt-20"}>
+      <main className={isTranslucent ? "" : "pt-20"}>
         <Outlet />
       </main>
       <Footer />
