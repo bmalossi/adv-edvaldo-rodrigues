@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 const links = [
   { to: "/", label: "Home" },
   { to: "/areas-de-atuacao", label: "Áreas" },
-  { to: "/calculadora", label: "Calculadora" },
+  { to: "/calculadora", label: "Calculadora Trabalhista" },
   { to: "/sobre", label: "Sobre" },
   { to: "/contato", label: "Contato" },
 ] as const;

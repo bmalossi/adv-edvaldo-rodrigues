@@ -3,7 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { calcularAnalisePJ, type DadosCalculoPJ, type ResultadoPJ } from "@/lib/calculadora/pj";
-import { ArrowLeft, ArrowRight, FileText, Info, RotateCcw } from "lucide-react";
+import { CurrencyInput } from "@/components/calculadora/CurrencyInput";
+import { PhoneInput } from "@/components/calculadora/PhoneInput";
+import { ArrowLeft, ArrowRight, FileText, Info, Loader2, Printer, RotateCcw, User } from "lucide-react";
+import { toast } from "sonner";
+
+const WEBHOOK_URL = "https://webhook.automab.dev/webhook/calculadora/notificacao";
 
 export function CalculadoraPJ() {
     const [step, setStep] = useState(1);
@@ -16,16 +21,97 @@ export function CalculadoraPJ() {
         outrasDespesas: 0,
         percRisco: 0,
     });
+    const [contato, setContato] = useState({ nome: "", whatsapp: "" });
+    const [enviando, setEnviando] = useState(false);
     const [resultado, setResultado] = useState<ResultadoPJ | null>(null);
 
-    const handleCalculate = () => {
+
+
+    const handleSubmitContato = async () => {
+        if (!contato.nome.trim()) {
+            toast.error("Por favor, informe seu nome completo.");
+            return;
+        }
+        if (contato.whatsapp.length < 10) {
+            toast.error("Informe um número de WhatsApp válido.");
+            return;
+        }
+
         const res = calcularAnalisePJ(dados);
+
+        // Formatar mensagem estruturada para o advogado
+        const resumoMensagem = [
+            "👤 *Dados do Cliente*",
+            `Nome: ${contato.nome}`,
+            `WhatsApp: ${contato.whatsapp}\n`,
+            "📋 *Dados da Simulação PJ*",
+            `Período: ${dados.dataInicio} a ${dados.dataFim}`,
+            `Faturamento Mensal: ${fmt(dados.notaMedia)}`,
+            `Imposto: ${dados.imposto}%`,
+            `Outras Despesas: ${fmt(dados.outrasDespesas)}`,
+            `Risco Informado: ${dados.percRisco}%\n`,
+            "📄 *Análise Comparativa (PJ vs CLT)*",
+            "🏢 *Visão como PJ*",
+            `Faturamento Total: ${fmt(res.faturamentoTotal)}`,
+            `Despesas Totais: ${fmt(res.despesasTotais)}`,
+            `Líquido PJ: ${fmt(res.liquidoPJ)}\n`,
+            "⚖️ *Direitos CLT Perdidos*",
+            `13º Salário: ${fmt(res.perda13)}`,
+            `Férias + 1/3: ${fmt(res.perdaFerias)}`,
+            `FGTS: ${fmt(res.perdaFGTS)}`,
+            `Multa FGTS (40%): ${fmt(res.perdaMultaFGTS)}`,
+            `Aviso Prévio: ${fmt(res.perdaAvisoPrevio)}`,
+            `*Total Direitos CLT: ${fmt(res.totalDireitosCLT)}*\n`,
+            `🚩 *Valor em Risco Estimado: ${fmt(res.valorRisco)}*`
+        ].join("\n");
+
+        setEnviando(true);
+        try {
+            await fetch(WEBHOOK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    nome: contato.nome,
+                    whatsapp: contato.whatsapp,
+                    tipo: "PJ",
+                    resumo: resumoMensagem,
+                    dados: {
+                        dataInicio: dados.dataInicio,
+                        dataFim: dados.dataFim,
+                        notaMedia: dados.notaMedia,
+                        contador: dados.contador,
+                        imposto: dados.imposto,
+                        outrasDespesas: dados.outrasDespesas,
+                        percRisco: dados.percRisco,
+                    },
+                    resultado: {
+                        faturamentoTotal: res.faturamentoTotal,
+                        despesasTotais: res.despesasTotais,
+                        liquidoPJ: res.liquidoPJ,
+                        totalDireitosCLT: res.totalDireitosCLT,
+                        valorRisco: res.valorRisco,
+                        perdas: {
+                            decimo: res.perda13,
+                            ferias: res.perdaFerias,
+                            fgts: res.perdaFGTS,
+                            multaFGTS: res.perdaMultaFGTS,
+                            aviso: res.perdaAvisoPrevio
+                        }
+                    }
+                }),
+            });
+        } catch {
+            console.warn("[Webhook] Falha ao enviar dados de contato.");
+        }
+
+        setEnviando(false);
         setResultado(res);
-        setStep(3); // Result Step
+        setStep(4);
     };
 
     const handleReset = () => {
         setResultado(null);
+        setContato({ nome: "", whatsapp: "" });
         setStep(1);
         setDados({
             dataInicio: "",
@@ -40,19 +126,19 @@ export function CalculadoraPJ() {
 
     const fmt = (v: number) => `R$ ${v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
 
+    const stepLabels = ["1. Período e Ganhos", "2. Despesas e Risco", "3. Contato", "4. Relatório"];
+
     return (
         <div className="mx-auto w-full max-w-4xl rounded-xl border border-border bg-card shadow-sm">
             {/* Progress Bar */}
-            <div className="flex border-b border-border bg-muted/40">
-                {[1, 2, 3].map((s) => (
+            <div className="flex border-b border-border bg-muted/40 print:hidden">
+                {stepLabels.map((label, idx) => (
                     <div
-                        key={s}
-                        className={`flex-1 px-4 py-3 text-center text-sm font-medium transition-colors ${step >= s ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+                        key={idx}
+                        className={`flex-1 px-2 py-3 text-center text-xs sm:text-sm font-medium transition-colors ${step >= idx + 1 ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
                             }`}
                     >
-                        {s === 1 && "1. Período e Ganhos"}
-                        {s === 2 && "2. Despesas e Risco"}
-                        {s === 3 && "3. Relatório"}
+                        {label}
                     </div>
                 ))}
             </div>
@@ -86,14 +172,11 @@ export function CalculadoraPJ() {
                                 />
                             </div>
                             <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="notaMedia">Valor Médio Menos da Nota Fiscal (R$)</Label>
-                                <Input
+                                <Label htmlFor="notaMedia">Valor Médio da Nota Fiscal</Label>
+                                <CurrencyInput
                                     id="notaMedia"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={dados.notaMedia || ""}
-                                    onChange={(e) => setDados({ ...dados, notaMedia: parseFloat(e.target.value) || 0 })}
+                                    value={dados.notaMedia}
+                                    onChange={(v) => setDados({ ...dados, notaMedia: v })}
                                 />
                             </div>
                         </div>
@@ -116,14 +199,11 @@ export function CalculadoraPJ() {
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="contador">Custo Mensal com Contador (R$)</Label>
-                                <Input
+                                <Label htmlFor="contador">Custo Mensal com Contador</Label>
+                                <CurrencyInput
                                     id="contador"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={dados.contador || ""}
-                                    onChange={(e) => setDados({ ...dados, contador: parseFloat(e.target.value) || 0 })}
+                                    value={dados.contador}
+                                    onChange={(v) => setDados({ ...dados, contador: v })}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -138,15 +218,13 @@ export function CalculadoraPJ() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="outrasDespesas">Outras Despesas Mensais (Ex: Vale, Transporte)</Label>
-                                <Input
+                                <Label htmlFor="outrasDespesas">Outras Despesas Mensais</Label>
+                                <CurrencyInput
                                     id="outrasDespesas"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={dados.outrasDespesas || ""}
-                                    onChange={(e) => setDados({ ...dados, outrasDespesas: parseFloat(e.target.value) || 0 })}
+                                    value={dados.outrasDespesas}
+                                    onChange={(v) => setDados({ ...dados, outrasDespesas: v })}
                                 />
+                                <p className="text-xs text-muted-foreground">Vale, transporte, etc.</p>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="percRisco">Espectro de Risco (%)</Label>
@@ -166,24 +244,101 @@ export function CalculadoraPJ() {
                             <Button variant="outline" onClick={() => setStep(1)}>
                                 <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
                             </Button>
-                            <Button onClick={handleCalculate} className="bg-cta-gold text-foreground hover:bg-cta-gold/90">
-                                <FileText className="mr-2 h-4 w-4" /> Calcular Vínculo
+                            <Button onClick={() => setStep(3)}>
+                                Próximo <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </div>
                     </div>
                 )}
 
-                {/* STEP 3: Relatório */}
-                {step === 3 && resultado && (
+                {/* STEP 3: Contato (Lead Capture) */}
+                {step === 3 && (
+                    <div className="space-y-6 animate-in slide-in-from-right-4">
+                        <div className="space-y-1">
+                            <h2 className="text-2xl font-semibold tracking-tight">Seus Dados de Contato</h2>
+                            <p className="text-sm text-muted-foreground">
+                                Informe seus dados para receber o resultado da simulação.
+                            </p>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="nomeContatoPJ">Nome Completo</Label>
+                                <div className="relative">
+                                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                        <User className="h-4 w-4" />
+                                    </span>
+                                    <Input
+                                        id="nomeContatoPJ"
+                                        type="text"
+                                        className="pl-10"
+                                        placeholder="Seu nome completo"
+                                        value={contato.nome}
+                                        onChange={(e) => setContato({ ...contato, nome: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="whatsappContatoPJ">WhatsApp</Label>
+                                <PhoneInput
+                                    id="whatsappContatoPJ"
+                                    value={contato.whatsapp}
+                                    onChange={(v) => setContato({ ...contato, whatsapp: v })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg border bg-blue-50/50 p-4 dark:bg-blue-950/20">
+                            <p className="text-xs text-muted-foreground">
+                                Seus dados serão utilizados exclusivamente para envio do resultado da simulação via WhatsApp.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-between pt-4 border-t">
+                            <Button variant="outline" onClick={() => setStep(2)}>
+                                <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+                            </Button>
+                            <Button
+                                onClick={handleSubmitContato}
+                                disabled={enviando}
+                                className="bg-cta-gold text-foreground hover:bg-cta-gold/90"
+                            >
+                                {enviando ? (
+                                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processando...</>
+                                ) : (
+                                    <><FileText className="mr-2 h-4 w-4" /> Calcular Vínculo</>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* STEP 4: Relatório */}
+                {step === 4 && resultado && (
                     <div className="space-y-8 animate-in zoom-in-95">
                         <div className="flex items-center justify-between">
                             <div>
                                 <h2 className="text-2xl font-serif font-semibold tracking-tight">Avaliação de Vínculo</h2>
                                 <p className="text-sm text-muted-foreground">Relatório baseado no período de {resultado.meses} meses informados.</p>
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => window.print()}>
-                                Imprimir
+                            <Button variant="outline" size="sm" onClick={() => window.print()} className="print:hidden">
+                                <Printer className="mr-2 h-4 w-4" /> Imprimir
                             </Button>
+                        </div>
+
+                        {/* Print-Only: Ficha de Dados Informados */}
+                        <div className="hidden print:block border rounded-lg p-4 mb-4">
+                            <h3 className="font-semibold text-lg mb-3 border-b pb-2">Dados Informados</h3>
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+                                <div><strong>Nome:</strong> {contato.nome}</div>
+                                <div><strong>WhatsApp:</strong> {contato.whatsapp}</div>
+                                <div><strong>Período:</strong> {dados.dataInicio} a {dados.dataFim}</div>
+                                <div><strong>Nota Fiscal (média):</strong> {fmt(dados.notaMedia)}</div>
+                                <div><strong>Contador:</strong> {fmt(dados.contador)}</div>
+                                <div><strong>Imposto (%):</strong> {dados.imposto}%</div>
+                                <div><strong>Outras Despesas:</strong> {fmt(dados.outrasDespesas)}</div>
+                                <div><strong>Risco (%):</strong> {dados.percRisco}%</div>
+                            </div>
                         </div>
 
                         <div className="grid gap-4 md:grid-cols-2">
@@ -227,7 +382,7 @@ export function CalculadoraPJ() {
                             </div>
                         </div>
 
-                        <div className="flex justify-end pt-4 border-t">
+                        <div className="flex justify-end pt-4 border-t print:hidden">
                             <Button variant="outline" onClick={handleReset}>
                                 <RotateCcw className="mr-2 h-4 w-4" /> Nova Simulação
                             </Button>

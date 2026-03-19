@@ -5,8 +5,30 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { calcularRescisaoCLT, type DadosCalculoCLT, type ResultadoCLT, type MotivoRescisao, type TipoAviso } from "@/lib/calculadora/clt";
-import { ArrowLeft, ArrowRight, Calculator, FileText, Info, RotateCcw } from "lucide-react";
+import { CurrencyInput } from "@/components/calculadora/CurrencyInput";
+import { PhoneInput } from "@/components/calculadora/PhoneInput";
+import { ArrowLeft, ArrowRight, Calculator, FileText, Info, Loader2, Printer, RotateCcw, User } from "lucide-react";
 import { toast } from "sonner";
+
+const WEBHOOK_URL = "https://webhook.automab.dev/webhook/calculadora/notificacao";
+
+const MOTIVO_LABELS: Record<MotivoRescisao, string> = {
+    sem_justa_causa: "Dispensa SEM Justa Causa",
+    pedido_demissao: "Pedido de Demissão",
+    justa_causa: "Dispensa COM Justa Causa",
+    acordo: "Rescisão por Acordo (Reforma)",
+    rescisao_indireta: "Rescisão Indireta",
+    termino_contrato: "Término de Contrato de Experiência",
+    antecipado_empregador: "Fim Antecipado pelo Empregador (Exp.)",
+    antecipado_empregado: "Fim Antecipado pelo Empregado (Exp.)",
+};
+
+const AVISO_LABELS: Record<TipoAviso, string> = {
+    indenizado: "Indenizado",
+    trabalhado: "Trabalhado",
+    dispensado: "Dispensado do Cumprimento",
+    descontado: "Descontado",
+};
 
 export function CalculadoraCLT() {
     const [step, setStep] = useState(1);
@@ -15,6 +37,7 @@ export function CalculadoraCLT() {
         dataDesligamento: "",
         salarioBase: 0,
         verbasFixas: 0,
+        mediaHorasExtras: 0,
         mediaVariavel: 0,
         motivoRescisao: "sem_justa_causa",
         tipoAviso: "indenizado",
@@ -29,21 +52,93 @@ export function CalculadoraCLT() {
         conv132Decimo: false,
     });
 
+    const [contato, setContato] = useState({ nome: "", whatsapp: "" });
+    const [enviando, setEnviando] = useState(false);
     const [resultado, setResultado] = useState<ResultadoCLT | null>(null);
 
-    const handleCalculate = () => {
-        if (!dados.dataAdmissao || !dados.dataDesligamento) {
-            toast.error("Por favor, informe a data de admissão e desligamento.");
-            setStep(1); // Go back to first step to fix
+
+
+    const handleSubmitContato = async () => {
+        if (!contato.nome.trim()) {
+            toast.error("Por favor, informe seu nome completo.");
             return;
         }
+        if (contato.whatsapp.length < 10) {
+            toast.error("Informe um número de WhatsApp válido.");
+            return;
+        }
+
         const res = calcularRescisaoCLT(dados);
+
+        // Formatar mensagem estruturada para o advogado
+        const resumoMensagem = [
+            "👤 *Dados do Cliente*",
+            `Nome: ${contato.nome}`,
+            `WhatsApp: ${contato.whatsapp}\n`,
+            "📅 *Dados do Contrato*",
+            `Admissão: ${dados.dataAdmissao}`,
+            `Desligamento: ${dados.dataDesligamento}`,
+            `Motivo: ${MOTIVO_LABELS[dados.motivoRescisao]}`,
+            `Aviso Prévio: ${AVISO_LABELS[dados.tipoAviso]}`,
+            `Salário Base: ${fmt(dados.salarioBase)}\n`,
+            "📄 *Resumo de Cálculo (CLT)*",
+            ...res.itens.map(i => {
+                const emoji = i.tipo === "+" ? "➕" : "➖";
+                return `${emoji} *${i.nome}*\nValor: ${fmt(i.valor)}\nFórmula: ${i.formula}\n`;
+            }),
+            `💰 *Líquido a Receber: ${fmt(res.totalLiquido)}*`
+        ].join("\n");
+
+        setEnviando(true);
+        try {
+            await fetch(WEBHOOK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    nome: contato.nome,
+                    whatsapp: contato.whatsapp,
+                    tipo: "CLT",
+                    resumo: resumoMensagem,
+                    dados: {
+                        dataAdmissao: dados.dataAdmissao,
+                        dataDesligamento: dados.dataDesligamento,
+                        salarioBase: dados.salarioBase,
+                        verbasFixas: dados.verbasFixas,
+                        mediaHorasExtras: dados.mediaHorasExtras,
+                        mediaVariavel: dados.mediaVariavel,
+                        motivoRescisao: dados.motivoRescisao,
+                        tipoAviso: dados.tipoAviso,
+                        feriasVencidas: dados.feriasVencidas,
+                        dependentes: dados.dependentes,
+                    },
+                    resultado: {
+                        totalBruto: res.totalBruto,
+                        totalDescontos: res.totalDescontos,
+                        totalLiquido: res.totalLiquido,
+                        fgtsRescisao: res.fgtsRescisao,
+                        multaFGTS: res.multaFGTS,
+                        saldoFGTSTotal: res.saldoFGTSTotal,
+                        itens: res.itens.map(i => ({
+                            nome: i.nome,
+                            valor: i.valor,
+                            tipo: i.tipo,
+                            formula: i.formula
+                        }))
+                    }
+                }),
+            });
+        } catch {
+            console.warn("[Webhook] Falha ao enviar dados de contato.");
+        }
+
+        setEnviando(false);
         setResultado(res);
-        setStep(4); // Result Step
+        setStep(5);
     };
 
     const resetParams = () => {
         setResultado(null);
+        setContato({ nome: "", whatsapp: "" });
         setStep(1);
     };
 
@@ -52,20 +147,19 @@ export function CalculadoraCLT() {
     const hasAviso = ["sem_justa_causa", "pedido_demissao", "acordo", "rescisao_indireta"].includes(dados.motivoRescisao);
     const isPrazo = ["termino_contrato", "antecipado_empregado", "antecipado_empregador"].includes(dados.motivoRescisao);
 
+    const stepLabels = ["1. Contrato", "2. Remuneração", "3. Férias e Descontos", "4. Contato", "5. Relatório"];
+
     return (
         <div className="mx-auto w-full max-w-4xl rounded-xl border border-border bg-card shadow-sm">
             {/* Progress Bar */}
-            <div className="flex flex-wrap border-b border-border bg-muted/40">
-                {[1, 2, 3, 4].map((s) => (
+            <div className="flex flex-wrap border-b border-border bg-muted/40 print:hidden">
+                {stepLabels.map((label, idx) => (
                     <div
-                        key={s}
-                        className={`flex-1 px-2 py-3 text-center text-xs sm:text-sm font-medium transition-colors ${step >= s ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+                        key={idx}
+                        className={`flex-1 px-2 py-3 text-center text-xs sm:text-sm font-medium transition-colors ${step >= idx + 1 ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
                             }`}
                     >
-                        {s === 1 && "1. Contrato"}
-                        {s === 2 && "2. Remuneração"}
-                        {s === 3 && "3. Férias e Descontos"}
-                        {s === 4 && "4. Relatório"}
+                        {label}
                     </div>
                 ))}
             </div>
@@ -175,38 +269,39 @@ export function CalculadoraCLT() {
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="salarioBase">Salário Base Mensal (R$)</Label>
-                                <Input
+                                <Label htmlFor="salarioBase">Salário Base</Label>
+                                <CurrencyInput
                                     id="salarioBase"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={dados.salarioBase || ""}
-                                    onChange={(e) => setDados({ ...dados, salarioBase: parseFloat(e.target.value) || 0 })}
+                                    value={dados.salarioBase}
+                                    onChange={(v) => setDados({ ...dados, salarioBase: v })}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="verbasFixas">Adicionais Fixos (Periculosidade, Insalubridade)</Label>
-                                <Input
+                                <Label htmlFor="verbasFixas">Adicionais Fixos</Label>
+                                <CurrencyInput
                                     id="verbasFixas"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={dados.verbasFixas || ""}
-                                    onChange={(e) => setDados({ ...dados, verbasFixas: parseFloat(e.target.value) || 0 })}
+                                    value={dados.verbasFixas}
+                                    onChange={(v) => setDados({ ...dados, verbasFixas: v })}
                                 />
+                                <p className="text-xs text-muted-foreground">Periculosidade, insalubridade, etc.</p>
                             </div>
-                            <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="mediaVariavel">Média de Horas Extras e Comissões (R$)</Label>
-                                <Input
-                                    id="mediaVariavel"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={dados.mediaVariavel || ""}
-                                    onChange={(e) => setDados({ ...dados, mediaVariavel: parseFloat(e.target.value) || 0 })}
+                            <div className="space-y-2">
+                                <Label htmlFor="mediaHorasExtras">Média de Horas Extras</Label>
+                                <CurrencyInput
+                                    id="mediaHorasExtras"
+                                    value={dados.mediaHorasExtras}
+                                    onChange={(v) => setDados({ ...dados, mediaHorasExtras: v })}
                                 />
-                                <p className="text-xs text-muted-foreground">Some o valor de horas extras dos últimos 12 meses e divida por 12.</p>
+                                <p className="text-xs text-muted-foreground">Some os últimos 12 meses e divida por 12.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="mediaVariavel">Média de Adicionais Variáveis</Label>
+                                <CurrencyInput
+                                    id="mediaVariavel"
+                                    value={dados.mediaVariavel}
+                                    onChange={(v) => setDados({ ...dados, mediaVariavel: v })}
+                                />
+                                <p className="text-xs text-muted-foreground">Gratificações, comissões, etc.</p>
                             </div>
                         </div>
 
@@ -287,38 +382,119 @@ export function CalculadoraCLT() {
                             <Button variant="outline" onClick={() => setStep(2)}>
                                 <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
                             </Button>
-                            <Button onClick={handleCalculate} className="bg-cta-gold text-foreground hover:bg-cta-gold/90">
-                                <Calculator className="mr-2 h-4 w-4" /> Simular Rescisão
+                            <Button onClick={() => setStep(4)}>
+                                Próximo <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </div>
                     </div>
                 )}
 
-                {/* STEP 4: Relatório */}
-                {step === 4 && resultado && (
+                {/* STEP 4: Contato (Lead Capture) */}
+                {step === 4 && (
+                    <div className="space-y-6 animate-in slide-in-from-right-4">
+                        <div className="space-y-1">
+                            <h2 className="text-2xl font-semibold tracking-tight">Seus Dados de Contato</h2>
+                            <p className="text-sm text-muted-foreground">
+                                Informe seus dados para receber o resultado da simulação.
+                            </p>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="nomeContato">Nome Completo</Label>
+                                <div className="relative">
+                                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                        <User className="h-4 w-4" />
+                                    </span>
+                                    <Input
+                                        id="nomeContato"
+                                        type="text"
+                                        className="pl-10"
+                                        placeholder="Seu nome completo"
+                                        value={contato.nome}
+                                        onChange={(e) => setContato({ ...contato, nome: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="whatsappContato">WhatsApp</Label>
+                                <PhoneInput
+                                    id="whatsappContato"
+                                    value={contato.whatsapp}
+                                    onChange={(v) => setContato({ ...contato, whatsapp: v })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg border bg-blue-50/50 p-4 dark:bg-blue-950/20">
+                            <p className="text-xs text-muted-foreground">
+                                Seus dados serão utilizados exclusivamente para envio do resultado da simulação via WhatsApp.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-between pt-4 border-t">
+                            <Button variant="outline" onClick={() => setStep(3)}>
+                                <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+                            </Button>
+                            <Button
+                                onClick={handleSubmitContato}
+                                disabled={enviando}
+                                className="bg-cta-gold text-foreground hover:bg-cta-gold/90"
+                            >
+                                {enviando ? (
+                                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processando...</>
+                                ) : (
+                                    <><Calculator className="mr-2 h-4 w-4" /> Ver Resultado</>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* STEP 5: Relatório */}
+                {step === 5 && resultado && (
                     <div className="space-y-8 animate-in zoom-in-95">
                         <div className="flex items-center justify-between">
                             <div>
                                 <h2 className="text-2xl font-serif font-semibold tracking-tight">Relatório de Rescisão (CLT)</h2>
                                 <p className="text-sm text-muted-foreground">Simulação baseada nas informações fornecidas.</p>
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => window.print()}>
-                                Imprimir
+                            <Button variant="outline" size="sm" onClick={() => window.print()} className="print:hidden">
+                                <Printer className="mr-2 h-4 w-4" /> Imprimir
                             </Button>
+                        </div>
+
+                        {/* Print-Only: Ficha de Dados Informados */}
+                        <div className="hidden print:block border rounded-lg p-4 mb-4">
+                            <h3 className="font-semibold text-lg mb-3 border-b pb-2">Dados Informados</h3>
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+                                <div><strong>Nome:</strong> {contato.nome}</div>
+                                <div><strong>WhatsApp:</strong> {contato.whatsapp}</div>
+                                <div><strong>Admissão:</strong> {dados.dataAdmissao.split("-").reverse().join("/")}</div>
+                                <div><strong>Desligamento:</strong> {dados.dataDesligamento.split("-").reverse().join("/")}</div>
+                                <div><strong>Motivo:</strong> {MOTIVO_LABELS[dados.motivoRescisao]}</div>
+                                <div><strong>Aviso Prévio:</strong> {AVISO_LABELS[dados.tipoAviso]}</div>
+                                <div><strong>Salário Base:</strong> {fmt(dados.salarioBase)}</div>
+                                <div><strong>Adicionais Fixos:</strong> {fmt(dados.verbasFixas)}</div>
+                                <div><strong>Horas Extras (média):</strong> {fmt(dados.mediaHorasExtras)}</div>
+                                <div><strong>Adicionais Variáveis (média):</strong> {fmt(dados.mediaVariavel)}</div>
+                                <div><strong>Férias Vencidas:</strong> {dados.feriasVencidas} período(s)</div>
+                                <div><strong>Dependentes IRRF:</strong> {dados.dependentes}</div>
+                            </div>
                         </div>
 
                         {/* Summary Cards */}
                         <div className="grid gap-4 md:grid-cols-3">
                             <div className="rounded-lg border bg-card p-4 shadow-sm">
-                                <p className="text-sm text-muted-foreground font-medium">Total de Proventos</p>
+                                <p className="text-sm text-muted-foreground font-medium">Proventos</p>
                                 <p className="text-2xl font-bold mt-1 text-green-600 dark:text-green-500">{fmt(resultado.totalBruto)}</p>
                             </div>
                             <div className="rounded-lg border bg-card p-4 shadow-sm">
-                                <p className="text-sm text-muted-foreground font-medium">Total de Descontos</p>
+                                <p className="text-sm text-muted-foreground font-medium">Descontos</p>
                                 <p className="text-2xl font-bold mt-1 text-red-600 dark:text-red-500">{fmt(resultado.totalDescontos)}</p>
                             </div>
                             <div className="rounded-lg border-2 border-primary bg-primary/5 p-4 shadow-sm">
-                                <p className="text-sm text-primary font-medium">Total Líquido a Receber</p>
+                                <p className="text-sm text-primary font-medium">Líquido a Receber</p>
                                 <p className="text-2xl font-bold mt-1">{fmt(resultado.totalLiquido)}</p>
                             </div>
                         </div>
@@ -342,7 +518,6 @@ export function CalculadoraCLT() {
                                             <tr key={idx} className="border-b last:border-0 hover:bg-muted/30">
                                                 <td className="px-4 py-3 font-medium">
                                                     {i.nome}
-                                                    <span className="block text-xs text-muted-foreground font-normal mt-0.5">{i.baseLegal}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-muted-foreground">{i.formula}</td>
                                                 <td className={`px-4 py-3 text-right font-medium ${i.tipo === '+' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
@@ -391,7 +566,7 @@ export function CalculadoraCLT() {
                             </div>
                         )}
 
-                        <div className="flex justify-between pt-4 border-t">
+                        <div className="flex justify-between pt-4 border-t print:hidden">
                             <p className="text-xs text-muted-foreground max-w-lg">
                                 Esta é uma simulação demonstrativa. Valores exatos dependem dos centavos arredondados em folha, DSRs exatos do mês base, dissídios, INSS sobre 13º e detalhes da sua convenção sindical.
                             </p>

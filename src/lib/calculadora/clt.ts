@@ -15,6 +15,7 @@ export interface DadosCalculoCLT {
     dataDesligamento: string;
     salarioBase: number;
     verbasFixas: number;
+    mediaHorasExtras: number;
     mediaVariavel: number;
     motivoRescisao: MotivoRescisao;
     tipoAviso: TipoAviso;
@@ -244,7 +245,7 @@ export function calcularRescisaoCLT(dados: DadosCalculoCLT): ResultadoCLT {
     if (!isValidDate(admissao)) admissao = new Date();
     if (!isValidDate(desligamento)) desligamento = new Date();
 
-    const remuneracao = round2(dados.salarioBase + dados.verbasFixas + dados.mediaVariavel);
+    const remuneracao = round2(dados.salarioBase + dados.verbasFixas + dados.mediaHorasExtras + dados.mediaVariavel);
     const mapa = getMapaVerbas(dados.motivoRescisao);
 
     const itens: ItemCalculo[] = [];

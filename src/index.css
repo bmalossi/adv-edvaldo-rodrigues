@@ -260,3 +260,77 @@ All colors MUST be HSL.
     background-image: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--secondary) / 0.85));
   }
 }
+
+/* ===== Print Styles ===== */
+@media print {
+
+  /* Hide navigation (header), hero, footer, buttons, progress bar */
+  header,
+  nav,
+  footer,
+  .print\:hidden,
+  section.relative.overflow-hidden {
+    display: none !important;
+    position: static !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Show print-only blocks */
+  .hidden.print\:block {
+    display: block !important;
+  }
+
+  /* Reset backgrounds for clean print */
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  /* Reset any fixed/sticky elements that could overlap pages */
+  .fixed,
+  [class*="fixed"] {
+    position: static !important;
+    display: none !important;
+  }
+
+  .bg-card,
+  .bg-muted,
+  .bg-muted\/40,
+  .bg-muted\/30,
+  .bg-muted\/50 {
+    background: white !important;
+  }
+
+  /* Ensure colored text stays visible */
+  .text-green-600,
+  .text-red-600,
+  .text-blue-800,
+  .text-amber-800 {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Remove shadows for print */
+  .shadow-sm,
+  .shadow-card-hover {
+    box-shadow: none !important;
+  }
+
+  /* Ensure borders remain for structure */
+  .border,
+  .border-b,
+  .border-t {
+    border-color: #ddd !important;
+  }
+
+  /* Page margins */
+  @page {
+    margin: 1.5cm;
+  }
+}
