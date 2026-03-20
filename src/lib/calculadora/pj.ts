@@ -5,7 +5,6 @@ export interface DadosCalculoPJ {
     contador: number; // Gasto contador
     imposto: number; // Porcentagem do imposto (Simples, etc)
     outrasDespesas: number; // Vale, refeição
-    percRisco: number; // Porcentagem de risco de sucesso (0-100)
 }
 
 export interface ResultadoPJ {
@@ -20,15 +19,19 @@ export interface ResultadoPJ {
     perdaAvisoPrevio: number;
     totalDireitosCLT: number;
     lucroDoEmpregador: number; // faturamentoTotal - totalDireitosCLT
-    valorRisco: number;
 }
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
 function calcularMeses(inicio: string, fim: string): number {
     if (!inicio || !fim) return 0;
-    const dInicio = new Date(`${inicio}-01T00:00:00`);
-    const dFim = new Date(`${fim}-01T00:00:00`);
+
+    // Suporta tanto YYYY-MM quanto YYYY-MM-DD
+    const strInicio = inicio.length === 7 ? `${inicio}-01` : inicio;
+    const strFim = fim.length === 7 ? `${fim}-01` : fim;
+
+    const dInicio = new Date(`${strInicio}T00:00:00`);
+    const dFim = new Date(`${strFim}T00:00:00`);
 
     if (isNaN(dInicio.getTime()) || isNaN(dFim.getTime())) return 0;
 
@@ -66,8 +69,6 @@ export function calcularAnalisePJ(dados: DadosCalculoPJ): ResultadoPJ {
     const totalDireitosCLT = round2(perda13 + perdaFerias + perdaFGTS + perdaMultaFGTS + perdaAvisoPrevio);
     const lucroDoEmpregador = round2(faturamentoTotal - totalDireitosCLT);
 
-    const valorRisco = round2(totalDireitosCLT * (dados.percRisco / 100));
-
     return {
         meses,
         faturamentoTotal,
@@ -79,7 +80,6 @@ export function calcularAnalisePJ(dados: DadosCalculoPJ): ResultadoPJ {
         perdaMultaFGTS,
         perdaAvisoPrevio,
         totalDireitosCLT,
-        lucroDoEmpregador,
-        valorRisco
+        lucroDoEmpregador
     };
 }

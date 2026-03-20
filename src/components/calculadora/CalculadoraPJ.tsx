@@ -2,10 +2,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LabelTooltip } from "@/components/calculadora/LabelTooltip";
 import { calcularAnalisePJ, type DadosCalculoPJ, type ResultadoPJ } from "@/lib/calculadora/pj";
 import { CurrencyInput } from "@/components/calculadora/CurrencyInput";
 import { PhoneInput } from "@/components/calculadora/PhoneInput";
-import { ArrowLeft, ArrowRight, FileText, Info, Loader2, Printer, RotateCcw, User } from "lucide-react";
+import { DateInput } from "@/components/calculadora/DateInput";
+import { ArrowLeft, ArrowRight, FileText, Info, Loader2, MessageCircle, Printer, RotateCcw, User } from "lucide-react";
+import { site } from "@/config/site";
 import { toast } from "sonner";
 
 const WEBHOOK_URL = "https://webhook.automab.dev/webhook/calculadora/notificacao";
@@ -19,7 +22,6 @@ export function CalculadoraPJ() {
         contador: 0,
         imposto: 0,
         outrasDespesas: 0,
-        percRisco: 0,
     });
     const [contato, setContato] = useState({ nome: "", whatsapp: "" });
     const [enviando, setEnviando] = useState(false);
@@ -39,21 +41,22 @@ export function CalculadoraPJ() {
 
         const res = calcularAnalisePJ(dados);
 
+        const fmtDate = (d: string) => d.split("-").reverse().join("/");
+
         // Formatar mensagem estruturada para o advogado
         const resumoMensagem = [
             "👤 *Dados do Cliente*",
             `Nome: ${contato.nome}`,
             `WhatsApp: ${contato.whatsapp}\n`,
             "📋 *Dados da Simulação PJ*",
-            `Período: ${dados.dataInicio} a ${dados.dataFim}`,
+            `Período: ${fmtDate(dados.dataInicio)} a ${fmtDate(dados.dataFim)}`,
             `Faturamento Mensal: ${fmt(dados.notaMedia)}`,
             `Imposto: ${dados.imposto}%`,
-            `Outras Despesas: ${fmt(dados.outrasDespesas)}`,
-            `Risco Informado: ${dados.percRisco}%\n`,
+            `Outras Despesas: ${fmt(dados.outrasDespesas)}\n`,
             "📄 *Análise Comparativa (PJ vs CLT)*",
             "🏢 *Visão como PJ*",
             `Faturamento Total: ${fmt(res.faturamentoTotal)}`,
-            `Despesas Totais: ${fmt(res.despesasTotais)}`,
+            `Despesas Totais: - ${fmt(res.despesasTotais)}`,
             `Líquido PJ: ${fmt(res.liquidoPJ)}\n`,
             "⚖️ *Direitos CLT Perdidos*",
             `13º Salário: ${fmt(res.perda13)}`,
@@ -61,8 +64,7 @@ export function CalculadoraPJ() {
             `FGTS: ${fmt(res.perdaFGTS)}`,
             `Multa FGTS (40%): ${fmt(res.perdaMultaFGTS)}`,
             `Aviso Prévio: ${fmt(res.perdaAvisoPrevio)}`,
-            `*Total Direitos CLT: ${fmt(res.totalDireitosCLT)}*\n`,
-            `🚩 *Valor em Risco Estimado: ${fmt(res.valorRisco)}*`
+            `*Total Direitos CLT: ${fmt(res.totalDireitosCLT)}*`
         ].join("\n");
 
         setEnviando(true);
@@ -82,14 +84,12 @@ export function CalculadoraPJ() {
                         contador: dados.contador,
                         imposto: dados.imposto,
                         outrasDespesas: dados.outrasDespesas,
-                        percRisco: dados.percRisco,
                     },
                     resultado: {
                         faturamentoTotal: res.faturamentoTotal,
                         despesasTotais: res.despesasTotais,
                         liquidoPJ: res.liquidoPJ,
                         totalDireitosCLT: res.totalDireitosCLT,
-                        valorRisco: res.valorRisco,
                         perdas: {
                             decimo: res.perda13,
                             ferias: res.perdaFerias,
@@ -120,13 +120,12 @@ export function CalculadoraPJ() {
             contador: 0,
             imposto: 0,
             outrasDespesas: 0,
-            percRisco: 0,
         });
     };
 
     const fmt = (v: number) => `R$ ${v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
 
-    const stepLabels = ["1. Período e Ganhos", "2. Despesas e Risco", "3. Contato", "4. Relatório"];
+    const stepLabels = ["1. Período e Ganhos", "2. Despesas", "3. Contato", "4. Relatório"];
 
     return (
         <div className="mx-auto w-full max-w-4xl rounded-xl border border-border bg-card shadow-sm">
@@ -154,25 +153,23 @@ export function CalculadoraPJ() {
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="dataInicio">Mês/Ano Início</Label>
-                                <Input
+                                <LabelTooltip htmlFor="dataInicio" tooltip="A data em que você assinou o contrato PJ ou começou a trabalhar no local diariamente.">Data de Início</LabelTooltip>
+                                <DateInput
                                     id="dataInicio"
-                                    type="month"
                                     value={dados.dataInicio}
-                                    onChange={(e) => setDados({ ...dados, dataInicio: e.target.value })}
+                                    onChange={(v) => setDados({ ...dados, dataInicio: v })}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="dataFim">Mês/Ano Fim</Label>
-                                <Input
+                                <LabelTooltip htmlFor="dataFim" tooltip="O último dia de trabalho, ou encerramento da sua prestação de serviços.">Data de Término</LabelTooltip>
+                                <DateInput
                                     id="dataFim"
-                                    type="month"
                                     value={dados.dataFim}
-                                    onChange={(e) => setDados({ ...dados, dataFim: e.target.value })}
+                                    onChange={(v) => setDados({ ...dados, dataFim: v })}
                                 />
                             </div>
                             <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="notaMedia">Valor Médio da Nota Fiscal</Label>
+                                <LabelTooltip htmlFor="notaMedia" tooltip="O valor mais comum ou a média dos valores das notas fiscais emitidas todo mês.">Valor Médio da Nota Fiscal</LabelTooltip>
                                 <CurrencyInput
                                     id="notaMedia"
                                     value={dados.notaMedia}
@@ -193,13 +190,13 @@ export function CalculadoraPJ() {
                 {step === 2 && (
                     <div className="space-y-6 animate-in slide-in-from-right-4">
                         <div className="space-y-1">
-                            <h2 className="text-2xl font-semibold tracking-tight">Despesas e Risco</h2>
-                            <p className="text-sm text-muted-foreground">Informe os custos mensais e a estimativa de risco.</p>
+                            <h2 className="text-2xl font-semibold tracking-tight">Despesas Mensais</h2>
+                            <p className="text-sm text-muted-foreground">Informe os custos mensais do seu contrato PJ.</p>
                         </div>
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="contador">Custo Mensal com Contador</Label>
+                                <LabelTooltip htmlFor="contador" tooltip="O valor mensal da contabilidade necessária para manter a sua empresa (CNPJ) regularizada.">Custo Mensal com Contador</LabelTooltip>
                                 <CurrencyInput
                                     id="contador"
                                     value={dados.contador}
@@ -207,7 +204,7 @@ export function CalculadoraPJ() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="imposto">Imposto Mensal (Média %)</Label>
+                                <LabelTooltip htmlFor="imposto" tooltip="A alíquota mensal de impostos retida na sua nota (exemplo: 6% no Simples Nacional).">Imposto Mensal (Média %)</LabelTooltip>
                                 <Input
                                     id="imposto"
                                     type="number"
@@ -218,25 +215,13 @@ export function CalculadoraPJ() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="outrasDespesas">Outras Despesas Mensais</Label>
+                                <LabelTooltip htmlFor="outrasDespesas" tooltip="Gastos diretamente relacionados ao trabalho que não são reembolsados: passagem, gasolina, alimentação, aluguel de equipamentos ou softwares.">Outras Despesas Mensais</LabelTooltip>
                                 <CurrencyInput
                                     id="outrasDespesas"
                                     value={dados.outrasDespesas}
                                     onChange={(v) => setDados({ ...dados, outrasDespesas: v })}
                                 />
                                 <p className="text-xs text-muted-foreground">Vale, transporte, etc.</p>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="percRisco">Espectro de Risco (%)</Label>
-                                <Input
-                                    id="percRisco"
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    step="1"
-                                    value={dados.percRisco || ""}
-                                    onChange={(e) => setDados({ ...dados, percRisco: parseFloat(e.target.value) || 0 })}
-                                />
                             </div>
                         </div>
 
@@ -263,7 +248,7 @@ export function CalculadoraPJ() {
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="nomeContatoPJ">Nome Completo</Label>
+                                <LabelTooltip htmlFor="nomeContatoPJ" tooltip="Insira seu nome completo para que a nossa equipe possa te orientar.">Nome Completo</LabelTooltip>
                                 <div className="relative">
                                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                                         <User className="h-4 w-4" />
@@ -279,7 +264,7 @@ export function CalculadoraPJ() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="whatsappContatoPJ">WhatsApp</Label>
+                                <LabelTooltip htmlFor="whatsappContatoPJ" tooltip="Usado apenas para que o nosso sistema e nossos especialistas enviem a simulação para você.">WhatsApp</LabelTooltip>
                                 <PhoneInput
                                     id="whatsappContatoPJ"
                                     value={contato.whatsapp}
@@ -337,7 +322,6 @@ export function CalculadoraPJ() {
                                 <div><strong>Contador:</strong> {fmt(dados.contador)}</div>
                                 <div><strong>Imposto (%):</strong> {dados.imposto}%</div>
                                 <div><strong>Outras Despesas:</strong> {fmt(dados.outrasDespesas)}</div>
-                                <div><strong>Risco (%):</strong> {dados.percRisco}%</div>
                             </div>
                         </div>
 
@@ -372,14 +356,22 @@ export function CalculadoraPJ() {
                             </div>
                         </div>
 
-                        <div className="rounded-lg border bg-card p-4">
-                            <h3 className="font-medium mb-2">Análise de Risco</h3>
-                            <p className="text-sm text-muted-foreground mb-4">Se este contrato for reconhecido como vínculo empregatício na justiça do trabalho, abaixo está uma estimativa do valor da causa, considerando o seu fator de risco informado ({dados.percRisco}%).</p>
-
-                            <div className="flex justify-between items-center rounded bg-red-50 p-3 dark:bg-red-950/30 text-red-900 dark:text-red-200">
-                                <span className="font-semibold">Valor em Risco Estimado:</span>
-                                <span className="font-bold text-xl">{fmt(resultado.valorRisco)}</span>
-                            </div>
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-6 text-center shadow-sm print:hidden">
+                            <h3 className="text-lg font-semibold text-primary mb-2">Próximo Passo: Consulta Gratuita</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                Estes valores são uma estimativa inicial. Para garantir seus direitos e entender as nuances do seu caso,
+                                é fundamental falar com um advogado. <strong>O contato é totalmente gratuito.</strong>
+                                Como você já preencheu a simulação, nosso advogado já recebeu seus dados e está pronto para te orientar.
+                            </p>
+                            <Button asChild size="lg" className="bg-green-600 hover:bg-green-700 text-white font-bold w-full sm:w-auto">
+                                <a
+                                    href={`https://wa.me/${site.contact.whatsappNumber}?text=${encodeURIComponent("Olá! Acabei de fazer uma simulação na análise de PJ vs CLT e gostaria de tirar algumas dúvidas sobre o meu caso.")}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <MessageCircle className="mr-2 h-5 w-5" /> Enviar Mensagem agora
+                                </a>
+                            </Button>
                         </div>
 
                         <div className="flex justify-end pt-4 border-t print:hidden">

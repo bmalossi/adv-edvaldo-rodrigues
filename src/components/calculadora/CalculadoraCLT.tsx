@@ -4,10 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { LabelTooltip } from "@/components/calculadora/LabelTooltip";
 import { calcularRescisaoCLT, type DadosCalculoCLT, type ResultadoCLT, type MotivoRescisao, type TipoAviso } from "@/lib/calculadora/clt";
+import { DateInput } from "@/components/calculadora/DateInput";
 import { CurrencyInput } from "@/components/calculadora/CurrencyInput";
 import { PhoneInput } from "@/components/calculadora/PhoneInput";
-import { ArrowLeft, ArrowRight, Calculator, FileText, Info, Loader2, Printer, RotateCcw, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calculator, FileText, Info, Loader2, MessageCircle, Printer, RotateCcw, User } from "lucide-react";
+import { site } from "@/config/site";
 import { toast } from "sonner";
 
 const WEBHOOK_URL = "https://webhook.automab.dev/webhook/calculadora/notificacao";
@@ -70,21 +73,24 @@ export function CalculadoraCLT() {
 
         const res = calcularRescisaoCLT(dados);
 
+        const fmtDate = (d: string) => d.split("-").reverse().join("/");
+
         // Formatar mensagem estruturada para o advogado
         const resumoMensagem = [
             "👤 *Dados do Cliente*",
             `Nome: ${contato.nome}`,
             `WhatsApp: ${contato.whatsapp}\n`,
             "📅 *Dados do Contrato*",
-            `Admissão: ${dados.dataAdmissao}`,
-            `Desligamento: ${dados.dataDesligamento}`,
+            `Admissão: ${fmtDate(dados.dataAdmissao)}`,
+            `Desligamento: ${fmtDate(dados.dataDesligamento)}`,
             `Motivo: ${MOTIVO_LABELS[dados.motivoRescisao]}`,
             `Aviso Prévio: ${AVISO_LABELS[dados.tipoAviso]}`,
             `Salário Base: ${fmt(dados.salarioBase)}\n`,
             "📄 *Resumo de Cálculo (CLT)*",
             ...res.itens.map(i => {
                 const emoji = i.tipo === "+" ? "➕" : "➖";
-                return `${emoji} *${i.nome}*\nValor: ${fmt(i.valor)}\nFórmula: ${i.formula}\n`;
+                const prefix = i.tipo === "−" || i.tipo === "-" ? "- " : "";
+                return `${emoji} *${i.nome}*\nValor: ${prefix}${fmt(i.valor)}\nFórmula: ${i.formula}\n`;
             }),
             `💰 *Líquido a Receber: ${fmt(res.totalLiquido)}*`
         ].join("\n");
@@ -175,26 +181,24 @@ export function CalculadoraCLT() {
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="dataAdmissao">Data de Admissão</Label>
-                                <Input
+                                <LabelTooltip htmlFor="dataAdmissao" tooltip="Data em que o seu contrato de trabalho iniciou na empresa, registrada na sua carteira.">Data de Admissão</LabelTooltip>
+                                <DateInput
                                     id="dataAdmissao"
-                                    type="date"
                                     value={dados.dataAdmissao}
-                                    onChange={(e) => setDados({ ...dados, dataAdmissao: e.target.value })}
+                                    onChange={(v) => setDados({ ...dados, dataAdmissao: v })}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="dataDesligamento">Data de Desligamento</Label>
-                                <Input
+                                <LabelTooltip htmlFor="dataDesligamento" tooltip="Seu último dia trabalhado na empresa (ou último dia do aviso trabalhado).">Data de Desligamento</LabelTooltip>
+                                <DateInput
                                     id="dataDesligamento"
-                                    type="date"
                                     value={dados.dataDesligamento}
-                                    onChange={(e) => setDados({ ...dados, dataDesligamento: e.target.value })}
+                                    onChange={(v) => setDados({ ...dados, dataDesligamento: v })}
                                 />
                             </div>
 
                             <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="motivoRescisao">Motivo da Rescisão</Label>
+                                <LabelTooltip htmlFor="motivoRescisao" tooltip="A forma como aconteceu a quebra ou encerramento do contrato (isso afeta muito todos os direitos).">Motivo da Rescisão</LabelTooltip>
                                 <Select
                                     value={dados.motivoRescisao}
                                     onValueChange={(val) => setDados({ ...dados, motivoRescisao: val as MotivoRescisao })}
@@ -217,7 +221,7 @@ export function CalculadoraCLT() {
 
                             {hasAviso && (
                                 <div className="space-y-2 md:col-span-2">
-                                    <Label htmlFor="tipoAviso">Situação do Aviso Prévio</Label>
+                                    <LabelTooltip htmlFor="tipoAviso" tooltip="Como os 30 dias obrigatórios antes da demissão foram cumpridos ou pagos?">Situação do Aviso Prévio</LabelTooltip>
                                     <Select
                                         value={dados.tipoAviso}
                                         onValueChange={(val) => setDados({ ...dados, tipoAviso: val as TipoAviso })}
@@ -239,7 +243,7 @@ export function CalculadoraCLT() {
 
                             {isPrazo && (
                                 <div className="space-y-2 md:col-span-2">
-                                    <Label htmlFor="dataTerminoContrato">Data Prevista para Término do Contrato</Label>
+                                    <LabelTooltip htmlFor="dataTerminoContrato" tooltip="A data que estava combinada no contrato para terminar (importante para calcular multas caso você ou a empresa tenham encerrado antes).">Data Prevista para Término do Contrato</LabelTooltip>
                                     <Input
                                         id="dataTerminoContrato"
                                         type="date"
@@ -269,7 +273,7 @@ export function CalculadoraCLT() {
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="salarioBase">Salário Base</Label>
+                                <LabelTooltip htmlFor="salarioBase" tooltip="Valor do salário fixo bruto registrado na sua carteira de trabalho ou contrato.">Salário Base</LabelTooltip>
                                 <CurrencyInput
                                     id="salarioBase"
                                     value={dados.salarioBase}
@@ -277,7 +281,7 @@ export function CalculadoraCLT() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="verbasFixas">Adicionais Fixos</Label>
+                                <LabelTooltip htmlFor="verbasFixas" tooltip="Adicionais listados no holerite que você recebe todo mês com valor fixo (ex: periculosidade, insalubridade, adicional noturno, gratificação de função).">Adicionais Fixos (Mensais)</LabelTooltip>
                                 <CurrencyInput
                                     id="verbasFixas"
                                     value={dados.verbasFixas}
@@ -286,7 +290,7 @@ export function CalculadoraCLT() {
                                 <p className="text-xs text-muted-foreground">Periculosidade, insalubridade, etc.</p>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="mediaHorasExtras">Média de Horas Extras</Label>
+                                <LabelTooltip htmlFor="mediaHorasExtras" tooltip="A média em dinheiro que você recebeu de horas extras nos últimos 12 meses (ou durante todo o contrato, se menor que 1 ano).">Média de Horas Extras</LabelTooltip>
                                 <CurrencyInput
                                     id="mediaHorasExtras"
                                     value={dados.mediaHorasExtras}
@@ -295,7 +299,7 @@ export function CalculadoraCLT() {
                                 <p className="text-xs text-muted-foreground">Some os últimos 12 meses e divida por 12.</p>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="mediaVariavel">Média de Adicionais Variáveis</Label>
+                                <LabelTooltip htmlFor="mediaVariavel" tooltip="A média em dinheiro que você recebeu de comissões, prêmios ou gorjetas nos últimos 12 meses.">Média de Adicionais Variáveis</LabelTooltip>
                                 <CurrencyInput
                                     id="mediaVariavel"
                                     value={dados.mediaVariavel}
@@ -326,7 +330,7 @@ export function CalculadoraCLT() {
 
                         <div className="grid gap-6 md:grid-cols-2 bg-muted/30 p-4 rounded-lg border">
                             <div className="space-y-2">
-                                <Label>Períodos de Férias Vencidas</Label>
+                                <LabelTooltip tooltip="Quantidade de períodos de férias anuais completas (12 meses de trabalho) que você já tem direito, mas ainda não tirou nem recebeu o pagamento.">Períodos de Férias Vencidas</LabelTooltip>
                                 <div className="flex items-center gap-4">
                                     <Input
                                         type="number"
@@ -342,13 +346,13 @@ export function CalculadoraCLT() {
                                             checked={dados.feriasEmDobro}
                                             onCheckedChange={(c) => setDados({ ...dados, feriasEmDobro: c })}
                                         />
-                                        <Label htmlFor="em-dobro" className="text-xs font-normal">Pagar em dobro?</Label>
+                                        <LabelTooltip htmlFor="em-dobro" className="text-xs font-normal" tooltip="Marque apenas se alguma destas férias estiverem acumuladas (vencidas) há mais de 2 anos sem você tirar (gera pagamento em dobro).">Pagar em dobro?</LabelTooltip>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Dependentes para IRRF</Label>
+                                <LabelTooltip tooltip="Número de filhos ou familiares que dependem de você legalmente e estão declarados no seu Imposto de Renda. Isso reduz o desconto de IRRF na sua rescisão.">Dependentes para IRRF</LabelTooltip>
                                 <Input
                                     type="number"
                                     min="0"
@@ -401,7 +405,7 @@ export function CalculadoraCLT() {
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="nomeContato">Nome Completo</Label>
+                                <LabelTooltip htmlFor="nomeContato" tooltip="Insira seu nome completo para iniciarmos o seu atendimento de forma personalizada.">Seu Nome</LabelTooltip>
                                 <div className="relative">
                                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                                         <User className="h-4 w-4" />
@@ -417,7 +421,7 @@ export function CalculadoraCLT() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="whatsappContato">WhatsApp</Label>
+                                <LabelTooltip htmlFor="whatsappContato" tooltip="Usado apenas para que o nosso sistema e nossos especialistas enviem a simulação completa para você.">WhatsApp</LabelTooltip>
                                 <PhoneInput
                                     id="whatsappContato"
                                     value={contato.whatsapp}
@@ -565,6 +569,24 @@ export function CalculadoraCLT() {
                                 </ul>
                             </div>
                         )}
+
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-6 text-center shadow-sm print:hidden">
+                            <h3 className="text-lg font-semibold text-primary mb-2">Próximo Passo: Consulta Gratuita</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                Estes valores são uma estimativa inicial. Para garantir seus direitos e entender as nuances do seu caso,
+                                é fundamental falar com um advogado. <strong>O contato é totalmente gratuito.</strong>
+                                Como você já preencheu a simulação, nosso advogado já recebeu seus dados e está pronto para te orientar.
+                            </p>
+                            <Button asChild size="lg" className="bg-green-600 hover:bg-green-700 text-white font-bold w-full sm:w-auto">
+                                <a
+                                    href={`https://wa.me/${site.contact.whatsappNumber}?text=${encodeURIComponent("Olá! Acabei de fazer uma simulação na calculadora de rescisão e gostaria de tirar algumas dúvidas sobre o meu caso.")}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <MessageCircle className="mr-2 h-5 w-5" /> Enviar Mensagem agora
+                                </a>
+                            </Button>
+                        </div>
 
                         <div className="flex justify-between pt-4 border-t print:hidden">
                             <p className="text-xs text-muted-foreground max-w-lg">
