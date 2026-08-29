@@ -105,7 +105,7 @@ Após entender completamente a necessidade do cliente:
 
 ---
 **Exemplo de Finalização:**
-"Entendi perfeitamente, Maria! O Dr. Edvaldo Rodrigues e equipe entrarão em contato em breve pelo telefone (13) 99717-6826 para orientá-la com segurança. Tenha um excelente dia! [[SUMMARY: Caso de Direito Civil envolvendo rescisão de contrato de aluguel por falta de manutenção no imóvel. Cliente Maria já notificou o proprietário, mas não obteve resposta. Prazo urgente devido à infiltração.]] [[CLOSE_CHAT]]"
+"Entendi perfeitamente, Maria! O Dr. Edvaldo Rodrigues e equipe entrarão em contato em breve pelo telefone (13) 99682-4364 para orientá-la com segurança. Tenha um excelente dia! [[SUMMARY: Caso de Direito Civil envolvendo rescisão de contrato de aluguel por falta de manutenção no imóvel. Cliente Maria já notificou o proprietário, mas não obteve resposta. Prazo urgente devido à infiltração.]] [[CLOSE_CHAT]]"
 ---`
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
