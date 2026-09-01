@@ -53,7 +53,7 @@ export default function Home() {
                 animate={reduce ? false : "visible"}
                 custom={1}
               >
-                Assessoria
+                Assessoria Jurídica
                 <span className="block text-hero">Empresarial</span>
               </motion.h1>
 
@@ -64,7 +64,10 @@ export default function Home() {
                 animate={reduce ? false : "visible"}
                 custom={2}
               >
-                Advocacia estratégica para pessoas e empresas.
+                <strong>Prevenção de riscos, contratos, relações trabalhistas e defesa jurídica para empresas.</strong>
+                <br />
+                <br />
+                Atendimento jurídico estratégico para empresários que buscam segurança para crescer e tomar decisões.
               </motion.p>
 
               <motion.div
