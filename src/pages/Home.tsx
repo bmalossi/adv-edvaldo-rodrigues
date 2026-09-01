@@ -53,8 +53,8 @@ export default function Home() {
                 animate={reduce ? false : "visible"}
                 custom={1}
               >
-                Advocacia Ética e
-                <span className="block text-hero">Comprometida</span>
+                Assessoria
+                <span className="block text-hero">Empresarial</span>
               </motion.h1>
 
               <motion.p
@@ -64,8 +64,7 @@ export default function Home() {
                 animate={reduce ? false : "visible"}
                 custom={2}
               >
-                Serviço personalizado para suas demandas jurídicas, das mais simples às mais complexas, com clareza,
-                responsabilidade e estratégia.
+                Advocacia estratégica para pessoas e empresas.
               </motion.p>
 
               <motion.div

@@ -75,9 +75,6 @@ All colors MUST be HSL.
     --grad-empresarial-from: 210 29% 12%;
     --grad-empresarial-to: 210 29% 20%;
 
-    --grad-tributario-from: 210 29% 14%;
-    --grad-tributario-to: 210 29% 22%;
-
     --grad-militar-from: 210 29% 8%;
     --grad-militar-to: 210 29% 16%;
 
@@ -242,10 +239,6 @@ All colors MUST be HSL.
 
   .bg-area-empresarial {
     background-image: linear-gradient(135deg, hsl(var(--grad-empresarial-from)), hsl(var(--grad-empresarial-to)));
-  }
-
-  .bg-area-tributario {
-    background-image: linear-gradient(135deg, hsl(var(--grad-tributario-from)), hsl(var(--grad-tributario-to)));
   }
 
   .bg-area-militar {

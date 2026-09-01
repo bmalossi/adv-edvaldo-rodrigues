@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { Briefcase, Gavel, Home, Scale, Shield, Users } from "lucide-react";
 
-export type AreaKey = "civil" | "previdenciario" | "trabalhista" | "criminal" | "familia" | "empresarial" | "tributario" | "militar";
+export type AreaKey = "civil" | "previdenciario" | "trabalhista" | "criminal" | "familia" | "empresarial" | "militar";
 
 export type PracticeArea = {
   key: AreaKey;
@@ -16,7 +16,6 @@ export type PracticeArea = {
   | "bg-area-criminal"
   | "bg-area-familia"
   | "bg-area-empresarial"
-  | "bg-area-tributario"
   | "bg-area-militar";
   content: string;
 };
@@ -147,27 +146,6 @@ Do suporte preventivo em contratos à defesa em litígios societários, minha at
 - Defesa técnica de interesses empresariais em juízo.
 
 Ofereço um atendimento direto e especializado, entendendo as particularidades do seu mercado para prover uma advocacia que funcione como um verdadeiro braço estratégico da sua empresa.`,
-  },
-  {
-    key: "tributario",
-    title: "Direito Tributário",
-    description: "Planejamento fiscal, defesa em execuções e recuperação de créditos.",
-    bullets: ["Planejamento tributário", "Defesas administrativas", "Recuperação de impostos"],
-    icon: Scale,
-    gradientClass: "bg-area-tributario",
-    content: `A complexidade tributária no Brasil exige uma **defesa técnica rigorosa e planejamento inteligente**. Minha atuação é focada na proteção do seu patrimônio e na justiça fiscal, evitando cobranças abusivas e identificando oportunidades de economia.
-
-Trabalho de forma técnica para garantir que sua relação com o fisco seja pautada estritamente pela legalidade, buscando sempre o menor impacto tributário possível dentro das normas vigentes.
-
-**Minha atuação estratégica em Direito Tributário:**
-
-- **Planejamento Tributário** estratégico para redução de carga fiscal;
-- Defesa técnica em **execuções fiscais** e ações de cobrança;
-- Recuperação de créditos tributários pagos indevidamente;
-- Impugnação de autos de infração e defesas administrativas;
-- Consultoria para conformidade fiscal e obtenção de certidões.
-
-Meu objetivo é prover segurança e previsibilidade financeira, garantindo que você ou sua empresa paguem apenas o que for estritamente devido por lei.`,
   },
   {
     key: "militar",

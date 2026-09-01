@@ -27,7 +27,7 @@ export default function Sobre() {
               Atuo de forma personalizada, entendendo que cada caso possui suas particularidades e exige uma estratégia jurídica própria.
             </p>
             <p>
-              Possuo experiência nas áreas Trabalhista, Cível, Família e Sucessões, Previdenciária, Criminal, Empresarial, Tributária, Imobiliária e Direito Militar, o que me permite oferecer uma assessoria jurídica completa, integrada e segura, tanto para pessoas físicas quanto jurídicas.
+              Possuo experiência nas áreas Trabalhista, Cível, Família e Sucessões, Previdenciária, Criminal, Empresarial, Imobiliária e Direito Militar, o que me permite oferecer uma assessoria jurídica completa, integrada e segura, tanto para pessoas físicas quanto jurídicas.
             </p>
             <p>
               Acredito que advocacia vai muito além de petições e processos: trata-se de orientar, proteger direitos e oferecer soluções jurídicas claras, com transparência e responsabilidade.
