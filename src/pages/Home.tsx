@@ -58,7 +58,7 @@ export default function Home() {
               </motion.h1>
 
               <motion.p
-                className="mt-6 max-w-2xl text-sm leading-relaxed text-primary-foreground/80 sm:text-base"
+                className="mt-6 max-w-1xl text-sm leading-relaxed text-primary-foreground/80 sm:text-base"
                 variants={fadeUp}
                 initial={reduce ? false : "hidden"}
                 animate={reduce ? false : "visible"}
