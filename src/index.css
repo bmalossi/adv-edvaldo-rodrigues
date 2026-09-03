@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Libre+Baskerville:wght@400;700&display=swap");
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,88 +9,87 @@ All colors MUST be HSL.
 @layer base {
   :root {
     /* Brand palette (HSL)
-       Navy: #1C3A57, Gold: #C9A961, Petrol: #2C5F7C, Dark: #0F1419, Bg: #F5F5F5
+       Navy: #0D1B30 (217 57% 12%)
+       Navy Deep: #0B1526 (218 55% 10%)
+       Navy Dark: #081220 (218 60% 8%)
+       Gold: #C9A961 (42 50% 58%)
+       Gold Dark: #B8935A (37 40% 54%)
+       Background: #FAF9F6 (45 20% 98%)
+       Card: #FFFFFF (0 0% 100%)
+       Foreground: #0D1B30 (217 57% 12%)
     */
-    --background: 0 0% 96%;
-    --foreground: 210 30% 10%;
+    --background: 45 20% 98%;
+    --foreground: 217 57% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 25% 12%;
+    --card-foreground: 217 57% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 25% 12%;
+    --popover-foreground: 217 57% 12%;
 
-    /* Azul padrão solicitado: #2c3e50 */
-    --primary: 210 29% 24%;
-    --primary-foreground: 210 40% 98%;
+    /* Azul padrão institucional: #0D1B30 */
+    --primary: 217 57% 12%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 42 46% 58%;
-    --secondary-foreground: 210 29% 10%;
+    /* Dourado padrão institucional: #C9A961 */
+    --secondary: 42 50% 58%;
+    --secondary-foreground: 217 57% 12%;
 
-    --muted: 210 20% 92%;
-    --muted-foreground: 215 14% 35%;
+    --muted: 214 20% 95%;
+    --muted-foreground: 215 16% 47%;
 
-    /* Premium surfaces (pós-hero) — institucional azul, bem sutil */
-    --surface: 210 26% 97%;
-    --surface-2: 210 22% 94%;
-    /* Gold highlight (detalhe, não massa) */
-    --highlight: 42 55% 90%;
+    /* Premium surfaces */
+    --surface: 0 0% 100%;
+    --surface-2: 45 20% 98%;
+    --highlight: 42 50% 95%;
 
-    /* Accent (brilho) — puxa para o ciano/azul do logo */
-    --accent: 190 75% 38%;
-    --accent-foreground: 210 40% 98%;
+    /* Accent Dourado */
+    --accent: 42 50% 58%;
+    --accent-foreground: 217 57% 12%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 210 18% 86%;
-    --input: 210 18% 86%;
-    --ring: 207 51% 23%;
+    --border: 214 25% 90%;
+    --input: 214 25% 90%;
+    --ring: 42 50% 58%;
 
-    /* Slightly more premium rounding */
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    /* Premium shadows (semantic tokens) */
-    --shadow-card: 0 10px 26px -18px hsl(var(--foreground) / 0.28);
-    --shadow-card-hover: 0 18px 40px -22px hsl(var(--foreground) / 0.34);
+    /* Sombras refinadas */
+    --shadow-card: 0 4px 20px -4px rgba(13, 27, 48, 0.08);
+    --shadow-card-hover: 0 12px 28px -6px rgba(13, 27, 48, 0.15);
 
-    /* Gradients (areas de atuação) — padronizado em variações do azul #2c3e50 */
-    --grad-civil-from: 210 29% 20%;
-    --grad-civil-to: 210 29% 28%;
+    /* Gradients de áreas de atuação */
+    --grad-civil-from: 217 57% 14%;
+    --grad-civil-to: 217 50% 22%;
 
-    --grad-previdenciario-from: 210 29% 22%;
-    --grad-previdenciario-to: 210 29% 30%;
+    --grad-previdenciario-from: 217 57% 16%;
+    --grad-previdenciario-to: 217 50% 24%;
 
-    --grad-trabalhista-from: 210 29% 18%;
-    --grad-trabalhista-to: 210 29% 26%;
+    --grad-trabalhista-from: 217 57% 12%;
+    --grad-trabalhista-to: 217 50% 20%;
 
-    --grad-criminal-from: 210 29% 16%;
-    --grad-criminal-to: 210 29% 24%;
+    --grad-criminal-from: 217 57% 10%;
+    --grad-criminal-to: 217 50% 18%;
 
-    --grad-familia-from: 210 29% 24%;
-    --grad-familia-to: 210 29% 32%;
+    --grad-familia-from: 217 57% 16%;
+    --grad-familia-to: 217 50% 25%;
 
-    --grad-empresarial-from: 210 29% 12%;
-    --grad-empresarial-to: 210 29% 20%;
+    --grad-empresarial-from: 217 57% 10%;
+    --grad-empresarial-to: 217 50% 18%;
 
-    --grad-militar-from: 210 29% 8%;
-    --grad-militar-to: 210 29% 16%;
+    --grad-militar-from: 217 57% 8%;
+    --grad-militar-to: 217 50% 16%;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 218 55% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 42 50% 58%;
+    --sidebar-primary-foreground: 217 57% 12%;
+    --sidebar-accent: 217 50% 18%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 217 40% 20%;
+    --sidebar-ring: 42 50% 58%;
   }
 
   .dark {
@@ -152,6 +149,35 @@ All colors MUST be HSL.
 
 @layer utilities {
 
+  /* Utilitários de cores da nova identidade */
+  .text-gold {
+    color: #C9A961;
+  }
+
+  .text-gold-light {
+    color: #DFC78E;
+  }
+
+  .bg-gold {
+    background-color: #C9A961;
+  }
+
+  .border-gold {
+    border-color: #C9A961;
+  }
+
+  .bg-navy {
+    background-color: #0D1B30;
+  }
+
+  .bg-navy-deep {
+    background-color: #0B1526;
+  }
+
+  .bg-navy-dark {
+    background-color: #081220;
+  }
+
   /* Premium borders (subtle, consistent) */
   .border-premium {
     @apply border border-border/60;
@@ -175,11 +201,9 @@ All colors MUST be HSL.
   }
 
   .bg-hero {
-    background-image:
-      radial-gradient(1200px 800px at 18% 18%, hsl(var(--accent) / 0.14), transparent 58%),
-      radial-gradient(900px 700px at 85% 25%, hsl(var(--secondary) / 0.10), transparent 62%),
-      /* Vignette + legibilidade do texto (mais forte à esquerda) */
-      linear-gradient(90deg, hsl(var(--foreground) / 0.86), hsl(var(--foreground) / 0.62) 42%, hsl(var(--foreground) / 0.28) 72%, transparent);
+    background: radial-gradient(1000px 600px at 75% 35%, rgba(201, 169, 97, 0.08), transparent 60%),
+                radial-gradient(800px 500px at 20% 20%, rgba(13, 27, 48, 0.4), transparent 60%),
+                #0D1B30;
   }
 
   .bg-hero-photo {

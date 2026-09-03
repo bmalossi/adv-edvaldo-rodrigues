@@ -1,129 +1,189 @@
-import { NavLink } from "@/components/NavLink";
+import { Link } from "react-router-dom";
 import { site } from "@/config/site";
-import { Facebook, Instagram, Linkedin, Mail, MapPin, Phone } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Instagram, Linkedin, Mail, MapPin, Phone } from "lucide-react";
 import { BrandLogo } from "@/components/site/BrandLogo";
 
-const socialLinks = [
-  { key: "instagram", label: "Instagram", icon: Instagram, href: site.social.instagram },
-  { key: "linkedin", label: "LinkedIn", icon: Linkedin, href: site.social.linkedin },
-  { key: "facebook", label: "Facebook", icon: Facebook, href: site.social.facebook },
-] as const;
+// Ícone do WhatsApp customizado ou do Lucide
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+  );
+}
 
 export function Footer() {
-  return (
-    <footer className="mt-16 border-t bg-background">
-      <div className="container py-12">
-        <div className="grid gap-10 md:grid-cols-3">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="grid size-10 place-items-center rounded-xl bg-card">
-                <BrandLogo sizeClassName="h-9" className="max-w-[36px]" />
-              </div>
-              <div>
-                <p className="font-serif text-lg font-semibold leading-tight">{site.brand.name}</p>
-                <p className="text-sm text-muted-foreground">{site.brand.subtitle}</p>
-              </div>
-            </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Advocacia ética e comprometida, oferecendo atendimento personalizado para suas demandas jurídicas.
-            </p>
+  const currentYear = new Date().getFullYear();
 
-            <div className="mt-5 flex gap-3">
-              {socialLinks
-                .filter((s) => !!s.href)
-                .map((s) => {
-                  const Icon = s.icon;
-                  return (
-                    <a
-                      key={s.key}
-                      href={s.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={cn(
-                        "grid size-10 place-items-center rounded-lg border bg-card text-muted-foreground transition-colors hover:text-foreground",
-                      )}
-                      aria-label={s.label}
-                    >
-                      <Icon className="size-5" aria-hidden="true" />
-                    </a>
-                  );
-                })}
-            </div>
+  return (
+    <footer className="bg-[#0B1526] text-white border-t border-[#162846]">
+      <div className="container py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+          {/* Coluna 1: Identidade Institucional */}
+          <div className="space-y-4">
+            <Link to="/" className="inline-block transition-opacity hover:opacity-90">
+              <BrandLogo variant="dark" />
+            </Link>
+            <p className="text-xs text-slate-300 leading-relaxed max-w-xs">
+              Assessoria jurídica estratégica para empresas e pessoas físicas, com atendimento focado em ética, transparência e segurança jurídica.
+            </p>
           </div>
 
-          <nav aria-label="Links rápidos">
-            <p className="font-serif text-base font-semibold">Links rápidos</p>
-            <ul className="mt-4 space-y-2 text-sm">
-              <li>
-                <NavLink to="/" className="text-muted-foreground hover:text-foreground">
-                  Home
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/areas-de-atuacao" className="text-muted-foreground hover:text-foreground">
-                  Áreas de atuação
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/calculadora" className="text-muted-foreground hover:text-foreground">
-                  Calculadora
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/sobre" className="text-muted-foreground hover:text-foreground">
-                  Sobre
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/contato" className="text-muted-foreground hover:text-foreground">
-                  Contato
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/termos-de-uso" className="text-muted-foreground hover:text-foreground">
-                  Termos de uso
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/politica-de-privacidade" className="text-muted-foreground hover:text-foreground">
-                  Política de privacidade
-                </NavLink>
-              </li>
-            </ul>
-          </nav>
-
+          {/* Coluna 2: Links Rápidos */}
           <div>
-            <p className="font-serif text-base font-semibold">Contato</p>
-            <ul className="mt-4 space-y-3 text-sm">
-              <li className="flex items-start gap-3 text-muted-foreground">
-                <Phone className="mt-0.5 size-5 text-accent" aria-hidden="true" />
-                <div>
-                  <p className="font-medium text-foreground">Telefone</p>
-                  <p>{site.contact.phoneDisplay}</p>
-                </div>
+            <p className="font-serif text-base font-semibold text-white tracking-wide mb-4">
+              Links rápidos
+            </p>
+            <ul className="space-y-2.5 text-xs text-slate-300">
+              <li>
+                <Link to="/" className="hover:text-[#C9A961] transition-colors">
+                  Início
+                </Link>
               </li>
-              <li className="flex items-start gap-3 text-muted-foreground">
-                <Mail className="mt-0.5 size-5 text-accent" aria-hidden="true" />
-                <div>
-                  <p className="font-medium text-foreground">E-mail</p>
-                  <p>{site.contact.email}</p>
-                </div>
+              <li>
+                <a href="/#empresas" className="hover:text-[#C9A961] transition-colors">
+                  Empresas
+                </a>
               </li>
-              <li className="flex items-start gap-3 text-muted-foreground">
-                <MapPin className="mt-0.5 size-5 text-accent" aria-hidden="true" />
-                <div>
-                  <p className="font-medium text-foreground">Endereço</p>
-                  <p>{site.contact.addressLine}</p>
-                </div>
+              <li>
+                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                  Áreas de Atuação
+                </Link>
+              </li>
+              <li>
+                <Link to="/calculadora" className="hover:text-[#C9A961] transition-colors">
+                  Conteúdo Jurídico
+                </Link>
+              </li>
+              <li>
+                <Link to="/sobre" className="hover:text-[#C9A961] transition-colors">
+                  Sobre
+                </Link>
+              </li>
+              <li>
+                <Link to="/contato" className="hover:text-[#C9A961] transition-colors">
+                  Contato
+                </Link>
               </li>
             </ul>
+          </div>
+
+          {/* Coluna 3: Áreas de Atuação */}
+          <div>
+            <p className="font-serif text-base font-semibold text-white tracking-wide mb-4">
+              Áreas
+            </p>
+            <ul className="space-y-2.5 text-xs text-slate-300">
+              <li>
+                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                  Empresarial
+                </Link>
+              </li>
+              <li>
+                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                  Civil
+                </Link>
+              </li>
+              <li>
+                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                  Família
+                </Link>
+              </li>
+              <li>
+                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                  Trabalhista
+                </Link>
+              </li>
+              <li>
+                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                  Criminal
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Coluna 4: Contato & Redes */}
+          <div>
+            <p className="font-serif text-base font-semibold text-white tracking-wide mb-4">
+              Contato
+            </p>
+            <ul className="space-y-3.5 text-xs text-slate-300">
+              <li className="flex items-center gap-2.5">
+                <Phone className="size-4 text-[#C9A961] shrink-0" aria-hidden="true" />
+                <a
+                  href={`tel:${site.contact.phoneDisplay.replace(/\D/g, "")}`}
+                  className="hover:text-[#C9A961] transition-colors"
+                >
+                  {site.contact.phoneDisplay}
+                </a>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Mail className="size-4 text-[#C9A961] shrink-0" aria-hidden="true" />
+                <a
+                  href={`mailto:${site.contact.email}`}
+                  className="hover:text-[#C9A961] transition-colors break-all"
+                >
+                  {site.contact.email}
+                </a>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <MapPin className="size-4 text-[#C9A961] shrink-0 mt-0.5" aria-hidden="true" />
+                <span>Praia Grande, SP — Atendimento presencial e online</span>
+              </li>
+            </ul>
+
+            {/* Ícones das Redes Sociais */}
+            <div className="mt-5 flex items-center gap-3">
+              {site.social.instagram && (
+                <a
+                  href={site.social.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="grid size-9 place-items-center rounded-full border border-[#C9A961]/40 bg-[#C9A961]/10 text-[#C9A961] hover:bg-[#C9A961] hover:text-[#0D1B30] transition-all duration-200"
+                  aria-label="Instagram"
+                >
+                  <Instagram className="size-4" aria-hidden="true" />
+                </a>
+              )}
+              {site.social.linkedin && (
+                <a
+                  href={site.social.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="grid size-9 place-items-center rounded-full border border-[#C9A961]/40 bg-[#C9A961]/10 text-[#C9A961] hover:bg-[#C9A961] hover:text-[#0D1B30] transition-all duration-200"
+                  aria-label="LinkedIn"
+                >
+                  <Linkedin className="size-4" aria-hidden="true" />
+                </a>
+              )}
+              <a
+                href={`https://wa.me/${site.contact.whatsappNumber}?text=${encodeURIComponent(
+                  "Olá! Gostaria de falar com o escritório Edvaldo Rodrigues Ferreira Advocacia."
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="grid size-9 place-items-center rounded-full border border-[#C9A961]/40 bg-[#C9A961]/10 text-[#C9A961] hover:bg-[#C9A961] hover:text-[#0D1B30] transition-all duration-200"
+                aria-label="WhatsApp"
+              >
+                <WhatsAppIcon className="size-4" />
+              </a>
+            </div>
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t pt-6 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-          <p>Guiado por Deus e desenvolvido por <a href="https://automab.dev" target="_blank" rel="noopener noreferrer">Automab.dev</a> © {new Date().getFullYear()} {site.brand.name} {site.brand.subtitle}. Todos os direitos reservados.</p>
-          <p>{site.brand.oab}</p>
+        {/* Linha Final de Copyright */}
+        <div className="mt-14 pt-8 border-t border-[#162846] flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+          <p>
+            © {currentYear} Edvaldo Rodrigues Ferreira Sociedade Individual de Advocacia. Todos os direitos reservados.
+          </p>
+          <div className="flex items-center gap-6">
+            <Link to="/politica-de-privacidade" className="hover:text-[#C9A961] transition-colors">
+              Política de Privacidade
+            </Link>
+            <Link to="/termos-de-uso" className="hover:text-[#C9A961] transition-colors">
+              Termos de Uso
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

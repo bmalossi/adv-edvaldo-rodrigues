@@ -15,9 +15,21 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Arial", "Noto Sans", "sans-serif"],
-        serif: ["Libre Baskerville", "ui-serif", "Georgia", "Cambria", "Times New Roman", "Times", "serif"],
+        serif: ["'Cormorant Garamond'", "Georgia", "Cambria", "Times New Roman", "Times", "serif"],
       },
       colors: {
+        navy: {
+          DEFAULT: "#0D1B30",
+          dark: "#081220",
+          deep: "#0B1526",
+          light: "#162846",
+        },
+        gold: {
+          DEFAULT: "#C9A961",
+          light: "#DFC78E",
+          dark: "#B8935A",
+          muted: "#E4D4B1",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

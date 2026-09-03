@@ -19,7 +19,7 @@ export default function Calculadora() {
     return (
         <div className="min-h-screen bg-surface pb-24">
             {/* Hero Section */}
-            <section className="relative overflow-hidden bg-slate-950">
+            <section className="relative overflow-hidden bg-[#0D1B30]">
                 <div className="relative">
                     <div className="absolute inset-0 bg-calculadora-photo opacity-60" aria-hidden="true" />
                     <div className="absolute inset-0 bg-hero" aria-hidden="true" />

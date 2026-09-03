@@ -3,119 +3,155 @@ import { site } from "@/config/site";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Phone, Settings } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { BrandLogo } from "@/components/site/BrandLogo";
-import { useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 const links = [
-  { to: "/", label: "Home" },
-  { to: "/areas-de-atuacao", label: "Áreas" },
-  { to: "/calculadora", label: "Calculadora Trabalhista" },
+  { to: "/", label: "Início" },
+  { to: "/#empresas", label: "Empresas" },
+  { to: "/areas-de-atuacao", label: "Áreas de Atuação" },
+  { to: "/calculadora", label: "Conteúdo Jurídico" },
   { to: "/sobre", label: "Sobre" },
   { to: "/contato", label: "Contato" },
 ] as const;
 
 export function Navbar() {
-  const { pathname } = useLocation();
-  const isTranslucent = pathname === "/" || pathname === "/calculadora";
-
+  const { pathname, hash } = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 12);
+    const onScroll = () => setIsScrolled(window.scrollY > 16);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Rolagem suave para links com hash (ex: /#empresas)
+  const handleNavClick = (to: string) => {
+    if (to.startsWith("/#")) {
+      const id = to.replace("/#", "");
+      const elem = document.getElementById(id);
+      if (elem) {
+        elem.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
+
   return (
-    <header className="fixed top-0 z-50 w-full bg-transparent">
+    <header className="fixed top-0 z-50 w-full transition-all duration-300">
       <div
-        className={
-          isTranslucent
-            ? isScrolled
-              ? "border-b border-primary-foreground/10 bg-foreground/45 backdrop-blur-md supports-[backdrop-filter]:bg-foreground/35"
-              : "border-b border-transparent bg-gradient-to-b from-foreground/55 to-transparent backdrop-blur-sm"
-            : "border-b border-border/60 bg-background/75 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/55"
-        }
+        className={cn(
+          "w-full transition-all duration-300 border-b",
+          isScrolled
+            ? "bg-[#0D1B30]/95 backdrop-blur-md border-[#162846] shadow-lg shadow-black/20"
+            : "bg-[#0D1B30] border-[#162846]/60"
+        )}
       >
         <div className="container flex h-20 items-center justify-between">
-          <NavLink to="/" className="flex items-center gap-3">
-            <div
-              className={
-                isTranslucent
-                  ? "grid size-10 place-items-center rounded-xl border border-primary-foreground/10 bg-background/5"
-                  : "grid size-10 place-items-center rounded-xl border border-border/60 bg-card/60 backdrop-blur"
-              }
-            >
-              <BrandLogo sizeClassName="h-9" className="max-w-[36px]" />
-            </div>
-          </NavLink>
+          {/* Logo institucional */}
+          <Link to="/" className="flex items-center gap-3 transition-opacity hover:opacity-90">
+            <BrandLogo variant="dark" />
+          </Link>
 
-          <nav className="hidden items-center gap-8 md:flex" aria-label="Navegação principal">
-            {links.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                className={
-                  isTranslucent
-                    ? "text-sm font-medium text-primary-foreground/80 transition-colors hover:text-primary-foreground"
-                    : "text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
-                }
-                activeClassName={isTranslucent ? "text-primary-foreground" : "text-foreground"}
-              >
-                {l.label}
-              </NavLink>
-            ))}
+          {/* Menu central desktop */}
+          <nav className="hidden items-center gap-7 lg:flex" aria-label="Navegação principal">
+            {links.map((l) => {
+              const isEmpresas = l.to === "/#empresas";
+              const isActive = isEmpresas
+                ? hash === "#empresas"
+                : pathname === l.to;
+
+              return (
+                <NavLink
+                  key={l.to}
+                  to={l.to}
+                  onClick={() => handleNavClick(l.to)}
+                  className={cn(
+                    "text-xs uppercase tracking-wider font-medium transition-colors py-2 relative",
+                    isActive
+                      ? "text-[#C9A961] font-semibold after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-[#C9A961]"
+                      : "text-slate-200 hover:text-[#C9A961]"
+                  )}
+                >
+                  {l.label}
+                </NavLink>
+              );
+            })}
           </nav>
 
-          <div className="flex items-center gap-3">
+          {/* CTA e Ações da Direita */}
+          <div className="flex items-center gap-4">
             <Button
               asChild
-              className="hidden md:inline-flex"
+              className="hidden sm:inline-flex bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-semibold text-xs uppercase tracking-wider h-10 px-5 rounded-md shadow-sm transition-all duration-200"
             >
-              <NavLink to="/contato">
-                <Phone className="size-4" aria-hidden="true" />
-                Consulta Agora
-              </NavLink>
+              <a
+                href={`https://wa.me/${site.contact.whatsappNumber}?text=${encodeURIComponent(
+                  "Olá! Gostaria de falar com o escritório Edvaldo Rodrigues Ferreira Advocacia."
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Phone className="size-3.5 fill-current" aria-hidden="true" />
+                Fale com o escritório
+              </a>
             </Button>
 
             <Link
               to="/admin"
-              className="text-primary-foreground/20 hover:text-amber-500 transition-colors"
+              className="text-slate-400/40 hover:text-[#C9A961] transition-colors p-1"
               title="Acesso Administrativo"
             >
               <Settings className="size-4" />
             </Link>
 
+            {/* Menu Mobile */}
             <Sheet>
               <SheetTrigger asChild>
                 <Button
-                  variant={isTranslucent ? "ghost" : "outline"}
+                  variant="ghost"
                   size="icon"
-                  className={isTranslucent ? "md:hidden text-primary-foreground hover:bg-background/10" : "md:hidden"}
-                  aria-label="Abrir menu"
+                  className="lg:hidden text-white hover:bg-white/10"
+                  aria-label="Abrir menu de navegação"
                 >
-                  <Menu className="size-5" aria-hidden="true" />
+                  <Menu className="size-6" aria-hidden="true" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[320px]">
-                <SheetHeader>
-                  <SheetTitle className="font-serif">Menu</SheetTitle>
+              <SheetContent side="right" className="w-[300px] bg-[#0D1B30] border-l border-[#162846] text-white">
+                <SheetHeader className="border-b border-[#162846] pb-4">
+                  <SheetTitle className="text-left font-serif text-white">
+                    <BrandLogo variant="dark" />
+                  </SheetTitle>
                 </SheetHeader>
-                <div className="mt-6 flex flex-col gap-3">
+                <div className="mt-6 flex flex-col gap-2">
                   {links.map((l) => (
-                    <Button key={l.to} variant="ghost" asChild className="justify-start">
-                      <NavLink to={l.to}>{l.label}</NavLink>
+                    <Button
+                      key={l.to}
+                      variant="ghost"
+                      asChild
+                      className="justify-start text-sm uppercase tracking-wider text-slate-200 hover:text-[#C9A961] hover:bg-white/5"
+                    >
+                      <NavLink to={l.to} onClick={() => handleNavClick(l.to)}>
+                        {l.label}
+                      </NavLink>
                     </Button>
                   ))}
-                  <Button asChild className="mt-2">
-                    <NavLink to="/contato">
-                      <Phone className="size-4" aria-hidden="true" />
-                      Consulta
-                    </NavLink>
-                  </Button>
+                  <div className="pt-4 mt-2 border-t border-[#162846]">
+                    <Button asChild className="w-full bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-semibold text-xs uppercase tracking-wider">
+                      <a
+                        href={`https://wa.me/${site.contact.whatsappNumber}?text=${encodeURIComponent(
+                          "Olá! Gostaria de falar com o escritório Edvaldo Rodrigues Ferreira Advocacia."
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Phone className="size-4 fill-current mr-2" aria-hidden="true" />
+                        Fale com o escritório
+                      </a>
+                    </Button>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
