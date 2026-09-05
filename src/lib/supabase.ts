@@ -80,3 +80,15 @@ export type ConfiguracoesAdvogado = {
     timezone: string
     updated_at: string
 }
+
+// ─── CRM Jurídico ─────────────────────────────────────────────
+export type {
+    PerfilUsuario,
+    PapelUsuario,
+    Cliente,
+    StatusCicloCliente,
+    TipoPessoa,
+    VisibilidadeRegistro,
+    ResultadoValidacao,
+    ResultadoTransicao,
+} from '@/domain/crm/cliente'

@@ -14,6 +14,8 @@ import Contato from "./pages/Contato";
 import PoliticaDePrivacidade from "./pages/PoliticaDePrivacidade";
 import TermosDeUso from "./pages/TermosDeUso";
 import Calculadora from "./pages/Calculadora";
+import ConteudoJuridico from "./pages/ConteudoJuridico";
+import ArtigoDetalhe from "./pages/ArtigoDetalhe";
 import NotFound from "./pages/NotFound";
 
 // Área administrativa
@@ -26,6 +28,12 @@ import ProcessoNovo from "./pages/admin/ProcessoNovo";
 import ProcessoDetalhe from "./pages/admin/ProcessoDetalhe";
 import Configuracoes from "./pages/admin/Configuracoes";
 import Notificacoes from "./pages/admin/Notificacoes";
+import ArtigosLista from "./pages/admin/ArtigosLista";
+import ArtigoEditor from "./pages/admin/ArtigoEditor";
+import BancoDeImagens from "./pages/admin/BancoDeImagens";
+import Clientes from "./pages/admin/Clientes";
+import ClienteForm from "./pages/admin/ClienteForm";
+import ClienteDetalhe from "./pages/admin/ClienteDetalhe";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +53,8 @@ const App = () => (
             <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidade />} />
             <Route path="/termos-de-uso" element={<TermosDeUso />} />
             <Route path="/calculadora" element={<Calculadora />} />
+            <Route path="/conteudo-juridico" element={<ConteudoJuridico />} />
+            <Route path="/conteudo-juridico/:slug" element={<ArtigoDetalhe />} />
           </Route>
 
           {/* ─── Autenticação ─── */}
@@ -107,6 +117,88 @@ const App = () => (
               <ProtectedRoute>
                 <AdminLayout>
                   <Notificacoes />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/artigos"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <ArtigosLista />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/artigos/novo"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <ArtigoEditor />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/artigos/:id/editar"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <ArtigoEditor />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/artigos/imagens"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <BancoDeImagens />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ─── CRM Jurídico (Issue #2) ─── */}
+          <Route
+            path="/admin/crm/clientes"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <Clientes />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/crm/clientes/novo"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <ClienteForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/crm/clientes/:id"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <ClienteDetalhe />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/crm/clientes/:id/editar"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <ClienteForm />
                 </AdminLayout>
               </ProtectedRoute>
             }

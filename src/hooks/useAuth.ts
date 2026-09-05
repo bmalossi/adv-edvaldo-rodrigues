@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Session, User } from '@supabase/supabase-js'
-import { supabase, Advogado } from '@/lib/supabase'
+import { supabase, Advogado, PerfilUsuario, PapelUsuario } from '@/lib/supabase'
 
 type AuthState = {
     session: Session | null
     user: User | null
     advogado: Advogado | null
+    perfil: PerfilUsuario | null
+    papel: PapelUsuario
     loading: boolean
 }
 
@@ -14,6 +16,8 @@ export function useAuth() {
         session: null,
         user: null,
         advogado: null,
+        perfil: null,
+        papel: 'advogado',
         loading: true,
     })
 
@@ -30,7 +34,7 @@ export function useAuth() {
 
         const loadProfile = async (session: Session | null) => {
             if (!session?.user) {
-                if (mounted) setState({ session: null, user: null, advogado: null, loading: false })
+                if (mounted) setState({ session: null, user: null, advogado: null, perfil: null, papel: 'advogado', loading: false })
                 return
             }
 
@@ -38,14 +42,30 @@ export function useAuth() {
             isFetching = true
 
             try {
-                const { data, error } = await supabase
+                // Tenta carregar perfil da tabela perfis (RBAC CRM)
+                let perfilCarregado: PerfilUsuario | null = null
+                let papelResolvido: PapelUsuario = 'advogado'
+
+                const { data: perfilData } = await supabase
+                    .from('perfis')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .maybeSingle()
+
+                if (perfilData) {
+                    perfilCarregado = perfilData as PerfilUsuario
+                    papelResolvido = perfilData.papel || 'advogado'
+                }
+
+                // Carrega advogado para compatibilidade com JusTrack
+                const { data: advData, error } = await supabase
                     .from('advogados')
                     .select('*')
                     .eq('user_id', session.user.id)
                     .single()
 
                 if (error && error.code === 'PGRST116') {
-                    // Tenta auto-criar
+                    // Tenta auto-criar registro de advogado se inexistente
                     const { data: newAdvogado, error: insertError } = await supabase
                         .from('advogados')
                         .insert({
@@ -56,14 +76,32 @@ export function useAuth() {
                         .select()
                         .single()
 
-                    if (mounted) setState({ session, user: session.user, advogado: insertError ? null : newAdvogado, loading: false })
+                    if (mounted) {
+                        setState({
+                            session,
+                            user: session.user,
+                            advogado: insertError ? null : newAdvogado,
+                            perfil: perfilCarregado,
+                            papel: papelResolvido,
+                            loading: false
+                        })
+                    }
                     return
                 }
 
-                if (mounted) setState({ session, user: session.user, advogado: data || null, loading: false })
+                if (mounted) {
+                    setState({
+                        session,
+                        user: session.user,
+                        advogado: advData || null,
+                        perfil: perfilCarregado,
+                        papel: papelResolvido,
+                        loading: false
+                    })
+                }
             } catch (err) {
                 console.error('[useAuth] Exceção no loadProfile:', err)
-                if (mounted) setState({ session, user: session.user, advogado: null, loading: false })
+                if (mounted) setState({ session, user: session.user, advogado: null, perfil: null, papel: 'advogado', loading: false })
             } finally {
                 isFetching = false
             }
