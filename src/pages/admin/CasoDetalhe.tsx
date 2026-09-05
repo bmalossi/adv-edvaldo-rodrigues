@@ -31,6 +31,7 @@ import {
   TIPOS_HONORARIO_CONFIG,
 } from '@/domain/crm/financeiro';
 import { ModalGerarMinuta } from '@/components/admin/ModalGerarMinuta';
+import { PainelDocumentosCaso } from '@/components/admin/PainelDocumentosCaso';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -532,6 +533,9 @@ export default function CasoDetalhe() {
               )}
             </div>
           ) : null}
+
+          {/* Módulo de Documentos e Google Drive (Issue #8) */}
+          <PainelDocumentosCaso caso={caso} cliente={cliente} />
         </div>
 
         {/* Coluna 3: Cliente Vinculado & Governança */}

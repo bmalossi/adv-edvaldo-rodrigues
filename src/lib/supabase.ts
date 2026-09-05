@@ -121,3 +121,8 @@ export type {
     CategoriaTemplate,
     VariaveisMinuta,
 } from '@/domain/crm/minuta'
+
+export type {
+    DocumentoCaso,
+    TipoDocumentoCaso,
+} from '@/domain/crm/drive'
