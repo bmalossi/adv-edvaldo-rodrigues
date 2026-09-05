@@ -38,6 +38,8 @@ import FunilClientes from "./pages/admin/FunilClientes";
 import Casos from "./pages/admin/Casos";
 import CasoForm from "./pages/admin/CasoForm";
 import CasoDetalhe from "./pages/admin/CasoDetalhe";
+import Agenda from "./pages/admin/Agenda";
+import PendenciaForm from "./pages/admin/PendenciaForm";
 
 const queryClient = new QueryClient();
 
@@ -255,6 +257,28 @@ const App = () => (
               <ProtectedRoute>
                 <AdminLayout>
                   <CasoForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Rotas de Agenda & Prazos (Issue #6) */}
+          <Route
+            path="/admin/crm/agenda"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <Agenda />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/crm/agenda/novo"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <PendenciaForm />
                 </AdminLayout>
               </ProtectedRoute>
             }

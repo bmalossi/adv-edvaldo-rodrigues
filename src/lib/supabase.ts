@@ -109,3 +109,9 @@ export type {
     ContratoFinanceiro,
     TipoHonorario,
 } from '@/domain/crm/financeiro'
+
+export type {
+    PendenciaCRM,
+    TipoPendencia,
+    StatusPendencia,
+} from '@/domain/crm/agenda'
