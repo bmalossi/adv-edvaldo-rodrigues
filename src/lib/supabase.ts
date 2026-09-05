@@ -97,3 +97,10 @@ export type {
     InteracaoCliente,
     TipoInteracao,
 } from '@/domain/crm/interacao'
+
+export type {
+    Caso,
+    TipoDemanda,
+    StatusCaso,
+    CasoColaborador,
+} from '@/domain/crm/caso'

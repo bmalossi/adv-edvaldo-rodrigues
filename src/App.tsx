@@ -35,6 +35,9 @@ import Clientes from "./pages/admin/Clientes";
 import ClienteForm from "./pages/admin/ClienteForm";
 import ClienteDetalhe from "./pages/admin/ClienteDetalhe";
 import FunilClientes from "./pages/admin/FunilClientes";
+import Casos from "./pages/admin/Casos";
+import CasoForm from "./pages/admin/CasoForm";
+import CasoDetalhe from "./pages/admin/CasoDetalhe";
 
 const queryClient = new QueryClient();
 
@@ -210,6 +213,48 @@ const App = () => (
               <ProtectedRoute>
                 <AdminLayout>
                   <ClienteForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Rotas de Casos (Issue #4) */}
+          <Route
+            path="/admin/crm/casos"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <Casos />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/crm/casos/novo"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <CasoForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/crm/casos/:id"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <CasoDetalhe />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/crm/casos/:id/editar"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <CasoForm />
                 </AdminLayout>
               </ProtectedRoute>
             }
