@@ -34,6 +34,7 @@ import BancoDeImagens from "./pages/admin/BancoDeImagens";
 import Clientes from "./pages/admin/Clientes";
 import ClienteForm from "./pages/admin/ClienteForm";
 import ClienteDetalhe from "./pages/admin/ClienteDetalhe";
+import FunilClientes from "./pages/admin/FunilClientes";
 
 const queryClient = new QueryClient();
 
@@ -162,7 +163,17 @@ const App = () => (
             }
           />
 
-          {/* ─── CRM Jurídico (Issue #2) ─── */}
+          {/* ─── CRM Jurídico ─── */}
+          <Route
+            path="/admin/crm/funil"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <FunilClientes />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/admin/crm/clientes"
             element={

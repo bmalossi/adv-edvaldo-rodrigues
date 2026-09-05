@@ -92,3 +92,8 @@ export type {
     ResultadoValidacao,
     ResultadoTransicao,
 } from '@/domain/crm/cliente'
+
+export type {
+    InteracaoCliente,
+    TipoInteracao,
+} from '@/domain/crm/interacao'

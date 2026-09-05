@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { BrandLogo } from '@/components/site/BrandLogo'
 
 const crmNavItems = [
+    { to: '/admin/crm/funil', label: 'Funil Comercial', icon: LayoutDashboard },
     { to: '/admin/crm/clientes', label: 'Clientes & Leads', icon: Users },
 ]
 

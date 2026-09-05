@@ -8,12 +8,31 @@ import {
   MapPin,
   Building2,
   User,
-  Trash2
+  Trash2,
+  MessageSquare,
+  PhoneCall,
+  Users as UsersIcon,
+  FileText,
+  Send,
+  Calendar,
+  Clock
 } from 'lucide-react';
-import { supabase, Cliente, StatusCicloCliente } from '@/lib/supabase';
+import {
+  supabase,
+  Cliente,
+  StatusCicloCliente,
+  InteracaoCliente,
+  TipoInteracao,
+} from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  validarNovaInteracao,
+  ordenarInteracoesCronologicamente,
+  TIPOS_INTERACAO_CONFIG,
+} from '@/domain/crm/interacao';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 const STATUS_CICLO_BADGES: Record<StatusCicloCliente, { label: string; color: string }> = {
   lead: { label: 'Lead / Prospecção', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
@@ -25,31 +44,112 @@ const STATUS_CICLO_BADGES: Record<StatusCicloCliente, { label: string; color: st
 export default function ClienteDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { papel } = useAuth();
+  const { user, papel } = useAuth();
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-    const fetchCliente = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('clientes')
-        .select('*')
-        .eq('id', id)
-        .is('deleted_at', null)
-        .single();
+  // Timeline de Interações
+  const [interacoes, setInteracoes] = useState<InteracaoCliente[]>([]);
+  const [loadingInteracoes, setLoadingInteracoes] = useState(true);
+  const [novaInteracaoTipo, setNovaInteracaoTipo] = useState<TipoInteracao>('whatsapp');
+  const [novaInteracaoDesc, setNovaInteracaoDesc] = useState('');
+  const [enviandoInteracao, setEnviandoInteracao] = useState(false);
 
-      if (error || !data) {
-        toast.error('Cliente não encontrado');
-        navigate('/admin/crm/clientes');
-      } else {
-        setCliente(data as Cliente);
-      }
-      setLoading(false);
-    };
+  const fetchCliente = async () => {
+    if (!id) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single();
+
+    if (error || !data) {
+      toast.error('Cliente não encontrado');
+      navigate('/admin/crm/clientes');
+    } else {
+      setCliente(data as Cliente);
+    }
+    setLoading(false);
+  };
+
+  const fetchInteracoes = async () => {
+    if (!id) return;
+    setLoadingInteracoes(true);
+    const { data, error } = await supabase
+      .from('interacoes_cliente')
+      .select('*, autor:perfis(nome)')
+      .eq('cliente_id', id)
+      .order('data_interacao', { ascending: false });
+
+    if (!error && data) {
+      const formatadas: InteracaoCliente[] = data.map((item: any) => ({
+        id: item.id,
+        cliente_id: item.cliente_id,
+        autor_id: item.autor_id,
+        autor_nome: item.autor?.nome || 'Colaborador',
+        tipo: item.tipo as TipoInteracao,
+        descricao: item.descricao,
+        data_interacao: item.data_interacao,
+        created_at: item.created_at,
+      }));
+      setInteracoes(ordenarInteracoesCronologicamente(formatadas));
+    }
+    setLoadingInteracoes(false);
+  };
+
+  useEffect(() => {
     fetchCliente();
-  }, [id, navigate]);
+    fetchInteracoes();
+  }, [id]);
+
+  const handleAdicionarInteracao = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cliente || !user) return;
+
+    const validacao = validarNovaInteracao({
+      tipo: novaInteracaoTipo,
+      descricao: novaInteracaoDesc,
+    });
+
+    if (!validacao.valido) {
+      toast.error(validacao.erros[0]);
+      return;
+    }
+
+    setEnviandoInteracao(true);
+    const { data, error } = await supabase
+      .from('interacoes_cliente')
+      .insert({
+        cliente_id: cliente.id,
+        autor_id: user.id,
+        tipo: novaInteracaoTipo,
+        descricao: novaInteracaoDesc.trim(),
+        data_interacao: new Date().toISOString(),
+      })
+      .select('*, autor:perfis(nome)')
+      .single();
+
+    if (error) {
+      toast.error('Erro ao registrar interação: ' + error.message);
+    } else if (data) {
+      const nova: InteracaoCliente = {
+        id: data.id,
+        cliente_id: data.cliente_id,
+        autor_id: data.autor_id,
+        autor_nome: data.autor?.nome || user.email || 'Eu',
+        tipo: data.tipo as TipoInteracao,
+        descricao: data.descricao,
+        data_interacao: data.data_interacao,
+        created_at: data.created_at,
+      };
+      setInteracoes((prev) => [nova, ...prev]);
+      setNovaInteracaoDesc('');
+      toast.success('Interação registrada no histórico!');
+    }
+    setEnviandoInteracao(false);
+  };
 
   const handleExcluirOuArquivar = async () => {
     if (!cliente) return;
@@ -90,6 +190,21 @@ export default function ClienteDetalhe() {
     }
   };
 
+  const renderIconeCanal = (tipo: TipoInteracao) => {
+    switch (tipo) {
+      case 'whatsapp':
+        return <MessageSquare className="w-4 h-4 text-green-400" />;
+      case 'ligacao':
+        return <PhoneCall className="w-4 h-4 text-blue-400" />;
+      case 'reuniao':
+        return <UsersIcon className="w-4 h-4 text-purple-400" />;
+      case 'email':
+        return <Mail className="w-4 h-4 text-amber-400" />;
+      default:
+        return <FileText className="w-4 h-4 text-slate-400" />;
+    }
+  };
+
   if (loading) {
     return <div className="p-12 text-center text-slate-400 italic animate-pulse">Carregando ficha...</div>;
   }
@@ -110,9 +225,10 @@ export default function ClienteDetalhe() {
             <div className="flex items-center gap-2">
               <h1 className="font-serif text-2xl font-bold text-white">{cliente.nome_razao_social}</h1>
               <span
-                className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                className={cn(
+                  'px-2.5 py-0.5 rounded-full text-xs font-bold border',
                   STATUS_CICLO_BADGES[cliente.status_ciclo]?.color
-                }`}
+                )}
               >
                 {STATUS_CICLO_BADGES[cliente.status_ciclo]?.label}
               </span>
@@ -144,13 +260,18 @@ export default function ClienteDetalhe() {
         </div>
       </div>
 
-      {/* Grid de Informações Principais */}
+      {/* Grid Principal */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Coluna 1 & 2: Dossiê e Qualificação */}
+        {/* Coluna 1 & 2: Qualificação + Timeline de Interações */}
         <div className="md:col-span-2 space-y-6">
+          {/* Dossiê de Qualificação */}
           <div className="bg-card border border-white/10 rounded-2xl p-6 shadow-sm space-y-4">
             <h2 className="text-sm font-bold text-white uppercase tracking-wider border-b border-white/10 pb-3 flex items-center gap-2">
-              {cliente.tipo_pessoa === 'PF' ? <User className="w-4 h-4 text-secondary" /> : <Building2 className="w-4 h-4 text-secondary" />}
+              {cliente.tipo_pessoa === 'PF' ? (
+                <User className="w-4 h-4 text-secondary" />
+              ) : (
+                <Building2 className="w-4 h-4 text-secondary" />
+              )}
               Qualificação Jurídica
             </h2>
 
@@ -207,18 +328,113 @@ export default function ClienteDetalhe() {
             </div>
           </div>
 
-          {/* Observações Iniciais */}
-          {cliente.observacoes_iniciais && (
-            <div className="bg-card border border-white/10 rounded-2xl p-6 shadow-sm space-y-2">
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Observações do Atendimento</h2>
-              <p className="text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">
-                {cliente.observacoes_iniciais}
-              </p>
+          {/* Timeline de Interações (Issue #3) */}
+          <div className="bg-card border border-white/10 rounded-2xl p-6 shadow-sm space-y-5">
+            <div className="border-b border-white/10 pb-3 flex items-center justify-between">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Clock className="w-4 h-4 text-secondary" />
+                Histórico & Timeline de Interações
+              </h2>
+              <span className="text-xs text-slate-400 font-mono">
+                {interacoes.length} registro(s)
+              </span>
             </div>
-          )}
+
+            {/* Formulário Rápido de Nova Interação */}
+            <form onSubmit={handleAdicionarInteracao} className="bg-white/[0.02] border border-white/10 rounded-xl p-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-slate-300">Canal:</span>
+                {(['whatsapp', 'ligacao', 'reuniao', 'email', 'nota_interna'] as TipoInteracao[]).map(
+                  (t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setNovaInteracaoTipo(t)}
+                      className={cn(
+                        'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5',
+                        novaInteracaoTipo === t
+                          ? 'bg-secondary text-primary border-secondary font-bold'
+                          : 'bg-slate-900/50 text-slate-400 border-white/10 hover:border-white/20'
+                      )}
+                    >
+                      {renderIconeCanal(t)}
+                      {TIPOS_INTERACAO_CONFIG[t].label}
+                    </button>
+                  )
+                )}
+              </div>
+
+              <textarea
+                required
+                rows={2}
+                value={novaInteracaoDesc}
+                onChange={(e) => setNovaInteracaoDesc(e.target.value)}
+                placeholder="Registrar anotação de ligação, WhatsApp, alinhamento ou consulta..."
+                className="w-full p-3 bg-slate-900/50 border border-white/10 rounded-xl text-white text-xs placeholder:text-slate-500 focus:border-secondary focus:outline-none"
+              />
+
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={enviandoInteracao || !novaInteracaoDesc.trim()}
+                  className="bg-cta-gold hover:opacity-90 text-primary font-bold rounded-xl text-xs flex items-center gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {enviandoInteracao ? 'Registrando...' : 'Adicionar ao Histórico'}
+                </Button>
+              </div>
+            </form>
+
+            {/* Lista Cronológica */}
+            {loadingInteracoes ? (
+              <div className="py-8 text-center text-slate-500 text-xs italic">
+                Carregando interações...
+              </div>
+            ) : interacoes.length === 0 ? (
+              <div className="py-8 text-center text-slate-500 text-xs italic">
+                Nenhuma interação registrada ainda. Registre a primeira anotação acima.
+              </div>
+            ) : (
+              <div className="space-y-3 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-white/10">
+                {interacoes.map((item) => (
+                  <div key={item.id} className="relative flex items-start gap-4 pl-8">
+                    <div className="absolute left-1.5 top-1 w-4 h-4 rounded-full bg-slate-900 border-2 border-secondary flex items-center justify-center -translate-x-1/2" />
+                    <div className="flex-1 bg-slate-900/50 border border-white/5 rounded-xl p-3.5 space-y-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              'px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center gap-1',
+                              TIPOS_INTERACAO_CONFIG[item.tipo]?.corBadge
+                            )}
+                          >
+                            {renderIconeCanal(item.tipo)}
+                            {TIPOS_INTERACAO_CONFIG[item.tipo]?.label}
+                          </span>
+                          <span className="text-slate-400 font-semibold">{item.autor_nome}</span>
+                        </div>
+                        <span className="text-slate-500 text-[11px]">
+                          {item.data_interacao
+                            ? new Date(item.data_interacao).toLocaleString('pt-BR', {
+                                dateStyle: 'short',
+                                timeStyle: 'short',
+                              })
+                            : '—'}
+                        </span>
+                      </div>
+                      <p className="text-slate-200 text-xs leading-relaxed whitespace-pre-wrap">
+                        {item.descricao}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Coluna 3: Contato & Metadados */}
+        {/* Coluna 3: Contato & Governança */}
         <div className="space-y-6">
           <div className="bg-card border border-white/10 rounded-2xl p-6 shadow-sm space-y-4">
             <h2 className="text-sm font-bold text-white uppercase tracking-wider border-b border-white/10 pb-3">
