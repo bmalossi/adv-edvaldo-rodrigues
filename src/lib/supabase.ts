@@ -104,3 +104,8 @@ export type {
     StatusCaso,
     CasoColaborador,
 } from '@/domain/crm/caso'
+
+export type {
+    ContratoFinanceiro,
+    TipoHonorario,
+} from '@/domain/crm/financeiro'
