@@ -42,10 +42,19 @@ CREATE INDEX IF NOT EXISTS idx_pendencias_data_vencimento ON public.pendencias_c
 CREATE INDEX IF NOT EXISTS idx_pendencias_caso_id ON public.pendencias_crm(caso_id);
 
 -- 4. Trigger updated_at
-CREATE OR REPLACE TRIGGER trg_pendencias_updated_at
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_pendencias_updated_at ON public.pendencias_crm;
+CREATE TRIGGER trg_pendencias_updated_at
     BEFORE UPDATE ON public.pendencias_crm
     FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE FUNCTION public.set_updated_at();
 
 -- 5. RLS
 ALTER TABLE public.pendencias_crm ENABLE ROW LEVEL SECURITY;

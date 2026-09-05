@@ -33,10 +33,19 @@ CREATE INDEX IF NOT EXISTS idx_templates_categoria ON public.templates_minutas(c
 CREATE INDEX IF NOT EXISTS idx_templates_ativo ON public.templates_minutas(ativo);
 
 -- 4. Trigger de updated_at
-CREATE OR REPLACE TRIGGER trg_templates_minutas_updated_at
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_templates_minutas_updated_at ON public.templates_minutas;
+CREATE TRIGGER trg_templates_minutas_updated_at
     BEFORE UPDATE ON public.templates_minutas
     FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE FUNCTION public.set_updated_at();
 
 -- 5. RLS
 ALTER TABLE public.templates_minutas ENABLE ROW LEVEL SECURITY;
