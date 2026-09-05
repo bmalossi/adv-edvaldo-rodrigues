@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -12,7 +12,8 @@ import {
   Lock,
   ExternalLink,
   Save,
-  CheckCircle2
+  CheckCircle2,
+  FileDown
 } from 'lucide-react';
 import {
   supabase,
@@ -29,6 +30,7 @@ import {
   podeVisualizarHonorarios,
   TIPOS_HONORARIO_CONFIG,
 } from '@/domain/crm/financeiro';
+import { ModalGerarMinuta } from '@/components/admin/ModalGerarMinuta';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -57,6 +59,7 @@ export default function CasoDetalhe() {
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [processosConexos, setProcessosConexos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalMinutaOpen, setModalMinutaOpen] = useState(false);
 
   // Módulo de Honorários (Blindado por RLS / Papel Advogado)
   const [contratoFinanceiro, setContratoFinanceiro] = useState<ContratoFinanceiro | null>(null);
@@ -233,12 +236,24 @@ export default function CasoDetalhe() {
           </div>
         </div>
 
-        <Button asChild variant="outline" className="border-white/10 text-white rounded-xl gap-1.5">
-          <Link to={`/admin/crm/casos/${caso.id}/editar`}>
-            <Edit className="w-4 h-4 text-secondary" />
-            Editar Caso
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {cliente && (
+            <Button
+              onClick={() => setModalMinutaOpen(true)}
+              className="rounded-xl gap-1.5 bg-primary hover:bg-primary/90 text-white"
+            >
+              <FileDown className="w-4 h-4" />
+              Gerar Minuta (.docx)
+            </Button>
+          )}
+
+          <Button asChild variant="outline" className="border-white/10 text-white rounded-xl gap-1.5">
+            <Link to={`/admin/crm/casos/${caso.id}/editar`}>
+              <Edit className="w-4 h-4 text-secondary" />
+              Editar Caso
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Grid Principal */}
@@ -580,6 +595,16 @@ export default function CasoDetalhe() {
           </div>
         </div>
       </div>
+
+      {cliente && (
+        <ModalGerarMinuta
+          open={modalMinutaOpen}
+          onOpenChange={setModalMinutaOpen}
+          cliente={cliente}
+          caso={caso}
+          processoNumero={processosConexos[0]?.numero_processo || null}
+        />
+      )}
     </div>
   );
 }

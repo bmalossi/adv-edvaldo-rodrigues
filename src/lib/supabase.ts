@@ -115,3 +115,9 @@ export type {
     TipoPendencia,
     StatusPendencia,
 } from '@/domain/crm/agenda'
+
+export type {
+    TemplateMinuta,
+    CategoriaTemplate,
+    VariaveisMinuta,
+} from '@/domain/crm/minuta'

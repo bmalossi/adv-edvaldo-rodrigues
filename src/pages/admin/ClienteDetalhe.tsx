@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,7 +15,8 @@ import {
   FileText,
   Send,
   Calendar,
-  Clock
+  Clock,
+  FileDown
 } from 'lucide-react';
 import {
   supabase,
@@ -30,6 +31,7 @@ import {
   ordenarInteracoesCronologicamente,
   TIPOS_INTERACAO_CONFIG,
 } from '@/domain/crm/interacao';
+import { ModalGerarMinuta } from '@/components/admin/ModalGerarMinuta';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -54,6 +56,7 @@ export default function ClienteDetalhe() {
   const [novaInteracaoTipo, setNovaInteracaoTipo] = useState<TipoInteracao>('whatsapp');
   const [novaInteracaoDesc, setNovaInteracaoDesc] = useState('');
   const [enviandoInteracao, setEnviandoInteracao] = useState(false);
+  const [modalMinutaOpen, setModalMinutaOpen] = useState(false);
 
   const fetchCliente = async () => {
     if (!id) return;
@@ -240,6 +243,14 @@ export default function ClienteDetalhe() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setModalMinutaOpen(true)}
+            className="rounded-xl gap-1.5 bg-primary hover:bg-primary/90 text-white"
+          >
+            <FileDown className="w-4 h-4" />
+            Gerar Minuta (.docx)
+          </Button>
+
           <Button asChild variant="outline" className="border-white/10 text-white rounded-xl gap-1.5">
             <Link to={`/admin/crm/clientes/${cliente.id}/editar`}>
               <Edit className="w-4 h-4 text-secondary" />
@@ -478,6 +489,14 @@ export default function ClienteDetalhe() {
           </div>
         </div>
       </div>
+
+      {cliente && (
+        <ModalGerarMinuta
+          open={modalMinutaOpen}
+          onOpenChange={setModalMinutaOpen}
+          cliente={cliente}
+        />
+      )}
     </div>
   );
 }
