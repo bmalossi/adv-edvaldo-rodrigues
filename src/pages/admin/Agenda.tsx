@@ -65,9 +65,22 @@ export default function Agenda() {
   const [mostrarConcluidos, setMostrarConcluidos] = useState(false);
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendentes' | 'concluidas' | 'atrasadas'>('todos');
 
-  // Modal de Criação Rápida (estilo Advbox)
+  // Modal de Criação / Edição Rápida (estilo Advbox)
   const [modalNovaTarefaAberto, setModalNovaTarefaAberto] = useState(false);
   const [dataPreSelecionada, setDataPreSelecionada] = useState<string>('');
+  const [tarefaSelecionadaParaEdicao, setTarefaSelecionadaParaEdicao] = useState<PendenciaCRM | null>(null);
+
+  const abrirNovaTarefa = (dataChave?: string) => {
+    setTarefaSelecionadaParaEdicao(null);
+    setDataPreSelecionada(dataChave || '');
+    setModalNovaTarefaAberto(true);
+  };
+
+  const abrirDetalheTarefa = (tarefa: PendenciaCRM) => {
+    setTarefaSelecionadaParaEdicao(tarefa);
+    setDataPreSelecionada('');
+    setModalNovaTarefaAberto(true);
+  };
 
   const anoAtual = dataReferencia.getFullYear();
   const mesAtual = dataReferencia.getMonth();
@@ -496,10 +509,10 @@ export default function Agenda() {
                               key={ev.id}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                alternarConclusao(ev.id, ev.status);
+                                abrirDetalheTarefa(ev);
                               }}
                               className={cn(
-                                'text-[11px] px-1.5 py-0.5 rounded truncate font-medium flex items-center gap-1 transition-all',
+                                'text-[11px] px-1.5 py-0.5 rounded truncate font-medium flex items-center gap-1.5 transition-all group/item hover:brightness-110',
                                 ev.tipo === 'prazo_fatal'
                                   ? 'bg-red-500/20 text-red-300 border border-red-500/40'
                                   : statusVisual === 'concluido'
@@ -508,18 +521,28 @@ export default function Agenda() {
                                   ? 'bg-amber-500/20 text-amber-300'
                                   : 'bg-blue-500/20 text-blue-300'
                               )}
-                              title={`${ev.titulo} (${ev.responsavel_nome})`}
+                              title={`${ev.titulo} (${ev.responsavel_nome}) - Clique para ver detalhes`}
                             >
-                              <span
-                                className={cn(
-                                  'w-1.5 h-1.5 rounded-full shrink-0',
-                                  ev.tipo === 'prazo_fatal'
-                                    ? 'bg-red-400 animate-pulse'
-                                    : statusVisual === 'concluido'
-                                    ? 'bg-green-400'
-                                    : 'bg-blue-400'
-                                )}
-                              />
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  alternarConclusao(ev.id, ev.status);
+                                }}
+                                className="shrink-0 hover:scale-125 transition-transform"
+                                title={ev.status === 'concluido' ? 'Reabrir tarefa' : 'Marcar como concluída'}
+                              >
+                                <span
+                                  className={cn(
+                                    'w-2 h-2 rounded-full inline-block',
+                                    ev.tipo === 'prazo_fatal'
+                                      ? 'bg-red-400 animate-pulse'
+                                      : statusVisual === 'concluido'
+                                      ? 'bg-green-400'
+                                      : 'bg-blue-400'
+                                  )}
+                                />
+                              </button>
                               <span className="truncate">{ev.titulo}</span>
                             </div>
                           );
@@ -575,18 +598,36 @@ export default function Agenda() {
                             key={ev.id}
                             onClick={(e) => {
                               e.stopPropagation();
-                              alternarConclusao(ev.id, ev.status);
+                              abrirDetalheTarefa(ev);
                             }}
                             className={cn(
-                              'p-2 rounded text-xs border space-y-1 transition-all',
+                              'p-2 rounded text-xs border space-y-1 transition-all cursor-pointer hover:brightness-110',
                               ev.tipo === 'prazo_fatal'
                                 ? 'bg-red-500/10 border-red-500/30 text-red-300'
                                 : ev.status === 'concluido'
                                 ? 'bg-green-500/10 border-green-500/30 text-green-400 line-through opacity-70'
                                 : 'bg-slate-800/80 border-slate-700 text-slate-200'
                             )}
+                            title="Clique para ver detalhes"
                           >
-                            <div className="font-semibold line-clamp-2">{ev.titulo}</div>
+                            <div className="flex items-start justify-between gap-1">
+                              <span className="font-semibold line-clamp-2">{ev.titulo}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  alternarConclusao(ev.id, ev.status);
+                                }}
+                                className="shrink-0 text-slate-400 hover:text-white"
+                                title={ev.status === 'concluido' ? 'Reabrir tarefa' : 'Marcar como concluída'}
+                              >
+                                {ev.status === 'concluido' ? (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                                ) : (
+                                  <span className="w-3 h-3 rounded-full border border-slate-400 hover:border-blue-400 block" />
+                                )}
+                              </button>
+                            </div>
                             {ev.hora && <div className="text-[10px] text-slate-400">{ev.hora}</div>}
                           </div>
                         ))
@@ -642,38 +683,45 @@ export default function Agenda() {
                     {eventosDia.map((ev) => (
                       <div
                         key={ev.id}
+                        onClick={() => abrirDetalheTarefa(ev)}
                         className={cn(
-                          'p-3.5 rounded-xl border flex items-start justify-between gap-4 transition-all',
+                          'p-3.5 rounded-xl border flex items-start justify-between gap-4 transition-all cursor-pointer hover:border-slate-600',
                           ev.tipo === 'prazo_fatal'
                             ? 'bg-red-500/10 border-red-500/40 text-red-200'
                             : ev.status === 'concluido'
                             ? 'bg-slate-900/60 border-slate-800 opacity-60'
                             : 'bg-[#172239] border-slate-700 text-slate-200'
                         )}
+                        title="Clique para ver ou editar detalhes"
                       >
-                        <div className="space-y-1">
+                        <div className="space-y-1 flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => alternarConclusao(ev.id, ev.status)}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                alternarConclusao(ev.id, ev.status);
+                              }}
                               className={cn(
-                                'w-4 h-4 rounded border flex items-center justify-center transition-colors',
+                                'w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors',
                                 ev.status === 'concluido'
                                   ? 'bg-green-500 border-green-500 text-white'
                                   : 'border-slate-500 hover:border-blue-400'
                               )}
+                              title={ev.status === 'concluido' ? 'Reabrir tarefa' : 'Marcar como concluída'}
                             >
                               {ev.status === 'concluido' && <CheckCircle2 className="w-3.5 h-3.5" />}
                             </button>
-                            <span className={cn('text-sm font-semibold', ev.status === 'concluido' && 'line-through text-slate-400')}>
+                            <span className={cn('text-sm font-semibold truncate', ev.status === 'concluido' && 'line-through text-slate-400')}>
                               {ev.titulo}
                             </span>
                             {ev.tipo === 'prazo_fatal' && (
-                              <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                              <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 shrink-0">
                                 Prazo Fatal
                               </span>
                             )}
                           </div>
-                          {ev.descricao && <p className="text-xs text-slate-400 pl-6">{ev.descricao}</p>}
+                          {ev.descricao && <p className="text-xs text-slate-400 pl-6 line-clamp-2">{ev.descricao}</p>}
                           <div className="flex flex-wrap gap-2 text-[11px] text-slate-400 pl-6 pt-1">
                             {ev.hora && <span>⏰ {ev.hora}</span>}
                             {ev.caso_titulo && <span>📁 {ev.caso_titulo}</span>}
@@ -700,25 +748,32 @@ export default function Agenda() {
                   {pendenciasFiltradas.map((p) => (
                     <div
                       key={p.id}
+                      onClick={() => abrirDetalheTarefa(p)}
                       className={cn(
-                        'p-3.5 rounded-xl border flex items-center justify-between gap-4 transition-all',
+                        'p-3.5 rounded-xl border flex items-center justify-between gap-4 transition-all cursor-pointer hover:border-slate-600',
                         p.tipo === 'prazo_fatal'
                           ? 'bg-red-500/10 border-red-500/30 text-slate-200'
                           : p.status === 'concluido'
                           ? 'bg-slate-900/60 border-slate-800 opacity-60'
                           : 'bg-[#172239] border-slate-700 text-slate-200'
                       )}
+                      title="Clique para ver ou editar detalhes"
                     >
                       <div className="space-y-1 flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => alternarConclusao(p.id, p.status)}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              alternarConclusao(p.id, p.status);
+                            }}
                             className={cn(
                               'w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors',
                               p.status === 'concluido'
                                 ? 'bg-green-500 border-green-500 text-white'
                                 : 'border-slate-500 hover:border-blue-400'
                             )}
+                            title={p.status === 'concluido' ? 'Reabrir tarefa' : 'Marcar como concluída'}
                           >
                             {p.status === 'concluido' && <CheckCircle2 className="w-3.5 h-3.5" />}
                           </button>
@@ -750,11 +805,15 @@ export default function Agenda() {
         </div>
       </div>
 
-      {/* Modal de Criação Rápida no Estilo Advbox */}
+      {/* Modal de Criação / Edição Rápida no Estilo Advbox */}
       <ModalNovaTarefaAgenda
         open={modalNovaTarefaAberto}
-        onOpenChange={setModalNovaTarefaAberto}
+        onOpenChange={(aberto) => {
+          setModalNovaTarefaAberto(aberto);
+          if (!aberto) setTarefaSelecionadaParaEdicao(null);
+        }}
         dataInicial={dataPreSelecionada}
+        tarefaEmEdicao={tarefaSelecionadaParaEdicao}
         onSalvoComSucesso={carregarDados}
       />
     </div>

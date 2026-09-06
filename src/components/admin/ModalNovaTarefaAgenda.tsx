@@ -10,8 +10,11 @@ import {
   AlertCircle,
   Loader2,
   Check,
+  CheckCircle2,
+  RotateCcw,
+  Trash2,
 } from 'lucide-react';
-import { supabase, TipoPendencia, StatusPendencia } from '@/lib/supabase';
+import { supabase, TipoPendencia, StatusPendencia, PendenciaCRM } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +30,7 @@ interface ModalNovaTarefaAgendaProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   dataInicial?: string; // YYYY-MM-DD
+  tarefaEmEdicao?: PendenciaCRM | null;
   onSalvoComSucesso?: () => void;
 }
 
@@ -43,6 +47,7 @@ export function ModalNovaTarefaAgenda({
   open,
   onOpenChange,
   dataInicial,
+  tarefaEmEdicao,
   onSalvoComSucesso,
 }: ModalNovaTarefaAgendaProps) {
   const { user } = useAuth();
@@ -54,7 +59,7 @@ export function ModalNovaTarefaAgenda({
   const [responsavelId, setResponsavelId] = useState('');
   const [casoId, setCasoId] = useState<string>('');
   const [clienteId, setClienteId] = useState<string>('');
-  const [buscaProcessoCaso, setBuscaProcessoCaso] = useState('');
+  const [status, setStatus] = useState<StatusPendencia>('pendente');
 
   // Datas e Horários
   const [dataCompromisso, setDataCompromisso] = useState('');
@@ -71,9 +76,10 @@ export function ModalNovaTarefaAgenda({
   const [casos, setCasos] = useState<{ id: string; titulo: string; cliente_id?: string | null }[]>([]);
   const [clientes, setClientes] = useState<{ id: string; nome_razao_social: string }[]>([]);
   const [salvando, setSalvando] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
   const [erros, setErros] = useState<string[]>([]);
 
-  // Carregar dados de referência
+  // Carregar dados de referência e preencher se for edição
   useEffect(() => {
     if (!open) return;
 
@@ -86,9 +92,6 @@ export function ModalNovaTarefaAgenda({
 
       if (perfisData) {
         setColaboradores(perfisData);
-        if (user && !responsavelId) {
-          setResponsavelId(user.id);
-        }
       }
       if (casosData) setCasos(casosData);
       if (clientesData) setClientes(clientesData);
@@ -96,18 +99,87 @@ export function ModalNovaTarefaAgenda({
 
     carregar();
 
-    if (dataInicial) {
-      setDataCompromisso(dataInicial);
+    if (tarefaEmEdicao) {
+      // Modo Edição / Detalhes
+      setTipo(tarefaEmEdicao.tipo);
+      setTitulo(tarefaEmEdicao.titulo || '');
+      setDescricao(tarefaEmEdicao.descricao || '');
+      setResponsavelId(tarefaEmEdicao.responsavel_id || '');
+      setCasoId(tarefaEmEdicao.caso_id || '');
+      setClienteId(tarefaEmEdicao.cliente_id || '');
+      setStatus(tarefaEmEdicao.status);
+      setHora(tarefaEmEdicao.hora || '');
+      setDiaInteiro(!!tarefaEmEdicao.dia_inteiro);
+      setLocal(tarefaEmEdicao.local || '');
+      setTagsSelecionadas(tarefaEmEdicao.tags || []);
+      setMostrarNaAgenda(tarefaEmEdicao.mostrar_na_agenda !== false);
+
+      if (tarefaEmEdicao.data_vencimento) {
+        const dataFormatada = tarefaEmEdicao.data_vencimento.split('T')[0];
+        if (tarefaEmEdicao.tipo === 'prazo_fatal') {
+          setPrazoFatal(dataFormatada);
+          setDataCompromisso(dataFormatada);
+        } else {
+          setDataCompromisso(dataFormatada);
+          setPrazoFatal('');
+        }
+      } else {
+        setDataCompromisso('');
+        setPrazoFatal('');
+      }
     } else {
-      const hoje = new Date().toISOString().split('T')[0];
-      setDataCompromisso(hoje);
+      // Modo Criação Novo
+      setTipo('tarefa');
+      setTitulo('');
+      setDescricao('');
+      setResponsavelId(user?.id || '');
+      setCasoId('');
+      setClienteId('');
+      setStatus('pendente');
+      setHora('');
+      setDiaInteiro(false);
+      setLocal('');
+      setTagsSelecionadas([]);
+      setMostrarNaAgenda(true);
+      setInformarTermino(false);
+      setPrazoFatal('');
+
+      if (dataInicial) {
+        setDataCompromisso(dataInicial);
+      } else {
+        const hoje = new Date().toISOString().split('T')[0];
+        setDataCompromisso(hoje);
+      }
     }
-  }, [open, dataInicial, user]);
+  }, [open, dataInicial, tarefaEmEdicao, user]);
 
   const toggleTag = (tagId: string) => {
     setTagsSelecionadas((prev) =>
       prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
     );
+  };
+
+  const alternarStatusConclusao = async () => {
+    if (!tarefaEmEdicao) return;
+    const novoStatus: StatusPendencia = status === 'concluido' ? 'pendente' : 'concluido';
+    setStatus(novoStatus);
+  };
+
+  const handleExcluir = async () => {
+    if (!tarefaEmEdicao) return;
+    if (!confirm('Tem certeza que deseja excluir esta tarefa/prazo?')) return;
+
+    setExcluindo(true);
+    try {
+      const { error } = await supabase.from('pendencias_crm').delete().eq('id', tarefaEmEdicao.id);
+      if (error) throw error;
+      onOpenChange(false);
+      if (onSalvoComSucesso) onSalvoComSucesso();
+    } catch (err: any) {
+      setErros([err.message || 'Erro ao excluir.']);
+    } finally {
+      setExcluindo(false);
+    }
   };
 
   const handleSalvar = async () => {
@@ -122,7 +194,6 @@ export function ModalNovaTarefaAgenda({
       errosValidacao.push('Selecione ao menos um responsável.');
     }
 
-    // Se tiver preenchido Prazo Fatal, ou se for marcado como urgente/fatal
     const isPrazoFatal = tipo === 'prazo_fatal' || !!prazoFatal;
 
     if (isPrazoFatal && !prazoFatal && !dataCompromisso) {
@@ -137,7 +208,6 @@ export function ModalNovaTarefaAgenda({
     setSalvando(true);
 
     try {
-      // Monta data de vencimento ISO
       let dataVencimentoIso: string | null = null;
       const dataRef = prazoFatal || dataCompromisso;
       if (dataRef) {
@@ -145,30 +215,40 @@ export function ModalNovaTarefaAgenda({
         dataVencimentoIso = new Date(`${dataRef}T${horaRef}`).toISOString();
       }
 
-      const { error } = await supabase.from('pendencias_crm').insert([
-        {
-          tipo: isPrazoFatal ? 'prazo_fatal' : 'tarefa',
-          titulo: titulo.trim(),
-          descricao: descricao.trim() || null,
-          responsavel_id: responsavelId,
-          caso_id: casoId || null,
-          cliente_id: clienteId || null,
-          status: 'pendente' as StatusPendencia,
-          data_vencimento: dataVencimentoIso,
-          hora: hora || null,
-          dia_inteiro: diaInteiro,
-          local: local.trim() || null,
-          tags: tagsSelecionadas,
-          mostrar_na_agenda: mostrarNaAgenda,
-        },
-      ]);
+      const payload = {
+        tipo: isPrazoFatal ? ('prazo_fatal' as TipoPendencia) : ('tarefa' as TipoPendencia),
+        titulo: titulo.trim(),
+        descricao: descricao.trim() || null,
+        responsavel_id: responsavelId,
+        caso_id: casoId || null,
+        cliente_id: clienteId || null,
+        status: status,
+        concluido_em: status === 'concluido' ? new Date().toISOString() : null,
+        concluido_por: status === 'concluido' ? user?.id || null : null,
+        data_vencimento: dataVencimentoIso,
+        hora: hora || null,
+        dia_inteiro: diaInteiro,
+        local: local.trim() || null,
+        tags: tagsSelecionadas,
+        mostrar_na_agenda: mostrarNaAgenda,
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) throw error;
+      if (tarefaEmEdicao) {
+        const { error } = await supabase
+          .from('pendencias_crm')
+          .update(payload)
+          .eq('id', tarefaEmEdicao.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('pendencias_crm').insert([payload]);
+        if (error) throw error;
+      }
 
       onOpenChange(false);
       if (onSalvoComSucesso) onSalvoComSucesso();
     } catch (err: any) {
-      setErros([err.message || 'Erro ao criar nova tarefa.']);
+      setErros([err.message || 'Erro ao salvar tarefa.']);
     } finally {
       setSalvando(false);
     }
@@ -178,9 +258,21 @@ export function ModalNovaTarefaAgenda({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl bg-[#0f172a] border-slate-800 text-slate-100 shadow-2xl p-6">
         <DialogHeader className="border-b border-slate-800 pb-4">
-          <DialogTitle className="text-lg font-medium text-white flex items-center justify-between">
-            <span>Criar nova tarefa</span>
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-lg font-medium text-white flex items-center gap-2">
+              <span>{tarefaEmEdicao ? 'Informações da Tarefa' : 'Criar nova tarefa'}</span>
+              {status === 'concluido' && (
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
+                  Concluída
+                </span>
+              )}
+            </DialogTitle>
+          </div>
+          <DialogDescription className="text-xs text-slate-400">
+            {tarefaEmEdicao
+              ? 'Visualize, edite as informações ou alterne o status de conclusão desta tarefa.'
+              : 'Preencha os dados da nova tarefa ou prazo no calendário.'}
+          </DialogDescription>
         </DialogHeader>
 
         {erros.length > 0 && (
@@ -370,32 +462,75 @@ export function ModalNovaTarefaAgenda({
           </div>
         </div>
 
-        {/* Rodapé com botões */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            disabled={salvando}
-            className="text-xs text-slate-400 hover:text-white hover:bg-slate-800"
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="button"
-            onClick={handleSalvar}
-            disabled={salvando}
-            className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 h-9 font-medium shadow-lg shadow-blue-600/20"
-          >
-            {salvando ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                Salvando...
-              </>
-            ) : (
-              'Criar nova tarefa'
+        {/* Rodapé com botões e ações de conclusão/exclusão */}
+        <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+          <div>
+            {tarefaEmEdicao && (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={alternarStatusConclusao}
+                  className={
+                    status === 'concluido'
+                      ? 'text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10 gap-1.5'
+                      : 'text-xs border-green-500/40 text-green-400 hover:bg-green-500/10 gap-1.5'
+                  }
+                >
+                  {status === 'concluido' ? (
+                    <>
+                      <RotateCcw className="w-3.5 h-3.5" /> Reabrir Tarefa
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Marcar como Concluída
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleExcluir}
+                  disabled={excluindo}
+                  className="text-xs text-red-400 hover:bg-red-500/10 gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Excluir
+                </Button>
+              </div>
             )}
-          </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={salvando || excluindo}
+              className="text-xs text-slate-400 hover:text-white hover:bg-slate-800"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSalvar}
+              disabled={salvando || excluindo}
+              className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 h-9 font-medium shadow-lg shadow-blue-600/20"
+            >
+              {salvando ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  Salvando...
+                </>
+              ) : tarefaEmEdicao ? (
+                'Salvar Alterações'
+              ) : (
+                'Criar nova tarefa'
+              )}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
