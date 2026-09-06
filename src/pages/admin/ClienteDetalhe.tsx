@@ -332,7 +332,7 @@ export default function ClienteDetalhe() {
                         cliente.endereco_complemento ? ' - ' + cliente.endereco_complemento : ''
                       }, ${cliente.endereco_bairro || ''}, ${cliente.endereco_cidade || ''} - ${
                         cliente.endereco_uf || ''
-                      }, CEP: ${cliente.endereco_cep || ''}`
+                      }${cliente.endereco_cep ? `, CEP: ${cliente.endereco_cep}` : ''}`
                     : 'Endereço não cadastrado'}
                 </span>
               </div>

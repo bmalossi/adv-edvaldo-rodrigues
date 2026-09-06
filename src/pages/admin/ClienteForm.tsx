@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Save, AlertCircle, CheckCircle2, Building2, User } from 'lucide-react';
 import { supabase, Cliente, TipoPessoa, StatusCicloCliente, VisibilidadeRegistro } from '@/lib/supabase';
@@ -390,6 +390,16 @@ export default function ClienteForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">CEP</label>
+                <Input
+                  value={formData.endereco_cep || ''}
+                  onChange={(e) => handleChange('endereco_cep', e.target.value)}
+                  placeholder="00000-000"
+                  className="bg-slate-900/50 border-white/10 text-white rounded-xl"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">Complemento</label>
                 <Input
                   value={formData.endereco_complemento || ''}
@@ -409,25 +419,26 @@ export default function ClienteForm() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Cidade</label>
-                <Input
-                  value={formData.endereco_cidade || ''}
-                  onChange={(e) => handleChange('endereco_cidade', e.target.value)}
-                  placeholder="São Paulo"
-                  className="bg-slate-900/50 border-white/10 text-white rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">UF</label>
-                <Input
-                  value={formData.endereco_uf || ''}
-                  onChange={(e) => handleChange('endereco_uf', e.target.value.toUpperCase().slice(0, 2))}
-                  placeholder="SP"
-                  maxLength={2}
-                  className="bg-slate-900/50 border-white/10 text-white rounded-xl uppercase"
-                />
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Cidade</label>
+                  <Input
+                    value={formData.endereco_cidade || ''}
+                    onChange={(e) => handleChange('endereco_cidade', e.target.value)}
+                    placeholder="São Paulo"
+                    className="bg-slate-900/50 border-white/10 text-white rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">UF</label>
+                  <Input
+                    value={formData.endereco_uf || ''}
+                    onChange={(e) => handleChange('endereco_uf', e.target.value.toUpperCase().slice(0, 2))}
+                    placeholder="SP"
+                    maxLength={2}
+                    className="bg-slate-900/50 border-white/10 text-white rounded-xl uppercase"
+                  />
+                </div>
               </div>
             </div>
           </div>
