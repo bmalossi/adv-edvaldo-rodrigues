@@ -15,6 +15,11 @@ export interface PendenciaCRM {
   status: StatusPendencia
   /** ISO-8601 string or null */
   data_vencimento: string | null
+  hora?: string | null
+  dia_inteiro?: boolean
+  local?: string | null
+  tags?: string[]
+  mostrar_na_agenda?: boolean
   /** ISO-8601 string: when completed */
   concluido_em: string | null
   /** perfil.id of executor */

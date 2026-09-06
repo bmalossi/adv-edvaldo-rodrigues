@@ -116,6 +116,18 @@ export type {
     StatusPendencia,
 } from '@/domain/crm/agenda'
 
+export {
+    obterDiasDoMes,
+    obterDiasDaSemana,
+    formatarDataChave,
+    agruparPendenciasPorData,
+    classificarStatusEvento,
+} from '@/domain/crm/agenda-calendario'
+export type {
+    DiaCalendario,
+    StatusVisualEvento,
+} from '@/domain/crm/agenda-calendario'
+
 export type {
     TemplateMinuta,
     CategoriaTemplate,
