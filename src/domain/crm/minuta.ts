@@ -13,6 +13,7 @@ export interface TemplateMinuta {
   descricao?: string | null;
   categoria: CategoriaTemplate;
   arquivo_url: string;
+  conteudo_texto?: string | null;
   exige_qualificacao_completa: boolean;
   variaveis_disponiveis?: string[];
   ativo?: boolean;
@@ -210,4 +211,66 @@ export async function processarTemplateDocx(
   });
 
   return out;
+}
+
+/**
+ * Converte um texto arbitrário (com quebras de linha e tags {tag}) em um arquivo .docx válido em memória
+ * e o renderiza com as variáveis do cliente/caso.
+ */
+export async function gerarDocxAPartirDeTexto(
+  conteudoTexto: string,
+  dados: Record<string, any>,
+  tituloDocumento?: string
+): Promise<Uint8Array> {
+  const zip = new PizZip();
+  zip.file(
+    '[Content_Types].xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+      '</Types>'
+  );
+  zip.file(
+    '_rels/.rels',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+      '</Relationships>'
+  );
+
+  const linhas = conteudoTexto.split('\n');
+  let bodyXml = '';
+
+  if (tituloDocumento) {
+    bodyXml += `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t>${tituloDocumento}</w:t></w:r></w:p><w:p/>`;
+  }
+
+  for (const linha of linhas) {
+    const limpa = linha.trim();
+    if (!limpa) {
+      bodyXml += '<w:p/>';
+    } else {
+      // Escapa caracteres XML essenciais antes de empacotar em w:t
+      const linhaXml = limpa
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      bodyXml += `<w:p><w:r><w:t>${linhaXml}</w:t></w:r></w:p>`;
+    }
+  }
+
+  zip.file(
+    'word/document.xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      '<w:body>' +
+      bodyXml +
+      '</w:body>' +
+      '</w:document>'
+  );
+
+  const buffer = zip.generate({ type: 'uint8array' });
+  return processarTemplateDocx(buffer, dados);
 }

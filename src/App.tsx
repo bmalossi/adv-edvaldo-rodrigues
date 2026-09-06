@@ -40,6 +40,7 @@ import CasoForm from "./pages/admin/CasoForm";
 import CasoDetalhe from "./pages/admin/CasoDetalhe";
 import Agenda from "./pages/admin/Agenda";
 import PendenciaForm from "./pages/admin/PendenciaForm";
+import ModelosMinutas from "./pages/admin/ModelosMinutas";
 
 const queryClient = new QueryClient();
 
@@ -279,6 +280,16 @@ const App = () => (
               <ProtectedRoute>
                 <AdminLayout>
                   <PendenciaForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/crm/modelos"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <ModelosMinutas />
                 </AdminLayout>
               </ProtectedRoute>
             }

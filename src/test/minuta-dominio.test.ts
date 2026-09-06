@@ -182,4 +182,27 @@ describe('Motor de Minutas CRM - Domínio', () => {
       expect(docXml).not.toContain('{cpf_cnpj}');
     });
   });
+
+  describe('gerarDocxAPartirDeTexto', () => {
+    it('gera buffer .docx a partir de texto puro com tags e título', async () => {
+      const { gerarDocxAPartirDeTexto } = await import('@/domain/crm/minuta');
+      const texto = 'Pelo presente instrumento, {nome_cliente}, inscrito no CPF {cpf_cnpj}, autoriza o advogado.';
+      const dados = {
+        nome_cliente: 'Maria Antonieta',
+        cpf_cnpj: '111.222.333-44',
+      };
+
+      const buffer = await gerarDocxAPartirDeTexto(texto, dados, 'AUTORIZAÇÃO');
+      expect(buffer).toBeInstanceOf(Uint8Array);
+      expect(buffer.byteLength).toBeGreaterThan(0);
+
+      const zip = new PizZip(buffer);
+      const docXml = zip.file('word/document.xml')?.asText();
+      expect(docXml).toContain('AUTORIZAÇÃO');
+      expect(docXml).toContain('Maria Antonieta');
+      expect(docXml).toContain('111.222.333-44');
+      expect(docXml).not.toContain('{nome_cliente}');
+    });
+  });
 });
+

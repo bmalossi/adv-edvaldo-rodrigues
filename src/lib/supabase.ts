@@ -122,7 +122,23 @@ export type {
     VariaveisMinuta,
 } from '@/domain/crm/minuta'
 
+export {
+    gerarDocxAPartirDeTexto,
+} from '@/domain/crm/minuta'
+
+export {
+    CATEGORIAS_TEMPLATE,
+    validarNovoTemplate,
+    extrairVariaveisDoTexto,
+    filtrarTemplatesAtivos,
+} from '@/domain/crm/template-minuta'
+export type {
+    CategoriaTemplateInfo,
+    NovoTemplateInput,
+} from '@/domain/crm/template-minuta'
+
 export type {
     DocumentoCaso,
     TipoDocumentoCaso,
 } from '@/domain/crm/drive'
+

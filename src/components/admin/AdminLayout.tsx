@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
     LayoutDashboard,
     FolderOpen,
@@ -14,6 +14,7 @@ import {
     Briefcase,
     Calendar,
     FileCheck,
+    ChevronDown,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -25,6 +26,7 @@ const crmNavItems = [
     { to: '/admin/crm/clientes', label: 'Clientes & Leads', icon: Users },
     { to: '/admin/crm/casos', label: 'Dossiê de Casos', icon: Briefcase },
     { to: '/admin/crm/agenda', label: 'Agenda & Prazos', icon: Calendar },
+    { to: '/admin/crm/modelos', label: 'Modelos de Minutas', icon: FileCheck },
 ]
 
 const justrackNavItems = [
@@ -43,11 +45,25 @@ const artigosNavItems = [
 export function AdminLayout({ children }: { children: React.ReactNode }) {
     const { advogado, signOut } = useAuth()
     const navigate = useNavigate()
+    const location = useLocation()
     const [sidebarOpen, setSidebarOpen] = useState(false)
 
     const handleLogout = async () => {
         await signOut()
         navigate('/login')
+    }
+
+    const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>({
+        crm: location.pathname.startsWith('/admin/crm'),
+        justrack: location.pathname === '/admin' || location.pathname.startsWith('/admin/processos') || location.pathname.startsWith('/admin/notificacoes') || location.pathname.startsWith('/admin/configuracoes'),
+        conteudo: location.pathname.startsWith('/admin/artigos'),
+    })
+
+    const toggleSection = (section: string) => {
+        setOpenSections((prev) => ({
+            ...prev,
+            [section]: !prev[section],
+        }))
     }
 
     const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
@@ -63,90 +79,141 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
+            <nav className="flex-1 px-3 py-4 space-y-3 overflow-y-auto">
                 {/* Seção CRM Jurídico */}
-                <div>
-                    <p className="px-3 text-[10px] font-bold tracking-wider text-secondary uppercase mb-1.5 flex items-center justify-between">
-                        <span>CRM Jurídico</span>
-                        <span className="bg-secondary/20 text-secondary text-[9px] px-1.5 py-0.5 rounded font-semibold">Novo</span>
-                    </p>
-                    <div className="space-y-1">
-                        {crmNavItems.map(({ to, label, icon: Icon }) => (
-                            <NavLink
-                                key={to}
-                                to={to}
-                                onClick={() => setSidebarOpen(false)}
-                                className={({ isActive }) =>
-                                    cn(
-                                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-                                        isActive
-                                            ? 'bg-secondary text-primary shadow-lg shadow-secondary/10 font-bold'
-                                            : 'text-slate-200 hover:text-white hover:bg-white/10'
-                                    )
-                                }
-                            >
-                                <Icon className="w-4 h-4 flex-shrink-0" />
-                                {label}
-                            </NavLink>
-                        ))}
-                    </div>
+                <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+                    <button
+                        type="button"
+                        onClick={() => toggleSection('crm')}
+                        className="w-full px-3 py-2.5 flex items-center justify-between text-left hover:bg-white/5 transition-colors group"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Scale className="w-4 h-4 text-secondary" />
+                            <span className="text-xs font-bold tracking-wider text-secondary uppercase">
+                                CRM Jurídico
+                            </span>
+                            <span className="bg-secondary/20 text-secondary text-[9px] px-1.5 py-0.5 rounded font-semibold">Novo</span>
+                        </div>
+                        <ChevronDown
+                            className={cn(
+                                'w-4 h-4 text-slate-400 transition-transform duration-200 group-hover:text-white',
+                                openSections.crm && 'transform rotate-180 text-secondary'
+                            )}
+                        />
+                    </button>
+                    {openSections.crm && (
+                        <div className="px-2 pb-2 pt-1 space-y-1 border-t border-white/[0.04]">
+                            {crmNavItems.map(({ to, label, icon: Icon }) => (
+                                <NavLink
+                                    key={to}
+                                    to={to}
+                                    onClick={() => setSidebarOpen(false)}
+                                    className={({ isActive }) =>
+                                        cn(
+                                            'flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200',
+                                            isActive
+                                                ? 'bg-secondary text-primary shadow-md shadow-secondary/10 font-bold'
+                                                : 'text-slate-300 hover:text-white hover:bg-white/10'
+                                        )
+                                    }
+                                >
+                                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                                    {label}
+                                </NavLink>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Seção JusTrack */}
-                <div className="pt-3 border-t border-white/5">
-                    <p className="px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-1.5">
-                        JusTrack
-                    </p>
-                    <div className="space-y-1">
-                        {justrackNavItems.map(({ to, label, icon: Icon, end }) => (
-                            <NavLink
-                                key={to}
-                                to={to}
-                                end={end}
-                                onClick={() => setSidebarOpen(false)}
-                                className={({ isActive }) =>
-                                    cn(
-                                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-                                        isActive
-                                            ? 'bg-secondary text-primary shadow-lg shadow-secondary/10 font-bold'
-                                            : 'text-slate-200 hover:text-white hover:bg-white/10'
-                                    )
-                                }
-                            >
-                                <Icon className="w-4 h-4 flex-shrink-0" />
-                                {label}
-                            </NavLink>
-                        ))}
-                    </div>
+                <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+                    <button
+                        type="button"
+                        onClick={() => toggleSection('justrack')}
+                        className="w-full px-3 py-2.5 flex items-center justify-between text-left hover:bg-white/5 transition-colors group"
+                    >
+                        <div className="flex items-center gap-2">
+                            <FolderOpen className="w-4 h-4 text-slate-300 group-hover:text-white transition-colors" />
+                            <span className="text-xs font-bold tracking-wider text-slate-300 uppercase group-hover:text-white transition-colors">
+                                JusTrack
+                            </span>
+                        </div>
+                        <ChevronDown
+                            className={cn(
+                                'w-4 h-4 text-slate-400 transition-transform duration-200 group-hover:text-white',
+                                openSections.justrack && 'transform rotate-180 text-secondary'
+                            )}
+                        />
+                    </button>
+                    {openSections.justrack && (
+                        <div className="px-2 pb-2 pt-1 space-y-1 border-t border-white/[0.04]">
+                            {justrackNavItems.map(({ to, label, icon: Icon, end }) => (
+                                <NavLink
+                                    key={to}
+                                    to={to}
+                                    end={end}
+                                    onClick={() => setSidebarOpen(false)}
+                                    className={({ isActive }) =>
+                                        cn(
+                                            'flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200',
+                                            isActive
+                                                ? 'bg-secondary text-primary shadow-md shadow-secondary/10 font-bold'
+                                                : 'text-slate-300 hover:text-white hover:bg-white/10'
+                                        )
+                                    }
+                                >
+                                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                                    {label}
+                                </NavLink>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Seção Conteúdo Jurídico */}
-                <div className="pt-3 border-t border-white/5">
-                    <p className="px-3 text-[10px] font-bold tracking-wider text-secondary uppercase mb-1.5 flex items-center justify-between">
-                        <span>Conteúdo Jurídico</span>
-                        <span className="bg-secondary/20 text-secondary text-[9px] px-1.5 py-0.5 rounded font-semibold">Blog</span>
-                    </p>
-                    <div className="space-y-1">
-                        {artigosNavItems.map(({ to, label, icon: Icon, end }) => (
-                            <NavLink
-                                key={to}
-                                to={to}
-                                end={end}
-                                onClick={() => setSidebarOpen(false)}
-                                className={({ isActive }) =>
-                                    cn(
-                                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-                                        isActive
-                                            ? 'bg-secondary text-primary shadow-lg shadow-secondary/10 font-bold'
-                                            : 'text-slate-200 hover:text-white hover:bg-white/10'
-                                    )
-                                }
-                            >
-                                <Icon className="w-4 h-4 flex-shrink-0" />
-                                {label}
-                            </NavLink>
-                        ))}
-                    </div>
+                <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+                    <button
+                        type="button"
+                        onClick={() => toggleSection('conteudo')}
+                        className="w-full px-3 py-2.5 flex items-center justify-between text-left hover:bg-white/5 transition-colors group"
+                    >
+                        <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-secondary" />
+                            <span className="text-xs font-bold tracking-wider text-secondary uppercase">
+                                Conteúdo Jurídico
+                            </span>
+                            <span className="bg-secondary/20 text-secondary text-[9px] px-1.5 py-0.5 rounded font-semibold">Blog</span>
+                        </div>
+                        <ChevronDown
+                            className={cn(
+                                'w-4 h-4 text-slate-400 transition-transform duration-200 group-hover:text-white',
+                                openSections.conteudo && 'transform rotate-180 text-secondary'
+                            )}
+                        />
+                    </button>
+                    {openSections.conteudo && (
+                        <div className="px-2 pb-2 pt-1 space-y-1 border-t border-white/[0.04]">
+                            {artigosNavItems.map(({ to, label, icon: Icon, end }) => (
+                                <NavLink
+                                    key={to}
+                                    to={to}
+                                    end={end}
+                                    onClick={() => setSidebarOpen(false)}
+                                    className={({ isActive }) =>
+                                        cn(
+                                            'flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200',
+                                            isActive
+                                                ? 'bg-secondary text-primary shadow-md shadow-secondary/10 font-bold'
+                                                : 'text-slate-300 hover:text-white hover:bg-white/10'
+                                        )
+                                    }
+                                >
+                                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                                    {label}
+                                </NavLink>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </nav>
 

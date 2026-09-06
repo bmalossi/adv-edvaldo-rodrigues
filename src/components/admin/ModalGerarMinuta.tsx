@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   FileText,
   Download,
@@ -7,7 +7,9 @@ import {
   Loader2,
   FileCheck,
   Building2,
-  Scale
+  Scale,
+  Edit3,
+  FileCode,
 } from 'lucide-react';
 import saveAs from 'file-saver';
 import PizZip from 'pizzip';
@@ -15,7 +17,8 @@ import { supabase, TemplateMinuta, Cliente, Caso } from '@/lib/supabase';
 import {
   prepararVariaveisDocumento,
   validarDadosParaMinuta,
-  processarTemplateDocx
+  processarTemplateDocx,
+  gerarDocxAPartirDeTexto,
 } from '@/domain/crm/minuta';
 import { Button } from '@/components/ui/button';
 import {
@@ -176,13 +179,23 @@ export function ModalGerarMinuta({
     buscarTemplates();
   }, [open]);
 
+  const [textoPersonalizado, setTextoPersonalizado] = useState<string>('');
+  const [modoEdicaoTexto, setModoEdicaoTexto] = useState<boolean>(false);
+
   useEffect(() => {
     if (!templateSelecionado) {
       setErrosValidacao([]);
+      setTextoPersonalizado('');
+      setModoEdicaoTexto(false);
       return;
     }
     const res = validarDadosParaMinuta(cliente, templateSelecionado);
     setErrosValidacao(res.erros);
+    if (templateSelecionado.conteudo_texto) {
+      setTextoPersonalizado(templateSelecionado.conteudo_texto);
+    } else {
+      setTextoPersonalizado('');
+    }
   }, [templateSelecionado, cliente]);
 
   const handleGerar = async () => {
@@ -205,24 +218,31 @@ export function ModalGerarMinuta({
         advogadoOab: 'OAB/SP 123.456',
       });
 
-      let templateBuffer: Uint8Array;
+      let docxFinal: Uint8Array;
 
-      // 2. Busca o template do Supabase Storage se existir URL, senão usa gerador padrão em memória
-      if (templateSelecionado.arquivo_url && templateSelecionado.arquivo_url.startsWith('http')) {
+      // 2. Prioridade: Se o usuário editou ou o template possui texto customizado
+      if (textoPersonalizado && textoPersonalizado.trim().length > 0) {
+        docxFinal = await gerarDocxAPartirDeTexto(
+          textoPersonalizado,
+          variaveis,
+          templateSelecionado.nome.toUpperCase()
+        );
+      } else if (templateSelecionado.arquivo_url && templateSelecionado.arquivo_url.startsWith('http')) {
+        // Se possui URL de arquivo DOCX remoto
         const res = await fetch(templateSelecionado.arquivo_url);
         const arrayBuf = await res.arrayBuffer();
-        templateBuffer = new Uint8Array(arrayBuf);
+        const templateBuffer = new Uint8Array(arrayBuf);
+        docxFinal = await processarTemplateDocx(templateBuffer, variaveis);
       } else {
-        templateBuffer = criarTemplatePadraoBuffer(
+        // Fallback para gerador OOXML padrão em memória
+        const templateBuffer = criarTemplatePadraoBuffer(
           templateSelecionado.categoria,
           templateSelecionado.nome
         );
+        docxFinal = await processarTemplateDocx(templateBuffer, variaveis);
       }
 
-      // 3. Processa no cliente via docxtemplater
-      const docxFinal = await processarTemplateDocx(templateBuffer, variaveis);
-
-      // 4. Dispara download imediato do .docx
+      // 3. Dispara download imediato do .docx
       const blob = new Blob([docxFinal], {
         type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       });
@@ -307,6 +327,44 @@ export function ModalGerarMinuta({
                 Dados do cliente e do caso qualificados com sucesso para emissão.
               </div>
             )}
+
+            {/* Editor ou Visualizador do Texto do Modelo */}
+            <div className="rounded-lg border border-border bg-background p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <Edit3 className="w-3.5 h-3.5 text-primary" />
+                  Personalização Prévia do Conteúdo
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setModoEdicaoTexto(!modoEdicaoTexto)}
+                  className="text-xs text-primary hover:underline font-medium"
+                >
+                  {modoEdicaoTexto ? 'Recolher Editor' : 'Personalizar Texto'}
+                </button>
+              </div>
+
+              {modoEdicaoTexto ? (
+                <div className="space-y-2 pt-1">
+                  <p className="text-[11px] text-muted-foreground">
+                    Você pode ajustar o texto abaixo antes de exportar. As tags como {'{nome_cliente}'} serão substituídas automaticamente pelos dados do cliente.
+                  </p>
+                  <textarea
+                    rows={6}
+                    value={textoPersonalizado}
+                    onChange={(e) => setTextoPersonalizado(e.target.value)}
+                    placeholder="Digite ou personalize o texto do modelo..."
+                    className="w-full text-xs font-mono bg-muted/30 border border-border rounded-md p-2.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+                  />
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted-foreground">
+                  {textoPersonalizado
+                    ? 'Este modelo possui redação customizada definida. Clique em "Personalizar Texto" para revisar.'
+                    : 'Modelo baseado em estrutura padrão ou arquivo .docx. Clique em "Personalizar Texto" para adicionar redação específica.'}
+                </p>
+              )}
+            </div>
 
             {/* Resumo do Destinatário */}
             <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs space-y-1">
