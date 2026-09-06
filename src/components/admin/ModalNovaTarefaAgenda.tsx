@@ -256,8 +256,8 @@ export function ModalNovaTarefaAgenda({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-[#0f172a] border-slate-800 text-slate-100 shadow-2xl p-6">
-        <DialogHeader className="border-b border-slate-800 pb-4">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col bg-[#0f172a] border-slate-800 text-slate-100 shadow-2xl p-0 overflow-hidden">
+        <DialogHeader className="border-b border-slate-800 p-5 pb-4 shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-medium text-white flex items-center gap-2">
               <span>{tarefaEmEdicao ? 'Informações da Tarefa' : 'Criar nova tarefa'}</span>
@@ -275,20 +275,20 @@ export function ModalNovaTarefaAgenda({
           </DialogDescription>
         </DialogHeader>
 
-        {erros.length > 0 && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400 space-y-1">
-            <div className="flex items-center gap-1.5 font-semibold">
-              <AlertCircle className="w-4 h-4 shrink-0" /> Erros no preenchimento:
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+          {erros.length > 0 && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400 space-y-1">
+              <div className="flex items-center gap-1.5 font-semibold">
+                <AlertCircle className="w-4 h-4 shrink-0" /> Erros no preenchimento:
+              </div>
+              <ul className="list-disc list-inside">
+                {erros.map((e, idx) => (
+                  <li key={idx}>{e}</li>
+                ))}
+              </ul>
             </div>
-            <ul className="list-disc list-inside">
-              {erros.map((e, idx) => (
-                <li key={idx}>{e}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+          )}
 
-        <div className="space-y-4 py-2 text-xs">
           {/* Processo ou Caso */}
           <div className="space-y-1.5">
             <label className="text-slate-300 font-medium">Processo ou caso *</label>
@@ -462,8 +462,8 @@ export function ModalNovaTarefaAgenda({
           </div>
         </div>
 
-        {/* Rodapé com botões e ações de conclusão/exclusão */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+        {/* Rodapé fixo com botões e ações de conclusão/exclusão */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 px-5 border-t border-slate-800 shrink-0 bg-[#0f172a]">
           <div>
             {tarefaEmEdicao && (
               <div className="flex items-center gap-2">
