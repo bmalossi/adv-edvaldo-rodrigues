@@ -1,4 +1,4 @@
-﻿export type PapelUsuario = 'advogado' | 'estagiario' | 'secretaria';
+export type PapelUsuario = 'advogado' | 'estagiario' | 'secretaria';
 
 export type StatusCicloCliente = 'lead' | 'consulta' | 'ativo' | 'encerrado';
 
@@ -30,6 +30,11 @@ export interface Cliente {
   profissao?: string | null;
   email?: string | null;
   telefone_whatsapp: string;
+  telefone_secundario?: string | null;
+  pais?: string | null;
+  data_nascimento?: string | null;
+  sexo?: string | null;
+  anotacoes_gerais?: string | null;
   endereco_logradouro?: string | null;
   endereco_numero?: string | null;
   endereco_complemento?: string | null;
@@ -37,6 +42,17 @@ export interface Cliente {
   endereco_cidade?: string | null;
   endereco_uf?: string | null;
   endereco_cep?: string | null;
+  tem_representante?: boolean;
+  rep_nome?: string | null;
+  rep_cpf_cnpj?: string | null;
+  rep_rg?: string | null;
+  rep_data_nascimento?: string | null;
+  rep_pais?: string | null;
+  rep_uf?: string | null;
+  rep_cidade?: string | null;
+  rep_endereco?: string | null;
+  rep_bairro?: string | null;
+  rep_cep?: string | null;
   status_ciclo: StatusCicloCliente;
   origem_contato?: string | null;
   observacoes_iniciais?: string | null;
@@ -44,6 +60,18 @@ export interface Cliente {
   responsavel_id?: string | null;
   google_drive_folder_id?: string | null;
   deleted_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DocumentoCliente {
+  id: string;
+  cliente_id: string;
+  nome_arquivo: string;
+  tamanho_bytes?: number | null;
+  mime_type?: string | null;
+  storage_path: string;
+  criado_por?: string | null;
   created_at?: string;
   updated_at?: string;
 }

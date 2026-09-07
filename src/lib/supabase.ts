@@ -86,6 +86,7 @@ export type {
     PerfilUsuario,
     PapelUsuario,
     Cliente,
+    DocumentoCliente,
     StatusCicloCliente,
     TipoPessoa,
     VisibilidadeRegistro,

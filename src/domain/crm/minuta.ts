@@ -38,6 +38,11 @@ export interface VariaveisMinuta {
   profissao: string;
   email: string;
   telefone: string;
+  telefone_secundario: string;
+  pais: string;
+  data_nascimento: string;
+  sexo: string;
+  anotacoes_gerais: string;
   endereco_completo: string;
   endereco_logradouro: string;
   endereco_numero: string;
@@ -46,6 +51,17 @@ export interface VariaveisMinuta {
   endereco_cidade: string;
   endereco_uf: string;
   endereco_cep: string;
+  tem_representante: string;
+  representante_nome: string;
+  representante_cpf_cnpj: string;
+  representante_rg: string;
+  representante_data_nascimento: string;
+  representante_pais: string;
+  representante_uf: string;
+  representante_cidade: string;
+  representante_endereco: string;
+  representante_bairro: string;
+  representante_cep: string;
   titulo_caso: string;
   area_direito: string;
   tipo_demanda: string;
@@ -120,6 +136,11 @@ export function prepararVariaveisDocumento(ctx: ContextoMinutaInput): VariaveisM
     profissao: c.profissao || '',
     email: c.email || '',
     telefone: c.telefone_whatsapp || '',
+    telefone_secundario: c.telefone_secundario || '',
+    pais: c.pais || 'Brasil',
+    data_nascimento: c.data_nascimento ? new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '',
+    sexo: c.sexo || '',
+    anotacoes_gerais: c.anotacoes_gerais || '',
     endereco_completo: enderecoCompleto,
     endereco_logradouro: c.endereco_logradouro || '',
     endereco_numero: c.endereco_numero || '',
@@ -128,6 +149,17 @@ export function prepararVariaveisDocumento(ctx: ContextoMinutaInput): VariaveisM
     endereco_cidade: c.endereco_cidade || '',
     endereco_uf: c.endereco_uf || '',
     endereco_cep: c.endereco_cep || '',
+    tem_representante: c.tem_representante ? 'Sim' : 'Não',
+    representante_nome: c.rep_nome || '',
+    representante_cpf_cnpj: c.rep_cpf_cnpj || '',
+    representante_rg: c.rep_rg || '',
+    representante_data_nascimento: c.rep_data_nascimento ? new Date(c.rep_data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '',
+    representante_pais: c.rep_pais || 'Brasil',
+    representante_uf: c.rep_uf || '',
+    representante_cidade: c.rep_cidade || '',
+    representante_endereco: c.rep_endereco || '',
+    representante_bairro: c.rep_bairro || '',
+    representante_cep: c.rep_cep || '',
     titulo_caso: caso.titulo || '',
     area_direito: caso.area_direito || '',
     tipo_demanda: caso.tipo_demanda || '',

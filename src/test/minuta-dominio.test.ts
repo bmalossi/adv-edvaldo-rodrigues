@@ -113,12 +113,28 @@ describe('Motor de Minutas CRM - Domínio', () => {
     });
 
     it('preenche variáveis mesmo sem caso vinculado', () => {
-      const cliente = makeClienteValidoPF();
+      const cliente = makeClienteValidoPF({
+        data_nascimento: '1985-10-25',
+        sexo: 'Masculino',
+        pais: 'Brasil',
+        telefone_secundario: '(11) 3333-4444',
+        anotacoes_gerais: 'Observações do cliente',
+        tem_representante: true,
+        rep_nome: 'Maria da Silva',
+        rep_cpf_cnpj: '999.888.777-66',
+        rep_rg: '55.444.333-2',
+      });
       const vars = prepararVariaveisDocumento({ cliente });
 
       expect(vars.nome_cliente).toBe('João da Silva');
       expect(vars.titulo_caso).toBe('');
       expect(vars.numero_processo).toBe('');
+      expect(vars.sexo).toBe('Masculino');
+      expect(vars.telefone_secundario).toBe('(11) 3333-4444');
+      expect(vars.pais).toBe('Brasil');
+      expect(vars.tem_representante).toBe('Sim');
+      expect(vars.representante_nome).toBe('Maria da Silva');
+      expect(vars.representante_cpf_cnpj).toBe('999.888.777-66');
     });
   });
 

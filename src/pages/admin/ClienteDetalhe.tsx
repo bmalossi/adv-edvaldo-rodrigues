@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -16,7 +16,10 @@ import {
   Send,
   Calendar,
   Clock,
-  FileDown
+  FileDown,
+  ShieldCheck,
+  FolderOpen,
+  Info
 } from 'lucide-react';
 import {
   supabase,
@@ -32,6 +35,7 @@ import {
   TIPOS_INTERACAO_CONFIG,
 } from '@/domain/crm/interacao';
 import { ModalGerarMinuta } from '@/components/admin/ModalGerarMinuta';
+import { PainelDocumentosCliente } from '@/components/admin/PainelDocumentosCliente';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -109,94 +113,76 @@ export default function ClienteDetalhe() {
 
   const handleAdicionarInteracao = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cliente || !user) return;
+    if (!cliente) return;
 
     const validacao = validarNovaInteracao({
+      cliente_id: cliente.id,
       tipo: novaInteracaoTipo,
-      descricao: novaInteracaoDesc,
+      descricao: novaInteracaoDesc.trim(),
     });
 
     if (!validacao.valido) {
-      toast.error(validacao.erros[0]);
+      toast.error(validacao.erros.join(', '));
       return;
     }
 
     setEnviandoInteracao(true);
-    const { data, error } = await supabase
-      .from('interacoes_cliente')
-      .insert({
+    try {
+      const { error } = await supabase.from('interacoes_cliente').insert({
         cliente_id: cliente.id,
-        autor_id: user.id,
+        autor_id: user?.id,
         tipo: novaInteracaoTipo,
         descricao: novaInteracaoDesc.trim(),
-        data_interacao: new Date().toISOString(),
-      })
-      .select('*, autor:perfis(nome)')
-      .single();
+      });
 
-    if (error) {
-      toast.error('Erro ao registrar interação: ' + error.message);
-    } else if (data) {
-      const nova: InteracaoCliente = {
-        id: data.id,
-        cliente_id: data.cliente_id,
-        autor_id: data.autor_id,
-        autor_nome: data.autor?.nome || user.email || 'Eu',
-        tipo: data.tipo as TipoInteracao,
-        descricao: data.descricao,
-        data_interacao: data.data_interacao,
-        created_at: data.created_at,
-      };
-      setInteracoes((prev) => [nova, ...prev]);
+      if (error) throw error;
+      toast.success('Interação registrada!');
       setNovaInteracaoDesc('');
-      toast.success('Interação registrada no histórico!');
+      fetchInteracoes();
+    } catch (err: any) {
+      toast.error('Erro ao salvar interação: ' + err.message);
+    } finally {
+      setEnviandoInteracao(false);
     }
-    setEnviandoInteracao(false);
   };
 
   const handleExcluirOuArquivar = async () => {
     if (!cliente) return;
-
-    if (cliente.status_ciclo === 'lead') {
-      const confirmacao = window.confirm(
-        'Confirmar exclusão definitiva deste lead? (Conformidade LGPD - Exclusão do Titular)'
+    if (cliente.status_ciclo === 'ativo') {
+      const confirmar = window.confirm(
+        'Este cliente está com status ATIVO. Deseja arquivá-lo em vez de excluí-lo?'
       );
-      if (!confirmacao) return;
-
-      const { error } = await supabase.from('clientes').delete().eq('id', cliente.id);
-      if (error) {
-        toast.error('Erro ao excluir lead: ' + error.message);
-      } else {
-        toast.success('Lead excluído permanentemente com sucesso.');
-        navigate('/admin/crm/clientes');
+      if (confirmar) {
+        await supabase
+          .from('clientes')
+          .update({ status_ciclo: 'encerrado', updated_at: new Date().toISOString() })
+          .eq('id', cliente.id);
+        toast.success('Cliente arquivado com sucesso!');
+        fetchCliente();
       }
+      return;
+    }
+
+    const confirmar = window.confirm('Deseja realmente mover este cliente para a lixeira?');
+    if (!confirmar) return;
+
+    const { error } = await supabase
+      .from('clientes')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', cliente.id);
+
+    if (error) {
+      toast.error('Erro ao excluir cliente');
     } else {
-      const confirmacao = window.confirm(
-        'Este registro possui histórico ou qualificação jurídica. Será mantido em Custódia Legal protegida (5 anos conforme Estatuto da OAB). Deseja arquivar?'
-      );
-      if (!confirmacao) return;
-
-      const { error } = await supabase
-        .from('clientes')
-        .update({
-          deleted_at: new Date().toISOString(),
-          status_ciclo: 'encerrado',
-        })
-        .eq('id', cliente.id);
-
-      if (error) {
-        toast.error('Erro ao arquivar cliente: ' + error.message);
-      } else {
-        toast.success('Cliente arquivado sob custódia legal.');
-        navigate('/admin/crm/clientes');
-      }
+      toast.success('Registro excluído com sucesso');
+      navigate('/admin/crm/clientes');
     }
   };
 
   const renderIconeCanal = (tipo: TipoInteracao) => {
     switch (tipo) {
       case 'whatsapp':
-        return <MessageSquare className="w-4 h-4 text-green-400" />;
+        return <MessageSquare className="w-4 h-4 text-emerald-400" />;
       case 'ligacao':
         return <PhoneCall className="w-4 h-4 text-blue-400" />;
       case 'reuniao':
@@ -215,7 +201,7 @@ export default function ClienteDetalhe() {
   if (!cliente) return null;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+    <div className="max-w-6xl mx-auto space-y-6 pb-12">
       {/* Barra de Topo */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -273,7 +259,7 @@ export default function ClienteDetalhe() {
 
       {/* Grid Principal */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Coluna 1 & 2: Qualificação + Timeline de Interações */}
+        {/* Coluna 1 & 2: Qualificação + Representante + Anexos + Timeline */}
         <div className="md:col-span-2 space-y-6">
           {/* Dossiê de Qualificação */}
           <div className="bg-card border border-white/10 rounded-2xl p-6 shadow-sm space-y-4">
@@ -286,22 +272,31 @@ export default function ClienteDetalhe() {
               Qualificação Jurídica
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
               <div>
                 <span className="text-slate-400 text-xs block">Documento (CPF / CNPJ)</span>
                 <span className="text-white font-mono font-medium">{cliente.cpf_cnpj || 'Não informado'}</span>
               </div>
 
               <div>
-                <span className="text-slate-400 text-xs block">RG / Inscrição Estadual</span>
+                <span className="text-slate-400 text-xs block">RG / National ID</span>
                 <span className="text-white font-medium">{cliente.rg_ie || 'Não informado'}</span>
+              </div>
+
+              <div>
+                <span className="text-slate-400 text-xs block">Data de Nascimento</span>
+                <span className="text-white font-medium">
+                  {cliente.data_nascimento
+                    ? new Date(cliente.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR')
+                    : 'Não informada'}
+                </span>
               </div>
 
               {cliente.tipo_pessoa === 'PF' ? (
                 <>
                   <div>
-                    <span className="text-slate-400 text-xs block">Nacionalidade</span>
-                    <span className="text-white font-medium">{cliente.nacionalidade || 'Não informado'}</span>
+                    <span className="text-slate-400 text-xs block">Sexo / Gênero</span>
+                    <span className="text-white font-medium">{cliente.sexo || 'Não informado'}</span>
                   </div>
 
                   <div>
@@ -310,7 +305,12 @@ export default function ClienteDetalhe() {
                   </div>
 
                   <div>
-                    <span className="text-slate-400 text-xs block">Profissão</span>
+                    <span className="text-slate-400 text-xs block">Nacionalidade</span>
+                    <span className="text-white font-medium">{cliente.nacionalidade || 'Não informado'}</span>
+                  </div>
+
+                  <div>
+                    <span className="text-slate-400 text-xs block">Profissão / Atividade</span>
                     <span className="text-white font-medium">{cliente.profissao || 'Não informado'}</span>
                   </div>
                 </>
@@ -320,6 +320,11 @@ export default function ClienteDetalhe() {
                   <span className="text-white font-medium">{cliente.nome_fantasia || 'Não informado'}</span>
                 </div>
               )}
+
+              <div>
+                <span className="text-slate-400 text-xs block">País</span>
+                <span className="text-white font-medium">{cliente.pais || 'Brasil'}</span>
+              </div>
             </div>
 
             <div className="pt-3 border-t border-white/10">
@@ -332,11 +337,80 @@ export default function ClienteDetalhe() {
                         cliente.endereco_complemento ? ' - ' + cliente.endereco_complemento : ''
                       }, ${cliente.endereco_bairro || ''}, ${cliente.endereco_cidade || ''} - ${
                         cliente.endereco_uf || ''
-                      }${cliente.endereco_cep ? `, CEP: ${cliente.endereco_cep}` : ''}`
+                      }${cliente.endereco_cep ? `, CEP: ${cliente.endereco_cep}` : ''}${
+                        cliente.pais && cliente.pais !== 'Brasil' ? ` (${cliente.pais})` : ''
+                      }`
                     : 'Endereço não cadastrado'}
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Dossiê do Representante Legal (se houver) */}
+          {(cliente.tem_representante || cliente.rep_nome) && (
+            <div className="bg-card border border-white/10 rounded-2xl p-6 shadow-sm space-y-4">
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider border-b border-white/10 pb-3 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-secondary" />
+                Representante Legal
+              </h2>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                <div className="sm:col-span-2">
+                  <span className="text-slate-400 text-xs block">Nome do Representante</span>
+                  <span className="text-white font-medium">{cliente.rep_nome || 'Não informado'}</span>
+                </div>
+
+                <div>
+                  <span className="text-slate-400 text-xs block">CPF / CNPJ</span>
+                  <span className="text-white font-mono font-medium">{cliente.rep_cpf_cnpj || 'Não informado'}</span>
+                </div>
+
+                <div>
+                  <span className="text-slate-400 text-xs block">RG</span>
+                  <span className="text-white font-medium">{cliente.rep_rg || 'Não informado'}</span>
+                </div>
+
+                <div>
+                  <span className="text-slate-400 text-xs block">Data de Nascimento</span>
+                  <span className="text-white font-medium">
+                    {cliente.rep_data_nascimento
+                      ? new Date(cliente.rep_data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR')
+                      : 'Não informada'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-slate-400 text-xs block">País</span>
+                  <span className="text-white font-medium">{cliente.rep_pais || 'Brasil'}</span>
+                </div>
+              </div>
+
+              {(cliente.rep_endereco || cliente.rep_cidade || cliente.rep_cep) && (
+                <div className="pt-2 border-t border-white/10 text-xs text-slate-300 flex items-start gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-secondary flex-shrink-0 mt-0.5" />
+                  <span>
+                    {[
+                      cliente.rep_endereco,
+                      cliente.rep_bairro,
+                      cliente.rep_cidade && cliente.rep_uf ? `${cliente.rep_cidade}/${cliente.rep_uf}` : cliente.rep_cidade,
+                      cliente.rep_cep ? `CEP: ${cliente.rep_cep}` : null
+                    ].filter(Boolean).join(', ')}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Módulo de Documentos e Arquivos do Cliente */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-secondary" />
+                Arquivos e Documentos do Cliente
+              </h2>
+              <span className="text-xs text-slate-400">Armazenamento em nuvem</span>
+            </div>
+            <PainelDocumentosCliente cliente={cliente} />
           </div>
 
           {/* Timeline de Interações (Issue #3) */}
@@ -445,7 +519,7 @@ export default function ClienteDetalhe() {
           </div>
         </div>
 
-        {/* Coluna 3: Contato & Governança */}
+        {/* Coluna 3: Contato & Governança & Anotações */}
         <div className="space-y-6">
           <div className="bg-card border border-white/10 rounded-2xl p-6 shadow-sm space-y-4">
             <h2 className="text-sm font-bold text-white uppercase tracking-wider border-b border-white/10 pb-3">
@@ -453,15 +527,31 @@ export default function ClienteDetalhe() {
             </h2>
 
             <div className="space-y-3 text-sm">
-              <div className="flex items-center gap-2.5 text-slate-200">
-                <Phone className="w-4 h-4 text-secondary" />
-                <span className="font-bold">{cliente.telefone_whatsapp}</span>
+              <div className="space-y-1">
+                <span className="text-xs text-slate-400 block">WhatsApp / Telefone 1:</span>
+                <div className="flex items-center gap-2.5 text-slate-200">
+                  <Phone className="w-4 h-4 text-secondary shrink-0" />
+                  <span className="font-bold">{cliente.telefone_whatsapp}</span>
+                </div>
               </div>
 
+              {cliente.telefone_secundario && (
+                <div className="space-y-1 pt-2 border-t border-white/5">
+                  <span className="text-xs text-slate-400 block">Telefone 2 / Adicional:</span>
+                  <div className="flex items-center gap-2.5 text-slate-300 text-xs">
+                    <Phone className="w-3.5 h-3.5 text-secondary shrink-0" />
+                    <span>{cliente.telefone_secundario}</span>
+                  </div>
+                </div>
+              )}
+
               {cliente.email && (
-                <div className="flex items-center gap-2.5 text-slate-300 text-xs truncate">
-                  <Mail className="w-4 h-4 text-secondary flex-shrink-0" />
-                  <span className="truncate">{cliente.email}</span>
+                <div className="space-y-1 pt-2 border-t border-white/5">
+                  <span className="text-xs text-slate-400 block">E-mail:</span>
+                  <div className="flex items-center gap-2.5 text-slate-300 text-xs truncate">
+                    <Mail className="w-4 h-4 text-secondary shrink-0" />
+                    <span className="truncate">{cliente.email}</span>
+                  </div>
                 </div>
               )}
 
@@ -472,6 +562,19 @@ export default function ClienteDetalhe() {
               )}
             </div>
           </div>
+
+          {/* Anotações Gerais e Senhas */}
+          {cliente.anotacoes_gerais && (
+            <div className="bg-card border border-white/10 rounded-2xl p-6 shadow-sm space-y-3">
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Info className="w-4 h-4 text-secondary" />
+                Anotações & Senhas
+              </h2>
+              <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap bg-slate-900/50 p-3 rounded-xl border border-white/5 font-mono">
+                {cliente.anotacoes_gerais}
+              </p>
+            </div>
+          )}
 
           {/* Visibilidade e Custódia Legal */}
           <div className="bg-card border border-white/10 rounded-2xl p-6 shadow-sm space-y-3">
