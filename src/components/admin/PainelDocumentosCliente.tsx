@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Upload,
   Search,
@@ -190,15 +190,33 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
         download: paraDownload ? nomeArquivo : undefined,
       });
 
-    if (error || !data?.signedUrl) {
+    let urlFinal = data?.signedUrl;
+
+    if (error || !urlFinal) {
       // Tenta fallback com URL pública caso configurado
       const { data: publicData } = supabase.storage
         .from('documentos-clientes')
         .getPublicUrl(storagePath);
-      return publicData?.publicUrl || null;
+      urlFinal = publicData?.publicUrl || null;
     }
 
-    return data.signedUrl;
+    if (!urlFinal) return null;
+
+    // Substitui a URL padrão do Supabase pelo domínio personalizado Cloudflare
+    const customStorageDomain =
+      import.meta.env.VITE_STORAGE_CUSTOM_DOMAIN || 'arquivos.edvaldorodrigues.com.br';
+
+    if (customStorageDomain) {
+      try {
+        const parsed = new URL(urlFinal);
+        parsed.hostname = customStorageDomain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+        return parsed.toString();
+      } catch {
+        return urlFinal;
+      }
+    }
+
+    return urlFinal;
   };
 
   const handleAbrirEmNovaGuia = async (doc: DocumentoCliente) => {
