@@ -27,3 +27,9 @@ dist-ssr
 twin-plan-current.md
 twin-plans/
 twin-workflow.md
+
+# Google Drive credentials
+*.json.key
+service-account*.json
+.env.local
+.env.*.local

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   FolderOpen,
   Upload,
@@ -14,7 +14,6 @@ import { supabase, DocumentoCaso, TipoDocumentoCaso, Caso, Cliente } from '@/lib
 import {
   TIPOS_DOCUMENTO_CASO,
   validarNovoDocumentoCaso,
-  gerarCaminhoHierarquicoDrive
 } from '@/domain/crm/drive';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -70,12 +69,17 @@ export function PainelDocumentosCaso({ caso, cliente }: PainelDocumentosCasoProp
   const handleUploadDocumento = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!arquivoSelecionado) {
+      toast.error('Selecione um arquivo para enviar.');
+      return;
+    }
+
     const validacao = validarNovoDocumentoCaso({
       caso_id: caso.id,
       nome_arquivo: nomeArquivo.trim(),
       tipo_documento: tipoDocumento,
-      tamanho_bytes: arquivoSelecionado?.size,
-      mime_type: arquivoSelecionado?.type,
+      tamanho_bytes: arquivoSelecionado.size,
+      mime_type: arquivoSelecionado.type,
     });
 
     if (!validacao.valido) {
@@ -85,31 +89,51 @@ export function PainelDocumentosCaso({ caso, cliente }: PainelDocumentosCasoProp
 
     setUploadando(true);
     try {
-      // 1. Gera árvore de pastas do Drive
-      const caminho = gerarCaminhoHierarquicoDrive({
-        clienteNome: cliente?.nome_razao_social || 'Cliente',
-        clienteId: caso.cliente_id,
-        casoTitulo: caso.titulo,
-        casoId: caso.id,
-      });
+      // 1. Monta FormData para a Edge Function
+      const form = new FormData();
+      form.append('file', arquivoSelecionado, nomeArquivo.trim() || arquivoSelecionado.name);
+      form.append('caso_id', caso.id);
+      form.append('cliente_nome', cliente?.nome_razao_social || 'Cliente');
+      form.append('cliente_id', caso.cliente_id);
+      form.append('caso_titulo', caso.titulo);
+      form.append('tipo_documento', tipoDocumento);
 
-      // 2. Link simulado ou direto do Google Drive
-      const driveFileId = `drive_file_${Date.now()}`;
-      const driveLink = driveFolderId
-        ? `https://drive.google.com/drive/folders/${driveFolderId}`
-        : `https://drive.google.com/drive/search?q=${encodeURIComponent(caminho.pastaCaso)}`;
+      // 2. Chama Edge Function (faz upload real no Google Drive)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
 
-      // 3. Salva metadados no Supabase
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-documento-drive`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: form,
+        }
+      );
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Erro no upload para o Drive.');
+
+      const { file_id, view_link, folder_id } = result as {
+        file_id: string;
+        view_link: string;
+        folder_id: string;
+      };
+
+      // 3. Salva metadados no Supabase (com link real do Drive)
       const { data, error } = await supabase
         .from('documentos_casos')
         .insert({
           caso_id: caso.id,
           nome_arquivo: nomeArquivo.trim(),
           tipo_documento: tipoDocumento,
-          tamanho_bytes: arquivoSelecionado?.size || null,
-          mime_type: arquivoSelecionado?.type || 'application/octet-stream',
-          google_drive_file_id: driveFileId,
-          google_drive_view_link: driveLink,
+          tamanho_bytes: arquivoSelecionado.size,
+          mime_type: arquivoSelecionado.type || 'application/octet-stream',
+          google_drive_file_id: file_id,
+          google_drive_view_link: view_link,
           criado_por: user?.id || null,
         })
         .select()
@@ -117,8 +141,17 @@ export function PainelDocumentosCaso({ caso, cliente }: PainelDocumentosCasoProp
 
       if (error) throw error;
 
+      // Atualiza folder_id do caso se ainda não tinha
+      if (folder_id && !driveFolderId) {
+        setDriveFolderId(folder_id);
+        await supabase
+          .from('casos')
+          .update({ google_drive_folder_id: folder_id })
+          .eq('id', caso.id);
+      }
+
       setDocumentos((prev) => [data as DocumentoCaso, ...prev]);
-      toast.success('Documento arquivado com sucesso no Google Drive do caso!');
+      toast.success('Documento enviado ao Google Drive com sucesso!');
       setNomeArquivo('');
       setArquivoSelecionado(null);
       setMostrandoForm(false);
@@ -128,6 +161,7 @@ export function PainelDocumentosCaso({ caso, cliente }: PainelDocumentosCasoProp
       setUploadando(false);
     }
   };
+
 
   const handleExcluir = async (id: string) => {
     const confirm = window.confirm('Deseja remover este registro de documento do caso?');
