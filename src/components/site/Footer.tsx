@@ -51,7 +51,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/calculadora" className="hover:text-[#C9A961] transition-colors">
+                <Link to="/conteudo-juridico" className="hover:text-[#C9A961] transition-colors">
                   Conteúdo Jurídico
                 </Link>
               </li>
@@ -128,7 +128,7 @@ export function Footer() {
               </li>
               <li className="flex items-start gap-2.5">
                 <MapPin className="size-4 text-[#C9A961] shrink-0 mt-0.5" aria-hidden="true" />
-                <span>Praia Grande, SP — Atendimento presencial e online</span>
+                <span>{site.contact.addressLine}</span>
               </li>
             </ul>
 

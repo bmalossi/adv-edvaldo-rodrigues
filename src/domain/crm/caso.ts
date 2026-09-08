@@ -1,4 +1,5 @@
 ﻿import { VisibilidadeRegistro, PapelUsuario } from './cliente';
+import { FaseFunil } from './etapa-funil';
 
 export type TipoDemanda = 'judicial' | 'extrajudicial' | 'consultivo';
 
@@ -8,6 +9,15 @@ export type StatusCaso =
   | 'aguardando_documentos'
   | 'concluido'
   | 'arquivado';
+
+export type ResultadoCaso =
+  | 'procedente'
+  | 'improcedente'
+  | 'parcialmente_procedente'
+  | 'acordo'
+  | 'desistencia'
+  | 'extincao_sem_resolucao'
+  | 'outro';
 
 export interface Caso {
   id: string;
@@ -22,6 +32,26 @@ export interface Caso {
   responsavel_id: string;
   responsavel_nome?: string;
   google_drive_folder_id?: string | null;
+
+  // Funil processual (ADVBOX)
+  fase_funil: FaseFunil;
+  etapa_id?: string | null;
+  etapa_nome?: string | null; // join via etapas_funil
+
+  // Campos críticos de datas
+  data_prazo?: string | null;
+  data_audiencia?: string | null;
+  data_fechamento?: string | null;
+  data_transito_julgado?: string | null;
+
+  // Resultado e valor
+  resultado_final?: ResultadoCaso | null;
+  valor_causa?: number | null;
+  numero_processo?: string | null;
+
+  // Compartilhamento pontual
+  compartilhado_com?: string[];
+
   created_at?: string;
   updated_at?: string;
 }
@@ -44,6 +74,16 @@ export const AREAS_DIREITO_PADRAO = [
   'Tributário',
   'Outros',
 ];
+
+export const RESULTADO_LABELS: Record<ResultadoCaso, string> = {
+  procedente: 'Procedente',
+  improcedente: 'Improcedente',
+  parcialmente_procedente: 'Parcialmente procedente',
+  acordo: 'Acordo',
+  desistencia: 'Desistência',
+  extincao_sem_resolucao: 'Extinção sem resolução',
+  outro: 'Outro',
+};
 
 export function validarNovoCaso(caso: Partial<Caso>): {
   valido: boolean;
@@ -80,19 +120,23 @@ export function podeAcessarCaso(
     return true;
   }
 
-  // 2. Se for privado:
-  // - O responsável direto sempre acessa
+  // 2. O responsável direto sempre acessa
   if (caso.responsavel_id === usuarioId) {
     return true;
   }
 
-  // - Sócios advogados têm acesso de governança técnica da banca
+  // 3. Sócios advogados têm acesso de governança técnica da banca
   if (papelUsuario === 'advogado') {
     return true;
   }
 
-  // - Colaboradores expressamente delegados ao caso têm acesso
+  // 4. Colaboradores expressamente delegados ao caso têm acesso
   if (colaboradoresDelegadosIds.includes(usuarioId)) {
+    return true;
+  }
+
+  // 5. Compartilhamento pontual: usuário na lista compartilhado_com
+  if (caso.compartilhado_com?.includes(usuarioId)) {
     return true;
   }
 

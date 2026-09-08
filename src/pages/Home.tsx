@@ -3,8 +3,11 @@ import { Link } from "react-router-dom";
 import { site } from "@/config/site";
 import { Button } from "@/components/ui/button";
 import { AreaDetailDialog } from "@/components/site/AreaDetailDialog";
+import { ArticlesSection } from "@/components/site/ArticlesSection";
 import { practiceAreas, type PracticeArea } from "@/content/areas";
 import fotoSobre from "@/assets/foto-sobre3.webp";
+import { SEOHead } from "@/components/site/SEOHead";
+import { SEO, buildLegalServiceSchema, buildBreadcrumb } from "@/lib/seo";
 import {
   ArrowRight,
   Briefcase,
@@ -21,6 +24,7 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
+
 
 export default function Home() {
   const [selectedArea, setSelectedArea] = useState<PracticeArea | null>(null);
@@ -124,6 +128,56 @@ export default function Home() {
 
   return (
     <div className="w-full bg-[#FAF9F6] text-[#0D1B30] overflow-hidden">
+      <SEOHead
+        title="Edvaldo Rodrigues | Advogado em Praia Grande/SP — Assessoria Jurídica"
+        description="Advogado em Praia Grande/SP especializado em Direito Civil, Empresarial, Trabalhista, Previdenciário, Criminal e Família. OAB/SP nº 465.818. Atendimento presencial e online."
+        canonical="/"
+        jsonLd={[
+          buildLegalServiceSchema(),
+          buildBreadcrumb([
+            { name: "Início", url: SEO.siteUrl },
+          ]),
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: [
+              {
+                "@type": "Question",
+                name: "O que é assessoria jurídica empresarial?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "Assessoria jurídica empresarial é o serviço contínuo de orientação legal para empresas, abrangendo elaboração de contratos, prevenção de litígios, conformidade trabalhista e suporte em decisões estratégicas com segurança jurídica.",
+                },
+              },
+              {
+                "@type": "Question",
+                name: "Quais áreas do Direito o escritório Edvaldo Rodrigues atende?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "O escritório atua em Direito Civil, Direito Empresarial, Direito Trabalhista, Direito Previdenciário, Direito de Família, Direito Criminal e Direito Militar, com atendimento em Praia Grande/SP e região.",
+                },
+              },
+              {
+                "@type": "Question",
+                name: "Como agendar uma consulta com o Dr. Edvaldo Rodrigues?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "O atendimento é feito sob agendamento pelo WhatsApp (13) 99682-4364 ou pelo formulário de contato no site. O escritório funciona de segunda a sexta, das 9h às 18h, em Praia Grande/SP.",
+                },
+              },
+              {
+                "@type": "Question",
+                name: "Prevenir litígios é mais barato do que litigar?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "Sim. A assessoria preventiva reduz custos com processos judiciais, protege o patrimônio da empresa e garante conformidade legal. Contratos bem elaborados e orientação contínua evitam a maioria dos conflitos empresariais.",
+                },
+              },
+            ],
+          },
+        ]}
+      />
+
       {/* ========================================================================= */}
       {/* 2. HERO SECTION (Imagem hero-bg.svg estendida em todo o hero)             */}
       {/* ========================================================================= */}
@@ -135,18 +189,12 @@ export default function Home() {
             alt="Dr. Edvaldo Rodrigues Ferreira Advocacia"
             className="w-full h-full object-cover object-[65%_center] sm:object-[70%_center] lg:object-center"
             loading="eager"
+            fetchPriority="high"
           />
         </div>
 
         <div className="container relative z-10">
           <div className="max-w-2xl lg:max-w-3xl space-y-5">
-            {/* Badge/Tag Pequena */}
-            <div className="inline-flex items-center gap-2 border border-[#C9A961]/40 bg-[#0D1B30]/85 backdrop-blur-sm px-3.5 py-1 rounded-full text-[11px] uppercase tracking-[0.2em] text-[#C9A961] font-semibold">
-              <span>{site.brand.oab.replace(" nº", "")}</span>
-              <span className="text-[#C9A961]/60">•</span>
-              <span>PRAIA GRANDE / SP</span>
-            </div>
-
             {/* Título Principal H1 em 3 Linhas */}
             <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-bold tracking-tight leading-[1.05]">
               <span className="block text-white">ASSESSORIA</span>
@@ -431,7 +479,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ⚠️ NOTA: A seção "Artigos recentes" foi omitida expressamente por solicitação do usuário. */}
+      {/* ========================================================================= */}
+      {/* 6.5. "ARTIGOS RECENTES" (Conteúdo Jurídico)                              */}
+      {/* ========================================================================= */}
+      <ArticlesSection />
 
       {/* ========================================================================= */}
       {/* 7. FAIXA DE CTA FINAL (Fundo Dourado #C9A961)                              */}

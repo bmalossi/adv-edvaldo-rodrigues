@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalculadoraCLT } from "@/components/calculadora/CalculadoraCLT";
 import { CalculadoraPJ } from "@/components/calculadora/CalculadoraPJ";
 import { AnimateInView } from "@/components/site/AnimateInView";
+import { SEOHead } from "@/components/site/SEOHead";
+import { SEO, buildBreadcrumb } from "@/lib/seo";
 
 const fadeUp = {
     hidden: { opacity: 0, y: 12 },
@@ -18,6 +20,31 @@ export default function Calculadora() {
 
     return (
         <div className="min-h-screen bg-surface pb-24">
+            <SEOHead
+                title="Calculadora de Rescisão Trabalhista e Vínculo PJ | Edvaldo Rodrigues"
+                description="Simule seus direitos trabalhistas CLT ou avalie riscos de pejotização com a calculadora jurídica do escritório Edvaldo Rodrigues Advocacia."
+                canonical="/calculadora"
+                jsonLd={[
+                    buildBreadcrumb([
+                        { name: "Início", url: SEO.siteUrl },
+                        { name: "Calculadora de Rescisão", url: `${SEO.siteUrl}/calculadora` },
+                    ]),
+                    {
+                        "@context": "https://schema.org",
+                        "@type": "WebApplication",
+                        name: "Calculadora de Rescisão Trabalhista e Riscos PJ",
+                        applicationCategory: "BusinessApplication",
+                        operatingSystem: "All",
+                        url: `${SEO.siteUrl}/calculadora`,
+                        description: "Ferramenta online de simulação de rescisão contratual trabalhista e diagnóstico de pejotização.",
+                        offers: {
+                            "@type": "Offer",
+                            price: "0",
+                            priceCurrency: "BRL",
+                        },
+                    },
+                ]}
+            />
             {/* Hero Section */}
             <section className="relative overflow-hidden bg-[#0D1B30]">
                 <div className="relative">

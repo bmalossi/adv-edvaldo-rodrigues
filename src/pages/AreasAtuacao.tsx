@@ -6,12 +6,40 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { AnimateInView } from "@/components/site/AnimateInView";
 import { AreaDetailDialog } from "@/components/site/AreaDetailDialog";
+import { SEOHead } from "@/components/site/SEOHead";
+import { SEO, buildBreadcrumb } from "@/lib/seo";
+
 
 export default function AreasAtuacao() {
   const [selectedArea, setSelectedArea] = useState<PracticeArea | null>(null);
 
   return (
     <div className="container py-12">
+      <SEOHead
+        title="Áreas de Atuação | Edvaldo Rodrigues Advocacia — Praia Grande/SP"
+        description="Conheça as áreas de atuação do escritório Edvaldo Rodrigues Advocacia: Direito Civil, Empresarial, Trabalhista, Previdenciário, Criminal, Família e Militar em Praia Grande/SP."
+        canonical="/areas-de-atuacao"
+        jsonLd={[
+          buildBreadcrumb([
+            { name: "Início", url: SEO.siteUrl },
+            { name: "Áreas de Atuação", url: `${SEO.siteUrl}/areas-de-atuacao` },
+          ]),
+          {
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            name: "Áreas de Atuação — Edvaldo Rodrigues Advocacia",
+            description: "Serviços jurídicos oferecidos pelo escritório Edvaldo Rodrigues Advocacia em Praia Grande/SP",
+            itemListElement: practiceAreas.map((area, idx) => ({
+              "@type": "ListItem",
+              position: idx + 1,
+              name: area.title,
+              description: area.description,
+              url: `${SEO.siteUrl}/areas-de-atuacao`,
+            })),
+          },
+        ]}
+      />
+
       <AnimateInView>
         <header className="max-w-3xl">
           <h1 className="font-serif text-4xl font-semibold tracking-tight">Áreas de atuação</h1>

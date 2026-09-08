@@ -4,10 +4,26 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { practiceAreas } from "@/content/areas";
 import { AnimateInView } from "@/components/site/AnimateInView";
+import { SEOHead } from "@/components/site/SEOHead";
+import { SEO, buildAttorneySchema, buildBreadcrumb } from "@/lib/seo";
+
 
 export default function Sobre() {
   return (
     <div className="container py-12">
+      <SEOHead
+        title="Sobre o Advogado | Edvaldo Rodrigues Ferreira — OAB/SP nº 465.818"
+        description="Conheça o Dr. Edvaldo Rodrigues Ferreira, advogado inscrito na OAB/SP nº 465.818, com atuação em Direito Civil, Empresarial, Trabalhista, Previdenciário, Criminal, Família e Militar em Praia Grande/SP."
+        canonical="/sobre"
+        jsonLd={[
+          buildAttorneySchema(),
+          buildBreadcrumb([
+            { name: "Início", url: SEO.siteUrl },
+            { name: "Sobre", url: `${SEO.siteUrl}/sobre` },
+          ]),
+        ]}
+      />
+
       <AnimateInView>
         <header className="max-w-3xl">
           <h1 className="font-serif text-4xl font-semibold tracking-tight">Sobre o Advogado</h1>

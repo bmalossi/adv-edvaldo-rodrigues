@@ -12,7 +12,7 @@ const links = [
   { to: "/", label: "Início" },
   { to: "/#empresas", label: "Empresas" },
   { to: "/areas-de-atuacao", label: "Áreas de Atuação" },
-  { to: "/calculadora", label: "Conteúdo Jurídico" },
+  { to: "/conteudo-juridico", label: "Conteúdo Jurídico" },
   { to: "/sobre", label: "Sobre" },
   { to: "/contato", label: "Contato" },
 ] as const;
@@ -51,7 +51,7 @@ export function Navbar() {
       >
         <div className="container flex h-20 items-center justify-between">
           {/* Logo institucional */}
-          <Link to="/" className="flex items-center gap-3 transition-opacity hover:opacity-90">
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 transition-opacity hover:opacity-90 min-w-0 shrink">
             <BrandLogo variant="dark" />
           </Link>
 
@@ -82,7 +82,7 @@ export function Navbar() {
           </nav>
 
           {/* CTA e Ações da Direita */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <Button
               asChild
               className="hidden sm:inline-flex bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-semibold text-xs uppercase tracking-wider h-10 px-5 rounded-md shadow-sm transition-all duration-200"
@@ -101,7 +101,7 @@ export function Navbar() {
 
             <Link
               to="/admin"
-              className="text-slate-400/40 hover:text-[#C9A961] transition-colors p-1"
+              className="hidden sm:inline-flex text-slate-400/40 hover:text-[#C9A961] transition-colors p-1"
               title="Acesso Administrativo"
             >
               <Settings className="size-4" />
@@ -151,6 +151,15 @@ export function Navbar() {
                         Fale com o escritório
                       </a>
                     </Button>
+                    <div className="pt-2 text-center">
+                      <Link
+                        to="/admin"
+                        className="text-[11px] text-slate-400 hover:text-[#C9A961] transition-colors inline-flex items-center gap-1.5"
+                      >
+                        <Settings className="size-3.5" />
+                        Painel Administrativo
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </SheetContent>

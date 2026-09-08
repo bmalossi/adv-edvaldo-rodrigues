@@ -4,10 +4,30 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { MapCard } from "@/components/site/MapCard";
 import { ParallaxCard } from "@/components/site/ParallaxCard";
 import { AnimateInView } from "@/components/site/AnimateInView";
+import { SEOHead } from "@/components/site/SEOHead";
+import { SEO, buildLegalServiceSchema, buildBreadcrumb } from "@/lib/seo";
 
 export default function Contato() {
   return (
     <div className="container py-12">
+      <SEOHead
+        title="Contato | Edvaldo Rodrigues Advocacia — Praia Grande/SP"
+        description="Entre em contato com o escritório Edvaldo Rodrigues Advocacia em Praia Grande/SP. Atendimento presencial e online via WhatsApp e formulário."
+        canonical="/contato"
+        jsonLd={[
+          buildBreadcrumb([
+            { name: "Início", url: SEO.siteUrl },
+            { name: "Contato", url: `${SEO.siteUrl}/contato` },
+          ]),
+          {
+            "@context": "https://schema.org",
+            "@type": "ContactPage",
+            name: "Contato — Edvaldo Rodrigues Advocacia",
+            url: `${SEO.siteUrl}/contato`,
+            mainEntity: buildLegalServiceSchema(),
+          },
+        ]}
+      />
       <AnimateInView>
         <header className="max-w-3xl">
           <h1 className="font-serif text-4xl font-semibold tracking-tight">Contato</h1>

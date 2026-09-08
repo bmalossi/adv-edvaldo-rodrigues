@@ -16,6 +16,7 @@ import {
     FileCheck,
     ChevronDown,
     Cloud,
+    Kanban,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -23,7 +24,7 @@ import { cn } from '@/lib/utils'
 import { BrandLogo } from '@/components/site/BrandLogo'
 
 const crmNavItems = [
-    { to: '/admin/crm/funil', label: 'Funil Comercial', icon: LayoutDashboard },
+    { to: '/admin/crm/funil', label: 'Funil Processual', icon: Kanban },
     { to: '/admin/crm/clientes', label: 'Clientes & Leads', icon: Users },
     { to: '/admin/crm/casos', label: 'Dossiê de Casos', icon: Briefcase },
     { to: '/admin/crm/agenda', label: 'Agenda & Prazos', icon: Calendar },

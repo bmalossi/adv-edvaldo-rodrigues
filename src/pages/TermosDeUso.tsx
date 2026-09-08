@@ -1,8 +1,14 @@
 import { site } from "@/config/site";
+import { SEOHead } from "@/components/site/SEOHead";
 
 const TermosDeUso = () => {
     return (
         <div className="container py-16 md:py-24">
+            <SEOHead
+                title="Termos de Uso | Edvaldo Rodrigues Advocacia"
+                canonical="/termos-de-uso"
+                noIndex={true}
+            />
             <div className="mx-auto max-w-3xl">
                 <h1 className="mb-8 font-serif text-4xl font-bold tracking-tight text-foreground md:text-5xl">
                     Termos de Uso

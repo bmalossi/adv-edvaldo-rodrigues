@@ -34,7 +34,7 @@ import BancoDeImagens from "./pages/admin/BancoDeImagens";
 import Clientes from "./pages/admin/Clientes";
 import ClienteForm from "./pages/admin/ClienteForm";
 import ClienteDetalhe from "./pages/admin/ClienteDetalhe";
-import FunilClientes from "./pages/admin/FunilClientes";
+import FunilProcessual from "./pages/admin/FunilProcessual";
 import Casos from "./pages/admin/Casos";
 import CasoForm from "./pages/admin/CasoForm";
 import CasoDetalhe from "./pages/admin/CasoDetalhe";
@@ -176,7 +176,7 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <AdminLayout>
-                  <FunilClientes />
+                  <FunilProcessual />
                 </AdminLayout>
               </ProtectedRoute>
             }
