@@ -241,7 +241,7 @@ export default function CasoDetalhe() {
           {cliente && (
             <Button
               onClick={() => setModalMinutaOpen(true)}
-              className="rounded-xl gap-1.5 bg-primary hover:bg-primary/90 text-white"
+              className="rounded-xl gap-1.5 bg-secondary hover:opacity-90 text-primary font-bold shadow-md"
             >
               <FileDown className="w-4 h-4" />
               Gerar Minuta (.docx)

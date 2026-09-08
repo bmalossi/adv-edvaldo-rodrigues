@@ -464,7 +464,7 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
             <Button
               type="submit"
               disabled={salvando}
-              className="flex-1 h-9 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg shadow-md transition-all gap-1.5"
+              className="flex-1 h-9 bg-secondary hover:opacity-90 text-primary font-bold text-xs rounded-lg shadow-md transition-all gap-1.5"
             >
               <Save className="w-3.5 h-3.5" />
               {salvando ? 'Atualizando...' : 'Atualizar dados do processo'}

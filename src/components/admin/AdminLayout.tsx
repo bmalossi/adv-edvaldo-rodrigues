@@ -136,8 +136,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                         className="w-full px-3 py-2.5 flex items-center justify-between text-left hover:bg-white/5 transition-colors group"
                     >
                         <div className="flex items-center gap-2">
-                            <FolderOpen className="w-4 h-4 text-slate-300 group-hover:text-white transition-colors" />
-                            <span className="text-xs font-bold tracking-wider text-slate-300 uppercase group-hover:text-white transition-colors">
+                            <FolderOpen className="w-4 h-4 text-secondary" />
+                            <span className="text-xs font-bold tracking-wider text-secondary uppercase">
                                 JusTrack
                             </span>
                         </div>
