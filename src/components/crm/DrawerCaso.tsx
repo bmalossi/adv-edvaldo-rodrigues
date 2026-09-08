@@ -155,12 +155,18 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
 
     setExcluindo(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('casos')
         .delete()
-        .eq('id', caso.id);
+        .eq('id', caso.id)
+        .select();
 
       if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast.error('O banco de dados não permitiu a exclusão. Aplique a migration de política DELETE no Supabase.');
+        return;
+      }
 
       toast.success('Processo removido do funil com sucesso.');
       if (onAtualizado) onAtualizado();

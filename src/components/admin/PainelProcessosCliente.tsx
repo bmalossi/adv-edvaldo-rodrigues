@@ -11,7 +11,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Calendar,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Caso, TipoDemanda, AREAS_DIREITO_PADRAO } from '@/domain/crm/caso';
@@ -149,6 +150,33 @@ export function PainelProcessosCliente({
 
     toast.success('Etapa do processo atualizada com sucesso!');
     fetchDados();
+  };
+
+  const handleExcluirCaso = async (casoId: string, titulo: string) => {
+    const confirmou = window.confirm(
+      `Deseja realmente excluir o processo "${titulo}"? Esta ação removerá o processo do funil.`
+    );
+    if (!confirmou) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('casos')
+        .delete()
+        .eq('id', casoId)
+        .select();
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast.error('O banco de dados não permitiu a exclusão. Execute o SQL da política DELETE no Supabase.');
+        return;
+      }
+
+      toast.success('Processo excluído com sucesso.');
+      fetchDados();
+    } catch (err: any) {
+      toast.error('Erro ao excluir processo: ' + err.message);
+    }
   };
 
   // Criar novo processo para este cliente
@@ -317,15 +345,26 @@ export function PainelProcessosCliente({
                     </div>
                   </div>
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCasoParaEditar(caso)}
-                    className="text-xs text-secondary hover:bg-secondary/10 gap-1 rounded-lg self-start"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    Editar no Drawer
-                  </Button>
+                  <div className="flex items-center gap-1 self-start">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCasoParaEditar(caso)}
+                      className="text-xs text-secondary hover:bg-secondary/10 gap-1 rounded-lg h-8"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Editar no Drawer
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleExcluirCaso(caso.id, caso.titulo)}
+                      className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg h-8 w-8"
+                      title="Excluir processo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Seletores Interativos de Fase e Etapa na Própria Ficha */}
