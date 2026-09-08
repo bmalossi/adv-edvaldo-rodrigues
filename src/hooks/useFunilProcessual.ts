@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Caso, TipoDemanda } from '@/domain/crm/caso';
@@ -28,53 +28,57 @@ export function useFunilProcessual() {
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState<FiltrosFunil>(FILTROS_VAZIOS);
 
-  const fetchEtapas = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('etapas_funil')
-      .select('*')
-      .order('fase')
-      .order('ordem');
-    if (!error && data) {
-      setEtapas(data as EtapaFunil[]);
+  // Referência para etapas para evitar loops em callbacks
+  const etapasRef = useRef<EtapaFunil[]>([]);
+  etapasRef.current = etapas;
+
+  const carregarDados = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [resEtapas, resCasos] = await Promise.all([
+        supabase.from('etapas_funil').select('*').order('fase').order('ordem'),
+        supabase
+          .from('casos')
+          .select(`
+            *,
+            cliente:clientes(nome_razao_social),
+            responsavel:perfis(nome)
+          `)
+          .order('created_at', { ascending: false })
+      ]);
+
+      const listaEtapas = (resEtapas.data as EtapaFunil[]) || [];
+      if (!resEtapas.error && resEtapas.data) {
+        setEtapas(listaEtapas);
+        etapasRef.current = listaEtapas;
+      }
+
+      if (resCasos.error) {
+        console.error('Erro ao carregar casos:', resCasos.error);
+        toast.error('Erro ao carregar funil: ' + resCasos.error.message);
+      } else if (resCasos.data) {
+        const formatados = resCasos.data.map((c: any) => ({
+          ...c,
+          cliente_nome: c.cliente?.nome_razao_social || 'Cliente não identificado',
+          responsavel_nome: c.responsavel?.nome || 'Advogado do Escritório',
+          etapa_nome: listaEtapas.find((e) => e.id === c.etapa_id)?.nome ?? null,
+        }));
+        setCasos(formatados as Caso[]);
+      }
+    } catch (err: any) {
+      console.error('Erro ao buscar dados do funil:', err);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  const fetchCasos = useCallback(async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('casos')
-      .select(`
-        *,
-        cliente:clientes(nome_razao_social),
-        responsavel:perfis(nome)
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Erro ao carregar casos:', error);
-      toast.error('Erro ao carregar funil: ' + error.message);
-    }
-
-    if (!error && data) {
-      const formatados = data.map((c: any) => ({
-        ...c,
-        cliente_nome: c.cliente?.nome_razao_social || 'Cliente não identificado',
-        responsavel_nome: c.responsavel?.nome || 'Advogado do Escritório',
-        etapa_nome: etapas.find((e) => e.id === c.etapa_id)?.nome ?? null,
-      }));
-      setCasos(formatados as Caso[]);
-    }
-    setLoading(false);
-  }, [etapas]);
-
   useEffect(() => {
-    fetchEtapas();
-    fetchCasos();
-  }, [fetchEtapas, fetchCasos]);
+    carregarDados();
+  }, [carregarDados]);
 
   const moverCasoParaEtapa = useCallback(
     async (casoId: string, novaEtapaId: string) => {
-      const etapa = etapas.find((e) => e.id === novaEtapaId);
+      const etapa = etapasRef.current.find((e) => e.id === novaEtapaId);
       if (!etapa) return;
 
       const { error } = await supabase
@@ -103,12 +107,12 @@ export function useFunilProcessual() {
         )
       );
     },
-    [etapas, user?.id]
+    [user?.id]
   );
 
   const moverCasoParaFase = useCallback(
     async (casoId: string, novaFase: FaseFunil) => {
-      const primeiraEtapaDaFase = etapas
+      const primeiraEtapaDaFase = etapasRef.current
         .filter((e) => e.fase === novaFase)
         .sort((a, b) => a.ordem - b.ordem)[0];
 
@@ -150,7 +154,7 @@ export function useFunilProcessual() {
 
       toast.success('Processo avançado com sucesso!');
     },
-    [etapas, user?.id]
+    [user?.id]
   );
 
   const casosFiltrados = casos.filter((c) => {
@@ -190,7 +194,7 @@ export function useFunilProcessual() {
     etapasPorFase,
     casosPorEtapa,
     casosSemEtapaNaFase,
-    recarregar: fetchCasos,
-    recarregarEtapas: fetchEtapas,
+    recarregar: carregarDados,
+    recarregarEtapas: carregarDados,
   };
 }
