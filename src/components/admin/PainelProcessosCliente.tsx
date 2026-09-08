@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Kanban,
   Plus,
@@ -64,39 +64,40 @@ export function PainelProcessosCliente({
 
   const fetchDados = useCallback(async () => {
     setLoading(true);
-    // Carregar casos vinculados a este cliente
-    const { data: dataCasos, error: errCasos } = await supabase
-      .from('casos')
-      .select('*, etapas_funil!etapa_id(nome)')
-      .eq('cliente_id', clienteId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false });
+
+    // Carregar etapas globais e perfis primeiro
+    const [{ data: dataEtapas }, { data: dataPerfis }, { data: dataCasos, error: errCasos }] = await Promise.all([
+      supabase.from('etapas_funil').select('*').order('ordem'),
+      supabase.from('perfis').select('id, nome'),
+      supabase
+        .from('casos')
+        .select('*, responsavel:perfis(nome)')
+        .eq('cliente_id', clienteId)
+        .order('created_at', { ascending: false })
+    ]);
+
+    const etapasCarregadas = (dataEtapas as EtapaFunil[]) || [];
+    setEtapas(etapasCarregadas);
+
+    if (dataPerfis) setPerfis(dataPerfis as Perfil[]);
+
+    if (errCasos) {
+      console.error('Erro ao carregar processos do cliente:', errCasos);
+      toast.error('Erro ao buscar processos: ' + errCasos.message);
+    }
 
     if (!errCasos && dataCasos) {
       const formatados = dataCasos.map((c: any) => ({
         ...c,
-        etapa_nome: c.etapas_funil?.nome ?? null,
+        cliente_nome: clienteNome,
+        responsavel_nome: c.responsavel?.nome || 'Advogado do Escritório',
+        etapa_nome: etapasCarregadas.find((e) => e.id === c.etapa_id)?.nome ?? null,
       }));
       setCasos(formatados as Caso[]);
     }
 
-    // Carregar etapas globais
-    const { data: dataEtapas } = await supabase
-      .from('etapas_funil')
-      .select('*')
-      .order('ordem');
-
-    if (dataEtapas) setEtapas(dataEtapas as EtapaFunil[]);
-
-    // Carregar advogados/perfis
-    const { data: dataPerfis } = await supabase
-      .from('perfis')
-      .select('id, nome');
-
-    if (dataPerfis) setPerfis(dataPerfis as Perfil[]);
-
     setLoading(false);
-  }, [clienteId]);
+  }, [clienteId, clienteNome]);
 
   useEffect(() => {
     fetchDados();

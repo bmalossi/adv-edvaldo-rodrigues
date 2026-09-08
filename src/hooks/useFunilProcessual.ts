@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Caso, TipoDemanda } from '@/domain/crm/caso';
@@ -45,20 +45,27 @@ export function useFunilProcessual() {
       .from('casos')
       .select(`
         *,
-        etapas_funil!etapa_id(nome)
+        cliente:clientes(nome_razao_social),
+        responsavel:perfis(nome)
       `)
-      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
+    if (error) {
+      console.error('Erro ao carregar casos:', error);
+      toast.error('Erro ao carregar funil: ' + error.message);
+    }
+
     if (!error && data) {
-      const casosComEtapa = data.map((c: any) => ({
+      const formatados = data.map((c: any) => ({
         ...c,
-        etapa_nome: c.etapas_funil?.nome ?? null,
+        cliente_nome: c.cliente?.nome_razao_social || 'Cliente não identificado',
+        responsavel_nome: c.responsavel?.nome || 'Advogado do Escritório',
+        etapa_nome: etapas.find((e) => e.id === c.etapa_id)?.nome ?? null,
       }));
-      setCasos(casosComEtapa as Caso[]);
+      setCasos(formatados as Caso[]);
     }
     setLoading(false);
-  }, []);
+  }, [etapas]);
 
   useEffect(() => {
     fetchEtapas();

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ExternalLink,
@@ -157,7 +157,7 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
     try {
       const { error } = await supabase
         .from('casos')
-        .update({ deleted_at: new Date().toISOString() })
+        .delete()
         .eq('id', caso.id);
 
       if (error) throw error;
