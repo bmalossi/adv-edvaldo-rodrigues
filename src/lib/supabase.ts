@@ -155,3 +155,19 @@ export type {
     TipoDocumentoCaso,
 } from '@/domain/crm/drive'
 
+export type {
+    EscopoBackup,
+    StatusBackup,
+    ConfiguracaoDrive,
+    HistoricoBackup,
+    ManifestoBackup,
+    DadosColetadosBackup,
+} from '@/domain/crm/backup'
+
+export {
+    converterClientesParaCSV,
+    gerarManifestoBackup,
+    gerarNomeArquivoZip,
+    validarConfiguracaoDrive,
+} from '@/domain/crm/backup'
+

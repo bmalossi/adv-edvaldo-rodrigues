@@ -41,6 +41,7 @@ import CasoDetalhe from "./pages/admin/CasoDetalhe";
 import Agenda from "./pages/admin/Agenda";
 import PendenciaForm from "./pages/admin/PendenciaForm";
 import ModelosMinutas from "./pages/admin/ModelosMinutas";
+import BackupCentral from "./pages/admin/BackupCentral";
 
 const queryClient = new QueryClient();
 
@@ -290,6 +291,16 @@ const App = () => (
               <ProtectedRoute>
                 <AdminLayout>
                   <ModelosMinutas />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/crm/backup"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <BackupCentral />
                 </AdminLayout>
               </ProtectedRoute>
             }

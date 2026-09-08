@@ -15,6 +15,7 @@ import {
     Calendar,
     FileCheck,
     ChevronDown,
+    Cloud,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -27,6 +28,7 @@ const crmNavItems = [
     { to: '/admin/crm/casos', label: 'Dossiê de Casos', icon: Briefcase },
     { to: '/admin/crm/agenda', label: 'Agenda & Prazos', icon: Calendar },
     { to: '/admin/crm/modelos', label: 'Modelos de Minutas', icon: FileCheck },
+    { to: '/admin/crm/backup', label: 'Backups & Drive', icon: Cloud },
 ]
 
 const justrackNavItems = [
