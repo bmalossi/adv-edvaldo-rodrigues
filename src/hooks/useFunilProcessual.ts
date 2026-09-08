@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Caso, TipoDemanda } from '@/domain/crm/caso';
@@ -157,7 +157,7 @@ export function useFunilProcessual() {
     [user?.id]
   );
 
-  const casosFiltrados = casos.filter((c) => {
+  const casosFiltradosRaw = casos.filter((c) => {
     if (filtros.responsavelId && c.responsavel_id !== filtros.responsavelId) return false;
     if (filtros.tipoDemanda && c.tipo_demanda !== filtros.tipoDemanda) return false;
     if (filtros.busca) {
@@ -173,14 +173,28 @@ export function useFunilProcessual() {
     return true;
   });
 
+  // Deduplica por ID para evitar contagem duplicada de registros repetidos
+  const seenIds = new Set<string>();
+  const casosFiltrados = casosFiltradosRaw.filter((c) => {
+    if (seenIds.has(c.id)) return false;
+    seenIds.add(c.id);
+    return true;
+  });
+
   const etapasPorFase = (fase: FaseFunil) =>
     etapas.filter((e) => e.fase === fase).sort((a, b) => a.ordem - b.ordem);
 
   const casosPorEtapa = (etapaId: string) =>
     casosFiltrados.filter((c) => c.etapa_id === etapaId);
 
-  const casosSemEtapaNaFase = (fase: FaseFunil) =>
-    casosFiltrados.filter((c) => c.fase_funil === fase && !c.etapa_id);
+  const casosSemEtapaNaFase = (fase: FaseFunil) => {
+    const etapasDaFaseIds = new Set(
+      etapas.filter((e) => e.fase === fase).map((e) => e.id)
+    );
+    return casosFiltrados.filter(
+      (c) => c.fase_funil === fase && (!c.etapa_id || !etapasDaFaseIds.has(c.etapa_id))
+    );
+  };
 
   return {
     casos: casosFiltrados,

@@ -74,10 +74,12 @@ export default function FunilProcessual() {
     if (casoSelecionado?.id === modalAvancarFase.id) setCasoSelecionado(null);
   };
 
-  const totalNaFase = etapasDaFase.reduce(
-    (acc, etapa) => acc + casosPorEtapa(etapa.id).length,
-    casosSemEtapaNaFase(faseAtiva).length
-  );
+  const totalNaFase = (() => {
+    const ids = new Set<string>();
+    etapasDaFase.forEach((etapa) => casosPorEtapa(etapa.id).forEach((c) => ids.add(c.id)));
+    casosSemEtapaNaFase(faseAtiva).forEach((c) => ids.add(c.id));
+    return ids.size;
+  })();
 
   return (
     <div className="flex flex-col h-full space-y-4 pb-6">
@@ -123,7 +125,10 @@ export default function FunilProcessual() {
       <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
         {FASES_FUNIL_CONFIG.map((fase) => {
           const etapasFase = etapasPorFase(fase.id);
-          const count = etapasFase.reduce((acc, e) => acc + casosPorEtapa(e.id).length, casosSemEtapaNaFase(fase.id).length);
+          const idsNaFase = new Set<string>();
+          etapasFase.forEach((e) => casosPorEtapa(e.id).forEach((c) => idsNaFase.add(c.id)));
+          casosSemEtapaNaFase(fase.id).forEach((c) => idsNaFase.add(c.id));
+          const count = idsNaFase.size;
           return (
             <button
               key={fase.id}
