@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users,
@@ -33,33 +33,33 @@ const COLUNAS_FUNIL: ColunaConfig[] = [
     id: 'lead',
     titulo: '1. Leads / Prospecção',
     subtitulo: 'Primeiro contato comercial',
-    corBorda: 'border-amber-500/30',
-    corBadge: 'bg-amber-500/20 text-amber-300',
-    corHeader: 'text-amber-400',
+    corBorda: 'border-white/10 hover:border-secondary/40',
+    corBadge: 'bg-secondary/15 text-secondary border-secondary/30',
+    corHeader: 'text-white',
   },
   {
     id: 'consulta',
     titulo: '2. Em Consulta / Triagem',
     subtitulo: 'Reunião marcada ou realizada',
-    corBorda: 'border-blue-500/30',
-    corBadge: 'bg-blue-500/20 text-blue-300',
-    corHeader: 'text-blue-400',
+    corBorda: 'border-white/10 hover:border-secondary/40',
+    corBadge: 'bg-secondary/15 text-secondary border-secondary/30',
+    corHeader: 'text-white',
   },
   {
     id: 'ativo',
     titulo: '3. Clientes Ativos',
     subtitulo: 'Contrato firmado / Caso em andamento',
-    corBorda: 'border-green-500/30',
-    corBadge: 'bg-green-500/20 text-green-300',
-    corHeader: 'text-green-400',
+    corBorda: 'border-white/10 hover:border-secondary/40',
+    corBadge: 'bg-secondary/15 text-secondary border-secondary/30',
+    corHeader: 'text-white',
   },
   {
     id: 'encerrado',
     titulo: '4. Encerrados / Arquivados',
     subtitulo: 'Custódia legal protegida',
-    corBorda: 'border-slate-500/30',
-    corBadge: 'bg-slate-500/20 text-slate-300',
-    corHeader: 'text-slate-400',
+    corBorda: 'border-white/10 hover:border-secondary/40',
+    corBadge: 'bg-secondary/15 text-secondary border-secondary/30',
+    corHeader: 'text-white',
   },
 ];
 

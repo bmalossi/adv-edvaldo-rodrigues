@@ -187,9 +187,9 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
       />
 
       {/* Painel lateral deslizante ADVBOX */}
-      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-[#0d1527] border-l border-white/10 shadow-2xl flex flex-col overflow-hidden text-slate-200">
+      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-primary border-l border-white/10 shadow-2xl flex flex-col overflow-hidden text-slate-200">
         {/* Barra superior de ícones */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-[#090e1a]">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-primary/80">
           <div className="flex items-center gap-3 text-slate-400">
             <span className="text-secondary font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
               <Folder className="w-4 h-4" />
