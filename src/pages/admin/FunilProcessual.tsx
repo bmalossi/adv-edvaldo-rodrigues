@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Settings2, Kanban } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,7 +18,7 @@ interface Perfil { id: string; nome: string; }
 
 export default function FunilProcessual() {
   const { user, papel } = useAuth();
-  const isAdmin = papel === 'admin';
+  const isAdmin = papel === 'advogado';
 
   const {
     etapas, loading, filtros, setFiltros, limparFiltros,

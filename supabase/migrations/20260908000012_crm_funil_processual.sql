@@ -118,39 +118,42 @@ CREATE INDEX IF NOT EXISTS idx_casos_etapa_id       ON casos(etapa_id);
 -- 6. RLS — etapas_funil
 ALTER TABLE etapas_funil ENABLE ROW LEVEL SECURITY;
 
--- Leitura: qualquer autenticado pode ver as etapas
+DROP POLICY IF EXISTS "etapas_funil_select" ON etapas_funil;
 CREATE POLICY "etapas_funil_select" ON etapas_funil
   FOR SELECT TO authenticated USING (true);
 
--- Escrita: somente admins (papel = 'admin' em perfis)
+DROP POLICY IF EXISTS "etapas_funil_insert_admin" ON etapas_funil;
 CREATE POLICY "etapas_funil_insert_admin" ON etapas_funil
   FOR INSERT TO authenticated
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM perfis WHERE id = auth.uid() AND papel = 'admin'
+      SELECT 1 FROM public.perfis WHERE id = auth.uid() AND (papel::text = 'advogado' OR papel::text = 'admin')
     )
   );
 
+DROP POLICY IF EXISTS "etapas_funil_update_admin" ON etapas_funil;
 CREATE POLICY "etapas_funil_update_admin" ON etapas_funil
   FOR UPDATE TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM perfis WHERE id = auth.uid() AND papel = 'admin'
+      SELECT 1 FROM public.perfis WHERE id = auth.uid() AND (papel::text = 'advogado' OR papel::text = 'admin')
     )
   );
 
+DROP POLICY IF EXISTS "etapas_funil_delete_admin" ON etapas_funil;
 CREATE POLICY "etapas_funil_delete_admin" ON etapas_funil
   FOR DELETE TO authenticated
   USING (
     eh_padrao = false AND
     EXISTS (
-      SELECT 1 FROM perfis WHERE id = auth.uid() AND papel = 'admin'
+      SELECT 1 FROM public.perfis WHERE id = auth.uid() AND (papel::text = 'advogado' OR papel::text = 'admin')
     )
   );
 
 -- 7. RLS — eventos_caso (herda visibilidade do caso)
 ALTER TABLE eventos_caso ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "eventos_caso_select" ON eventos_caso;
 CREATE POLICY "eventos_caso_select" ON eventos_caso
   FOR SELECT TO authenticated
   USING (
@@ -165,6 +168,7 @@ CREATE POLICY "eventos_caso_select" ON eventos_caso
     )
   );
 
+DROP POLICY IF EXISTS "eventos_caso_insert" ON eventos_caso;
 CREATE POLICY "eventos_caso_insert" ON eventos_caso
   FOR INSERT TO authenticated
   WITH CHECK (
@@ -178,8 +182,3 @@ CREATE POLICY "eventos_caso_insert" ON eventos_caso
         )
     )
   );
-
--- 8. Atualizar RLS dos casos para incluir compartilhado_com
--- (políticas existentes mantidas — adicionar apenas a nova condição)
--- NOTA: execute DROP/CREATE nas políticas de casos somente se necessário,
--- pois podem ser gerenciadas separadamente no projeto.
