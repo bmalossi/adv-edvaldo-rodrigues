@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -36,6 +36,7 @@ import {
 } from '@/domain/crm/interacao';
 import { ModalGerarMinuta } from '@/components/admin/ModalGerarMinuta';
 import { PainelDocumentosCliente } from '@/components/admin/PainelDocumentosCliente';
+import { PainelProcessosCliente } from '@/components/admin/PainelProcessosCliente';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -400,6 +401,12 @@ export default function ClienteDetalhe() {
               )}
             </div>
           )}
+
+          {/* Funil Processual & Casos do Cliente (ADVBOX) */}
+          <PainelProcessosCliente
+            clienteId={cliente.id}
+            clienteNome={cliente.nome_razao_social}
+          />
 
           {/* Módulo de Documentos e Arquivos do Cliente */}
           <div className="space-y-2">

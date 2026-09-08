@@ -1,4 +1,4 @@
-﻿import { Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Caso } from '@/domain/crm/caso';
 import { EtapaFunil } from '@/domain/crm/etapa-funil';
@@ -14,7 +14,6 @@ interface KanbanColunaProps {
   onAvancarFase: (caso: Caso) => void;
   onDragStart: (e: React.DragEvent, casoId: string) => void;
   onDrop: (e: React.DragEvent, etapaId: string) => void;
-  onAdicionarEtapa?: () => void;
 }
 
 export function KanbanColuna({
@@ -27,7 +26,6 @@ export function KanbanColuna({
   onAvancarFase,
   onDragStart,
   onDrop,
-  onAdicionarEtapa,
 }: KanbanColunaProps) {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -73,19 +71,6 @@ export function KanbanColuna({
           ))
         )}
       </div>
-
-      {/* Botão adicionar etapa (admin only) */}
-      {isAdmin && onAdicionarEtapa && (
-        <div className="p-2 border-t border-white/5">
-          <button
-            onClick={onAdicionarEtapa}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] text-slate-400 hover:text-white hover:bg-white/5 transition-all"
-          >
-            <Plus className="w-3 h-3" />
-            Adicionar etapa
-          </button>
-        </div>
-      )}
     </div>
   );
 }

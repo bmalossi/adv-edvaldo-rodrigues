@@ -24,7 +24,7 @@ export default function FunilProcessual() {
     etapas, loading, filtros, setFiltros, limparFiltros,
     moverCasoParaEtapa, moverCasoParaFase,
     etapasPorFase, casosPorEtapa, casosSemEtapaNaFase,
-    recarregarEtapas,
+    recarregarEtapas, recarregar,
   } = useFunilProcessual();
 
   const [faseAtiva, setFaseAtiva] = useState<FaseFunil>('negociacao');
@@ -174,9 +174,21 @@ export default function FunilProcessual() {
               onAvancarFase={handleAvancarFase}
               onDragStart={handleDragStart}
               onDrop={handleDrop}
-              onAdicionarEtapa={isAdmin ? () => setGerenciarAberto(true) : undefined}
             />
           ))}
+
+          {/* Botão "+ Adicionar outra etapa" à direita de todas as colunas (estilo ADVBOX) */}
+          {isAdmin && (
+            <div className="flex flex-col items-center justify-start min-w-[220px] w-[220px] flex-shrink-0 pt-1">
+              <button
+                onClick={() => setGerenciarAberto(true)}
+                className="w-full flex items-center justify-center gap-2 py-4 px-4 rounded-2xl border-2 border-dashed border-white/10 hover:border-secondary/60 bg-white/[0.02] hover:bg-secondary/10 text-slate-400 hover:text-white transition-all text-xs font-semibold group shadow-sm"
+              >
+                <Plus className="w-4 h-4 text-secondary group-hover:scale-125 transition-transform" />
+                <span>+ Adicionar outra etapa</span>
+              </button>
+            </div>
+          )}
 
           {etapasDaFase.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-500 text-sm py-16">
@@ -196,6 +208,7 @@ export default function FunilProcessual() {
         caso={casoSelecionado}
         onFechar={() => setCasoSelecionado(null)}
         onAvancarFase={handleAvancarFase}
+        onAtualizado={recarregar}
       />
 
       {/* Gerenciar etapas (admin) */}

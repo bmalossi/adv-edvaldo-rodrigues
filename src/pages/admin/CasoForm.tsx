@@ -1,15 +1,18 @@
-﻿import { useEffect, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Briefcase, User, Scale } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
+import { ArrowLeft, Save, Briefcase, User, Scale, Kanban } from 'lucide-react';
 import { supabase, Caso, Cliente, TipoDemanda, StatusCaso, VisibilidadeRegistro } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { validarNovoCaso, AREAS_DIREITO_PADRAO } from '@/domain/crm/caso';
+import { FASES_FUNIL_CONFIG, FaseFunil, EtapaFunil } from '@/domain/crm/etapa-funil';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 export default function CasoForm() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const clienteIdQuery = searchParams.get('cliente_id');
   const isEditing = Boolean(id);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -17,17 +20,20 @@ export default function CasoForm() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEditing);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [etapas, setEtapas] = useState<EtapaFunil[]>([]);
   const [processosDisponiveis, setProcessosDisponiveis] = useState<any[]>([]);
   const [processosSelecionadosIds, setProcessosSelecionadosIds] = useState<string[]>([]);
 
   const [formData, setFormData] = useState<Partial<Caso>>({
-    cliente_id: '',
+    cliente_id: clienteIdQuery || '',
     titulo: '',
     descricao: '',
     area_direito: 'Trabalhista',
     tipo_demanda: 'judicial',
     status: 'em_andamento',
     visibilidade: 'colegiado',
+    fase_funil: 'negociacao',
+    etapa_id: null,
   });
 
   useEffect(() => {
@@ -46,6 +52,13 @@ export default function CasoForm() {
         .select('id, numero_cnj, etiqueta, tribunal_base, caso_id')
         .order('created_at', { ascending: false });
       if (dataProcessos) setProcessosDisponiveis(dataProcessos);
+
+      // Carrega etapas do funil
+      const { data: dataEtapas } = await supabase
+        .from('etapas_funil')
+        .select('*')
+        .order('ordem');
+      if (dataEtapas) setEtapas(dataEtapas as EtapaFunil[]);
 
       if (isEditing && id) {
         setFetching(true);
@@ -294,6 +307,58 @@ export default function CasoForm() {
               >
                 <option value="colegiado">Colegiado (Toda a banca jurídica)</option>
                 <option value="privado">Privado (Restrito ao responsável/delegados)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Posicionamento no Funil Processual (ADVBOX) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/[0.02] p-4 rounded-xl border border-white/10">
+            <div>
+              <label className="block text-xs font-bold text-secondary mb-1.5 flex items-center gap-1.5">
+                <Kanban className="w-3.5 h-3.5" />
+                Fase do Funil Processual
+              </label>
+              <select
+                value={formData.fase_funil || 'negociacao'}
+                onChange={(e) => {
+                  const novaFase = e.target.value as FaseFunil;
+                  const primeira = etapas
+                    .filter((et) => et.fase === novaFase)
+                    .sort((a, b) => a.ordem - b.ordem)[0];
+                  setFormData((prev) => ({
+                    ...prev,
+                    fase_funil: novaFase,
+                    etapa_id: primeira?.id || null,
+                  }));
+                }}
+                className="w-full h-10 px-3 bg-slate-900/50 border border-white/10 rounded-xl text-secondary font-semibold text-sm focus:border-secondary uppercase"
+              >
+                {FASES_FUNIL_CONFIG.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.label.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-secondary mb-1.5">
+                Etapa da Fase
+              </label>
+              <select
+                value={formData.etapa_id || ''}
+                onChange={(e) => handleChange('etapa_id', e.target.value || null)}
+                className="w-full h-10 px-3 bg-slate-900/50 border border-white/10 rounded-xl text-white text-sm focus:border-secondary"
+              >
+                <option value="">Sem etapa definida</option>
+                {etapas
+                  .filter((et) => et.fase === (formData.fase_funil || 'negociacao'))
+                  .sort((a, b) => a.ordem - b.ordem)
+                  .map((et) => (
+                    <option key={et.id} value={et.id}>
+                      {et.nome}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

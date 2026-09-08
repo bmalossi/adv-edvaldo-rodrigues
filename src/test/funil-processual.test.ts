@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   podeDeletarEtapa,
   validarNovaEtapa,
@@ -127,5 +127,36 @@ describe('podeAcessarCaso com compartilhado_com', () => {
   it('responsável direto sempre acessa', () => {
     const pode = podeAcessarCaso(casoPrivado, 'adv1', 'assistente', []);
     expect(pode).toBe(true);
+  });
+});
+
+// ── Campos ADVBOX e Inclusão de Processos no Funil ─────────────────────────────
+
+describe('Campos ADVBOX no Caso e Funil', () => {
+  it('permite instanciar caso com todos os campos ADVBOX (protocolo, originario, pasta, requerimento)', () => {
+    const casoAdvbox: Caso = {
+      id: 'caso-advbox-1',
+      cliente_id: 'cliente-123',
+      titulo: 'NULIDADE DE LICITAÇÃO',
+      area_direito: 'Administrativo',
+      tipo_demanda: 'judicial',
+      status: 'em_andamento',
+      visibilidade: 'colegiado',
+      responsavel_id: 'adv-1',
+      fase_funil: 'administrativo',
+      etapa_id: 'etapa-1',
+      numero_processo: '9999999-99.9999.9.99.9999',
+      numero_protocolo: '123456789-0',
+      processo_originario: '8888888-88.8888.8.88.8888',
+      identificacao_pasta: 'PASTA-2026/01',
+      data_requerimento: '2026-09-04T12:00:00Z',
+      valor_causa: 999999.99,
+      resultado_final: 'procedente',
+    };
+
+    expect(casoAdvbox.numero_protocolo).toBe('123456789-0');
+    expect(casoAdvbox.identificacao_pasta).toBe('PASTA-2026/01');
+    expect(casoAdvbox.fase_funil).toBe('administrativo');
+    expect(casoAdvbox.valor_causa).toBe(999999.99);
   });
 });

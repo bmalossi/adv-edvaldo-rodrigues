@@ -1,4 +1,4 @@
-﻿import { VisibilidadeRegistro, PapelUsuario } from './cliente';
+import { VisibilidadeRegistro, PapelUsuario } from './cliente';
 import { FaseFunil } from './etapa-funil';
 
 export type TipoDemanda = 'judicial' | 'extrajudicial' | 'consultivo';
@@ -48,6 +48,12 @@ export interface Caso {
   resultado_final?: ResultadoCaso | null;
   valor_causa?: number | null;
   numero_processo?: string | null;
+
+  // Campos ADVBOX
+  numero_protocolo?: string | null;
+  processo_originario?: string | null;
+  identificacao_pasta?: string | null;
+  data_requerimento?: string | null;
 
   // Compartilhamento pontual
   compartilhado_com?: string[];
