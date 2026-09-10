@@ -168,7 +168,7 @@ export function PainelProcessosCliente({
       if (error) throw error;
 
       if (!data || data.length === 0) {
-        toast.error('O banco de dados não permitiu a exclusão. Execute o SQL da política DELETE no Supabase.');
+        toast.error('Não foi possível realizar a exclusão. Verifique suas permissões de acesso.');
         return;
       }
 

@@ -282,7 +282,7 @@ export default function ArtigoEditor() {
         setIsSlugLocked(true)
         return saved
       } else {
-        toast.error('Erro ao salvar artigo no banco de dados.')
+        toast.error('Erro ao salvar artigo no sistema.')
         return null
       }
     } catch {

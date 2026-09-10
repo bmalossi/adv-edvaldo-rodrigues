@@ -343,7 +343,7 @@ export default function GerarDocumentos() {
         setHistorico(prev => [data, ...prev])
       }
     } catch (e) {
-      console.warn('Erro ao salvar no histórico do Supabase', e)
+      console.warn('Erro ao salvar no histórico', e)
     }
   }
 
@@ -1183,8 +1183,8 @@ export default function GerarDocumentos() {
               <History className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="font-serif text-lg font-bold text-white">Histórico de Emissões no Supabase</h2>
-              <p className="text-xs text-slate-400">Documentos gerados e persistidos no banco de dados.</p>
+              <h2 className="font-serif text-lg font-bold text-white">Histórico de Emissões</h2>
+              <p className="text-xs text-slate-400">Documentos gerados e registrados no sistema.</p>
             </div>
           </div>
 

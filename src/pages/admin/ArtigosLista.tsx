@@ -378,7 +378,7 @@ export default function ArtigosLista() {
             <AlertDialogTitle className="text-white">Confirmar exclusão de artigo</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-400">
               Tem certeza de que deseja excluir o artigo{' '}
-              <strong className="text-white">"{articleToDelete?.title}"</strong>? Esta ação é irreversível e removerá a publicação do site e do banco de dados.
+              <strong className="text-white">"{articleToDelete?.title}"</strong>? Esta ação é irreversível e removerá a publicação do site definitivamente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

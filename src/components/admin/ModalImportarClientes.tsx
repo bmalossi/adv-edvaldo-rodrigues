@@ -173,7 +173,7 @@ export function ModalImportarClientes({
       if (onSuccess) onSuccess()
     } catch (err: any) {
       console.error(err)
-      toast.error('Erro durante a importação: ' + (err.message || 'falha no banco de dados'))
+      toast.error('Erro durante a importação: ' + (err.message || 'falha no processamento'))
     } finally {
       setImportando(false)
     }

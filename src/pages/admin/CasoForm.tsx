@@ -179,7 +179,7 @@ export default function CasoForm() {
       }
     } catch (err: unknown) {
       console.error('Erro ao salvar caso:', err);
-      const msg = err instanceof Error ? err.message : 'Erro no banco de dados';
+      const msg = err instanceof Error ? err.message : 'Erro ao salvar processo';
       toast.error(msg);
     } finally {
       setLoading(false);

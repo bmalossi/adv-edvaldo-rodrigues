@@ -167,8 +167,10 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
 
       if (error) throw error;
 
-      if (!data || data.length === 0) {
-        toast.error('O banco de dados não permitiu a exclusão. Aplique a migration de política DELETE no Supabase.');
+      const isPgRlsOrPolicyError = !data || data.length === 0;
+
+      if (isPgRlsOrPolicyError) {
+        toast.error('Não foi possível realizar a exclusão. Verifique suas permissões de acesso.');
         return;
       }
 
