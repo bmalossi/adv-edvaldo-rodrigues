@@ -17,8 +17,12 @@ import {
     ChevronDown,
     Cloud,
     Kanban,
+    FileSignature,
+    Lock,
+    AlertTriangle,
 } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
 import { BrandLogo } from '@/components/site/BrandLogo'
@@ -28,15 +32,9 @@ const crmNavItems = [
     { to: '/admin/crm/clientes', label: 'Clientes & Leads', icon: Users },
     { to: '/admin/crm/casos', label: 'Dossiê de Casos', icon: Briefcase },
     { to: '/admin/crm/agenda', label: 'Agenda & Prazos', icon: Calendar },
+    { to: '/admin/crm/documentos', label: 'Gerar Documentos', icon: FileSignature },
     { to: '/admin/crm/modelos', label: 'Modelos de Minutas', icon: FileCheck },
     { to: '/admin/crm/backup', label: 'Backups & Drive', icon: Cloud },
-]
-
-const justrackNavItems = [
-    { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
-    { to: '/admin/processos', label: 'Processos', icon: FolderOpen },
-    { to: '/admin/notificacoes', label: 'Notificações', icon: Bell },
-    { to: '/admin/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
 const artigosNavItems = [
@@ -57,8 +55,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     }
 
     const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>({
-        crm: location.pathname.startsWith('/admin/crm'),
-        justrack: location.pathname === '/admin' || location.pathname.startsWith('/admin/processos') || location.pathname.startsWith('/admin/notificacoes') || location.pathname.startsWith('/admin/configuracoes'),
+        crm: location.pathname.startsWith('/admin/crm') || location.pathname === '/admin',
         conteudo: location.pathname.startsWith('/admin/artigos'),
     })
 
@@ -72,17 +69,17 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
         <aside
             className={cn(
-                'flex flex-col bg-primary border-r border-white/5 shadow-2xl',
-                mobile ? 'w-full h-full' : 'hidden lg:flex w-64 min-h-screen fixed top-0 left-0'
+                'flex flex-col bg-primary border-r border-white/5 shadow-2xl overflow-hidden',
+                mobile ? 'w-full h-full' : 'hidden lg:flex w-64 h-screen max-h-screen fixed top-0 left-0 z-30'
             )}
         >
             {/* Logo */}
-            <div className="flex items-center gap-3 px-5 py-6 border-b border-white/5 overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-6 border-b border-white/5 overflow-hidden shrink-0">
                 <BrandLogo variant="dark" compact sizeClassName="h-9" />
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 px-3 py-4 space-y-3 overflow-y-auto">
+            <nav className="flex-1 min-h-0 px-3 py-4 space-y-3 overflow-y-auto sidebar-scroll">
                 {/* Seção CRM Jurídico */}
                 <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] overflow-hidden">
                     <button
@@ -110,51 +107,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                                 <NavLink
                                     key={to}
                                     to={to}
-                                    onClick={() => setSidebarOpen(false)}
-                                    className={({ isActive }) =>
-                                        cn(
-                                            'flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200',
-                                            isActive
-                                                ? 'bg-secondary text-primary shadow-md shadow-secondary/10 font-bold'
-                                                : 'text-slate-300 hover:text-white hover:bg-white/10'
-                                        )
-                                    }
-                                >
-                                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                                    {label}
-                                </NavLink>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Seção JusTrack */}
-                <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] overflow-hidden">
-                    <button
-                        type="button"
-                        onClick={() => toggleSection('justrack')}
-                        className="w-full px-3 py-2.5 flex items-center justify-between text-left hover:bg-white/5 transition-colors group"
-                    >
-                        <div className="flex items-center gap-2">
-                            <FolderOpen className="w-4 h-4 text-secondary" />
-                            <span className="text-xs font-bold tracking-wider text-secondary uppercase">
-                                JusTrack
-                            </span>
-                        </div>
-                        <ChevronDown
-                            className={cn(
-                                'w-4 h-4 text-slate-400 transition-transform duration-200 group-hover:text-white',
-                                openSections.justrack && 'transform rotate-180 text-secondary'
-                            )}
-                        />
-                    </button>
-                    {openSections.justrack && (
-                        <div className="px-2 pb-2 pt-1 space-y-1 border-t border-white/[0.04]">
-                            {justrackNavItems.map(({ to, label, icon: Icon, end }) => (
-                                <NavLink
-                                    key={to}
-                                    to={to}
-                                    end={end}
                                     onClick={() => setSidebarOpen(false)}
                                     className={({ isActive }) =>
                                         cn(
@@ -218,10 +170,59 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                         </div>
                     )}
                 </div>
+
+                {/* Seção JusTrack (Trancado / Em Desenvolvimento) */}
+                <div className="rounded-lg bg-white/[0.01] border border-white/[0.04] overflow-hidden opacity-60 hover:opacity-80 transition-opacity">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            toast.info('JusTrack em desenvolvimento', {
+                                description: 'Este módulo está temporariamente trancado e será liberado em breve.'
+                            })
+                        }}
+                        className="w-full px-3 py-2.5 flex items-center justify-between text-left cursor-not-allowed group"
+                        title="JusTrack em desenvolvimento (trancado)"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Lock className="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition-colors" />
+                            <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">
+                                JusTrack
+                            </span>
+                            <span
+                                className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-[10px] font-bold"
+                                title="Módulo em desenvolvimento"
+                            >
+                                !
+                            </span>
+                        </div>
+                        <span className="text-[9px] text-amber-400/90 font-bold uppercase tracking-tight bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                            Em breve
+                        </span>
+                    </button>
+                </div>
+
+                {/* Link Direto: Configurações (Fora de qualquer menu hamburguer/accordion) */}
+                <div className="pt-1">
+                    <NavLink
+                        to="/admin/configuracoes"
+                        onClick={() => setSidebarOpen(false)}
+                        className={({ isActive }) =>
+                            cn(
+                                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-200 border',
+                                isActive
+                                    ? 'bg-secondary text-primary shadow-md shadow-secondary/10 font-bold border-secondary/30'
+                                    : 'text-slate-300 hover:text-white hover:bg-white/10 border-white/[0.04] bg-white/[0.02]'
+                            )
+                        }
+                    >
+                        <Settings className="w-4 h-4 flex-shrink-0 text-slate-400 group-hover:text-white" />
+                        <span className="font-bold tracking-wide">Configurações</span>
+                    </NavLink>
+                </div>
             </nav>
 
             {/* Perfil + logout */}
-            <div className="px-3 py-5 border-t border-white/5 bg-white/[0.02]">
+            <div className="px-3 py-5 border-t border-white/5 bg-white/[0.02] shrink-0">
                 <div className="flex items-center gap-3 px-3 py-2 mb-3">
                     <div className="w-9 h-9 rounded-full bg-secondary/10 border border-secondary/20 flex items-center justify-center flex-shrink-0">
                         <span className="text-secondary text-xs font-bold">

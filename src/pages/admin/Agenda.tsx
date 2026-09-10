@@ -28,6 +28,7 @@ import {
 } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { PermissionGuard } from '@/components/admin/PermissionGuard';
 import { ModalNovaTarefaAgenda } from '@/components/admin/ModalNovaTarefaAgenda';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +49,9 @@ interface PendenciaComRelacoes extends PendenciaCRM {
 }
 
 export default function Agenda() {
-  const { user } = useAuth();
+  const { user, role, papel } = useAuth();
+  const isAdmin = role?.nome === 'Administrador' || papel === 'Administrador' || papel === 'admin';
+  const temAcessoGeral = isAdmin || role?.escopo === 'geral';
 
   // Estados de navegação temporal
   const [dataReferencia, setDataReferencia] = useState<Date>(new Date());
@@ -65,7 +68,7 @@ export default function Agenda() {
   const [mostrarConcluidos, setMostrarConcluidos] = useState(false);
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendentes' | 'concluidas' | 'atrasadas'>('todos');
 
-  // Modal de Criação / Edição Rápida (estilo Advbox)
+  // Modal de Criação / Edição Rápida
   const [modalNovaTarefaAberto, setModalNovaTarefaAberto] = useState(false);
   const [dataPreSelecionada, setDataPreSelecionada] = useState<string>('');
   const [tarefaSelecionadaParaEdicao, setTarefaSelecionadaParaEdicao] = useState<PendenciaCRM | null>(null);
@@ -96,7 +99,7 @@ export default function Agenda() {
 
       if (perfisData) {
         setColaboradores(perfisData);
-        if (!responsavelAtivoId && user) {
+        if (!temAcessoGeral && user) {
           setResponsavelAtivoId(user.id);
         }
       }
@@ -111,7 +114,9 @@ export default function Agenda() {
         `)
         .order('data_vencimento', { ascending: true, nullsFirst: false });
 
-      if (responsavelAtivoId) {
+      if (!temAcessoGeral && user) {
+        query = query.eq('responsavel_id', user.id);
+      } else if (responsavelAtivoId) {
         query = query.eq('responsavel_id', responsavelAtivoId);
       }
 
@@ -242,7 +247,7 @@ export default function Agenda() {
 
   return (
     <div className="space-y-4">
-      {/* ─── Topbar estilo Advbox ────────────────────────────────────────── */}
+      {/* ─── Topbar da Agenda ────────────────────────────────────────── */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-[#0d1527] border border-slate-800 rounded-xl p-3.5 text-slate-200">
         {/* Barra de pesquisa superior */}
         <div className="relative flex-1 max-w-md">
@@ -265,16 +270,18 @@ export default function Agenda() {
             Hoje
           </button>
 
-          <Button
-            onClick={() => {
-              setDataPreSelecionada('');
-              setModalNovaTarefaAberto(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-4 h-9 font-medium shadow-md shadow-blue-600/30 gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            Adicionar
-          </Button>
+          <PermissionGuard modulo="agenda" acao="criar">
+            <Button
+              onClick={() => {
+                setDataPreSelecionada('');
+                setModalNovaTarefaAberto(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-4 h-9 font-medium shadow-md shadow-blue-600/30 gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              Adicionar
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -306,33 +313,39 @@ export default function Agenda() {
               Agenda
             </span>
 
-            {/* Chip com o responsável selecionado */}
-            {colaboradorSelecionado ? (
-              <div className="flex items-center justify-between bg-[#172239] border border-slate-700 rounded-lg px-3 py-2 text-xs font-medium text-slate-200">
-                <span className="truncate pr-2 uppercase">
-                  {colaboradorSelecionado.nome}
-                </span>
-                <button
-                  onClick={() => setResponsavelAtivoId('')}
-                  title="Limpar filtro de responsável"
-                  className="text-slate-400 hover:text-white"
+            {/* Chip com o responsável selecionado (usuários com acesso geral podem alternar entre outros usuários) */}
+            {temAcessoGeral ? (
+              colaboradorSelecionado ? (
+                <div className="flex items-center justify-between bg-[#172239] border border-slate-700 rounded-lg px-3 py-2 text-xs font-medium text-slate-200">
+                  <span className="truncate pr-2 uppercase">
+                    {colaboradorSelecionado.nome}
+                  </span>
+                  <button
+                    onClick={() => setResponsavelAtivoId('')}
+                    title="Limpar filtro de responsável (ver todas as agendas)"
+                    className="text-slate-400 hover:text-white"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={responsavelAtivoId}
+                  onChange={(e) => setResponsavelAtivoId(e.target.value)}
+                  className="w-full bg-[#172239] border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
                 >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
+                  <option value="">Todas as agendas da equipe</option>
+                  {colaboradores.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </select>
+              )
             ) : (
-              <select
-                value={responsavelAtivoId}
-                onChange={(e) => setResponsavelAtivoId(e.target.value)}
-                className="w-full bg-[#172239] border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-              >
-                <option value="">Todas as agendas da equipe</option>
-                {colaboradores.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>
+              <div className="bg-[#172239] border border-slate-700/80 rounded-lg px-3 py-2 text-xs font-medium text-slate-300">
+                Minha Agenda Individual
+              </div>
             )}
           </div>
 
@@ -458,7 +471,7 @@ export default function Agenda() {
             </div>
           </div>
 
-          {/* ─── VISÃO MÊS (Padrão Advbox) ───────────────────────────────── */}
+          {/* ─── VISÃO MÊS ───────────────────────────────── */}
           {modoVisao === 'mes' && (
             <div className="space-y-1 select-none">
               {/* Cabeçalho dos dias da semana */}
@@ -805,7 +818,7 @@ export default function Agenda() {
         </div>
       </div>
 
-      {/* Modal de Criação / Edição Rápida no Estilo Advbox */}
+      {/* Modal de Criação / Edição Rápida */}
       <ModalNovaTarefaAgenda
         open={modalNovaTarefaAberto}
         onOpenChange={(aberto) => {

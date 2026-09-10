@@ -18,6 +18,7 @@ export type Advogado = {
     oab: string | null
     telefone_whatsapp: string | null
     email: string | null
+    assinatura_url?: string | null
     ativo: boolean
     created_at: string
     updated_at: string
@@ -95,6 +96,15 @@ export type {
 } from '@/domain/crm/cliente'
 
 export type {
+    ModuloSistema,
+    AcaoPermissao,
+    EscopoAcesso,
+    Role,
+    Permission,
+    AuditLog,
+} from '@/domain/crm/rbac'
+
+export type {
     InteracaoCliente,
     TipoInteracao,
 } from '@/domain/crm/interacao'
@@ -170,4 +180,16 @@ export {
     gerarNomeArquivoZip,
     validarConfiguracaoDrive,
 } from '@/domain/crm/backup'
+
+export type {
+    TipoDocumento,
+    ConfigDocumentos,
+    OpcaoContrato,
+    OpcaoProcuracao,
+    OpcaoHipossuficiencia,
+    OpcaoIrpf,
+    OpcaoRecibo,
+    OpcaoResidencia,
+    DocumentoEmitido,
+} from '@/domain/crm/documentos/tipos'
 

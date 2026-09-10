@@ -33,7 +33,7 @@ export interface Caso {
   responsavel_nome?: string;
   google_drive_folder_id?: string | null;
 
-  // Funil processual (ADVBOX)
+  // Funil processual
   fase_funil: FaseFunil;
   etapa_id?: string | null;
   etapa_nome?: string | null; // join via etapas_funil
@@ -49,7 +49,7 @@ export interface Caso {
   valor_causa?: number | null;
   numero_processo?: string | null;
 
-  // Campos ADVBOX
+  // Campos complementares do processo
   numero_protocolo?: string | null;
   processo_originario?: string | null;
   identificacao_pasta?: string | null;
@@ -118,11 +118,18 @@ export function validarNovoCaso(caso: Partial<Caso>): {
 export function podeAcessarCaso(
   caso: Caso,
   usuarioId: string,
-  papelUsuario: PapelUsuario,
-  colaboradoresDelegadosIds: string[] = []
+  papelUsuario?: string,
+  colaboradoresDelegadosIds: string[] = [],
+  roleNome?: string,
+  escopo?: 'individual' | 'geral'
 ): boolean {
-  // 1. Casos com visibilidade colegiada são acessíveis a toda a equipe
-  if (caso.visibilidade === 'colegiado') {
+  // 1. Administrador do escritório ou perfil com escopo geral tem acesso a todos os casos
+  if (
+    roleNome === 'Administrador' ||
+    papelUsuario === 'Administrador' ||
+    papelUsuario === 'admin' ||
+    escopo === 'geral'
+  ) {
     return true;
   }
 
@@ -131,18 +138,13 @@ export function podeAcessarCaso(
     return true;
   }
 
-  // 3. Sócios advogados têm acesso de governança técnica da banca
-  if (papelUsuario === 'advogado') {
+  // 3. Compartilhamento pontual: usuário na lista compartilhado_com
+  if (caso.compartilhado_com?.includes(usuarioId)) {
     return true;
   }
 
   // 4. Colaboradores expressamente delegados ao caso têm acesso
   if (colaboradoresDelegadosIds.includes(usuarioId)) {
-    return true;
-  }
-
-  // 5. Compartilhamento pontual: usuário na lista compartilhado_com
-  if (caso.compartilhado_com?.includes(usuarioId)) {
     return true;
   }
 

@@ -19,7 +19,8 @@ import {
   FileDown,
   ShieldCheck,
   FolderOpen,
-  Info
+  Info,
+  FileSignature
 } from 'lucide-react';
 import {
   supabase,
@@ -37,6 +38,7 @@ import {
 import { ModalGerarMinuta } from '@/components/admin/ModalGerarMinuta';
 import { PainelDocumentosCliente } from '@/components/admin/PainelDocumentosCliente';
 import { PainelProcessosCliente } from '@/components/admin/PainelProcessosCliente';
+import { PermissionGuard } from '@/components/admin/PermissionGuard';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -229,23 +231,38 @@ export default function ClienteDetalhe() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setModalMinutaOpen(true)}
-            className="rounded-xl gap-1.5 bg-secondary hover:opacity-90 text-primary font-bold shadow-md"
-          >
-            <FileDown className="w-4 h-4" />
-            Gerar Minuta (.docx)
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <PermissionGuard modulo="documentos" acao="visualizar">
+            <Button
+              asChild
+              className="rounded-xl gap-1.5 bg-cta-gold hover:opacity-90 text-primary font-bold shadow-md"
+            >
+              <Link to={`/admin/crm/documentos?clienteId=${cliente.id}`}>
+                <FileSignature className="w-4 h-4" />
+                Gerar Documentos
+              </Link>
+            </Button>
 
-          <Button asChild variant="outline" className="border-white/10 text-white rounded-xl gap-1.5">
-            <Link to={`/admin/crm/clientes/${cliente.id}/editar`}>
-              <Edit className="w-4 h-4 text-secondary" />
-              Editar Cadastro
-            </Link>
-          </Button>
+            <Button
+              onClick={() => setModalMinutaOpen(true)}
+              variant="outline"
+              className="border-white/10 text-white rounded-xl gap-1.5"
+            >
+              <FileDown className="w-4 h-4 text-secondary" />
+              Minuta (.docx)
+            </Button>
+          </PermissionGuard>
 
-          {papel === 'advogado' && (
+          <PermissionGuard modulo="clientes" acao="editar">
+            <Button asChild variant="outline" className="border-white/10 text-white rounded-xl gap-1.5">
+              <Link to={`/admin/crm/clientes/${cliente.id}/editar`}>
+                <Edit className="w-4 h-4 text-secondary" />
+                Editar Cadastro
+              </Link>
+            </Button>
+          </PermissionGuard>
+
+          <PermissionGuard modulo="clientes" acao="excluir">
             <Button
               variant="ghost"
               onClick={handleExcluirOuArquivar}
@@ -254,7 +271,7 @@ export default function ClienteDetalhe() {
             >
               <Trash2 className="w-4 h-4" />
             </Button>
-          )}
+          </PermissionGuard>
         </div>
       </div>
 
@@ -402,7 +419,7 @@ export default function ClienteDetalhe() {
             </div>
           )}
 
-          {/* Funil Processual & Casos do Cliente (ADVBOX) */}
+          {/* Funil Processual & Casos do Cliente */}
           <PainelProcessosCliente
             clienteId={cliente.id}
             clienteNome={cliente.nome_razao_social}

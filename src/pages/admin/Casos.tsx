@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Briefcase,
@@ -17,6 +17,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+import { PermissionGuard } from '@/components/admin/PermissionGuard';
 
 const STATUS_CASO_BADGES: Record<StatusCaso, { label: string; color: string }> = {
   analise: { label: 'Em Análise Inicial', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
@@ -100,12 +102,14 @@ export default function Casos() {
           </p>
         </div>
 
-        <Button asChild className="bg-cta-gold hover:opacity-90 text-primary font-bold shadow-lg rounded-xl">
-          <Link to="/admin/crm/casos/novo" className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Novo Caso
-          </Link>
-        </Button>
+        <PermissionGuard modulo="casos" acao="criar">
+          <Button asChild className="bg-cta-gold hover:opacity-90 text-primary font-bold shadow-lg rounded-xl">
+            <Link to="/admin/crm/casos/novo" className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Novo Caso
+            </Link>
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Barra de Filtros e Busca */}
@@ -162,9 +166,11 @@ export default function Casos() {
             <p className="text-slate-400 text-xs max-w-sm">
               Crie o primeiro caso judicial, extrajudicial ou consultivo para centralizar documentos e processos.
             </p>
-            <Button asChild className="mt-2 bg-cta-gold text-primary font-bold rounded-xl">
-              <Link to="/admin/crm/casos/novo">Cadastrar Caso</Link>
-            </Button>
+            <PermissionGuard modulo="casos" acao="criar">
+              <Button asChild className="mt-2 bg-cta-gold text-primary font-bold rounded-xl">
+                <Link to="/admin/crm/casos/novo">Cadastrar Caso</Link>
+              </Button>
+            </PermissionGuard>
           </div>
         ) : (
           <div className="overflow-x-auto">

@@ -27,6 +27,7 @@ import {
 } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PermissionGuard } from '@/components/admin/PermissionGuard';
 import {
   Dialog,
   DialogContent,
@@ -244,10 +245,12 @@ export default function ModelosMinutas() {
             Gerencie modelos de contratos, procurações e declarações com tags para preenchimento automático.
           </p>
         </div>
-        <Button onClick={abrirNovo} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Novo Modelo
-        </Button>
+        <PermissionGuard modulo="documentos" acao="criar">
+          <Button onClick={abrirNovo} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Novo Modelo
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Filtros e Busca */}
@@ -345,10 +348,12 @@ export default function ModelosMinutas() {
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-4 mt-2 border-t border-border/50">
-                <Button variant="outline" size="sm" onClick={() => abrirEdicao(tpl)} className="text-xs gap-1.5">
-                  <Edit2 className="w-3.5 h-3.5" />
-                  Editar
-                </Button>
+                <PermissionGuard modulo="documentos" acao="editar">
+                  <Button variant="outline" size="sm" onClick={() => abrirEdicao(tpl)} className="text-xs gap-1.5">
+                    <Edit2 className="w-3.5 h-3.5" />
+                    Editar
+                  </Button>
+                </PermissionGuard>
               </div>
             </div>
           ))}
@@ -518,16 +523,18 @@ Por este instrumento particular de procuração, o OUTORGANTE {nome_cliente}, in
             <Button variant="outline" size="sm" onClick={() => setModalAberto(false)} disabled={salvando}>
               Cancelar
             </Button>
-            <Button size="sm" onClick={handleSalvar} disabled={salvando} className="gap-2">
-              {salvando ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                'Salvar Modelo'
-              )}
-            </Button>
+            <PermissionGuard modulo="documentos" acao={templateEditando ? 'editar' : 'criar'}>
+              <Button size="sm" onClick={handleSalvar} disabled={salvando} className="gap-2">
+                {salvando ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  'Salvar Modelo'
+                )}
+              </Button>
+            </PermissionGuard>
           </div>
         </DialogContent>
       </Dialog>

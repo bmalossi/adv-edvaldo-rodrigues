@@ -42,6 +42,8 @@ import Agenda from "./pages/admin/Agenda";
 import PendenciaForm from "./pages/admin/PendenciaForm";
 import ModelosMinutas from "./pages/admin/ModelosMinutas";
 import BackupCentral from "./pages/admin/BackupCentral";
+import GerarDocumentos from "./pages/admin/GerarDocumentos";
+import TrocarSenha from "./pages/admin/TrocarSenha";
 
 const queryClient = new QueryClient();
 
@@ -70,12 +72,18 @@ const App = () => (
 
           {/* ─── Área administrativa (protegida) ─── */}
           <Route
+            path="/admin/trocar-senha"
+            element={
+              <ProtectedRoute>
+                <TrocarSenha />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin"
             element={
               <ProtectedRoute>
-                <AdminLayout>
-                  <Dashboard />
-                </AdminLayout>
+                <Navigate to="/admin/crm/funil" replace />
               </ProtectedRoute>
             }
           />
@@ -286,6 +294,16 @@ const App = () => (
             }
           />
           <Route
+            path="/admin/crm/documentos"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <GerarDocumentos />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/crm/modelos"
             element={
               <ProtectedRoute>
@@ -298,7 +316,7 @@ const App = () => (
           <Route
             path="/admin/crm/backup"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requires={{ modulo: 'relatorios', acao: 'visualizar' }}>
                 <AdminLayout>
                   <BackupCentral />
                 </AdminLayout>

@@ -17,8 +17,8 @@ import { toast } from 'sonner';
 interface Perfil { id: string; nome: string; }
 
 export default function FunilProcessual() {
-  const { user, papel } = useAuth();
-  const isAdmin = papel === 'advogado';
+  const { user, papel, role } = useAuth();
+  const isAdmin = role?.nome === 'Administrador' || papel === 'Administrador' || papel === 'admin';
 
   const {
     etapas, loading, filtros, setFiltros, limparFiltros,
@@ -182,7 +182,7 @@ export default function FunilProcessual() {
             />
           ))}
 
-          {/* Botão "+ Adicionar outra etapa" à direita de todas as colunas (estilo ADVBOX) */}
+          {/* Botão "+ Adicionar outra etapa" à direita de todas as colunas */}
           {isAdmin && (
             <div className="flex flex-col items-center justify-start min-w-[220px] w-[220px] flex-shrink-0 pt-1">
               <button

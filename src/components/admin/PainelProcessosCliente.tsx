@@ -252,7 +252,7 @@ export function PainelProcessosCliente({
             Funil Processual do Cliente
           </h2>
           <p className="text-slate-400 text-xs mt-0.5">
-            Gerencie e inclua este cliente nas fases e etapas do fluxo da banca (ADVBOX).
+            Gerencie e inclua este cliente nas fases e etapas do fluxo da banca.
           </p>
         </div>
 
@@ -470,7 +470,7 @@ export function PainelProcessosCliente({
                   />
                 </div>
 
-                {/* Fase e Etapa do Funil (ADVBOX) */}
+                {/* Fase e Etapa do Funil */}
                 <div className="grid grid-cols-2 gap-3 bg-white/[0.02] p-3 rounded-xl border border-white/10">
                   <div>
                     <label className="block text-[11px] font-semibold text-secondary mb-1">
@@ -646,7 +646,7 @@ export function PainelProcessosCliente({
         </>
       )}
 
-      {/* Drawer lateral de edição ADVBOX quando clica em Editar no Drawer */}
+      {/* Drawer lateral de edição quando clica em Editar no Drawer */}
       {casoParaEditar && (
         <DrawerCaso
           caso={casoParaEditar}

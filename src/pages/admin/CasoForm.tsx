@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Briefcase, User, Scale, Kanban } from 'lucide-react';
+import { ArrowLeft, Save, Briefcase, User, Scale, Kanban, Users } from 'lucide-react';
 import { supabase, Caso, Cliente, TipoDemanda, StatusCaso, VisibilidadeRegistro } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { validarNovoCaso, AREAS_DIREITO_PADRAO } from '@/domain/crm/caso';
 import { FASES_FUNIL_CONFIG, FaseFunil, EtapaFunil } from '@/domain/crm/etapa-funil';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { PermissionGuard } from '@/components/admin/PermissionGuard';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export default function CasoForm() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +30,7 @@ export default function CasoForm() {
   const [fetching, setFetching] = useState(isEditing);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [etapas, setEtapas] = useState<EtapaFunil[]>([]);
+  const [perfis, setPerfis] = useState<{ id: string; nome: string }[]>([]);
   const [processosDisponiveis, setProcessosDisponiveis] = useState<any[]>([]);
   const [processosSelecionadosIds, setProcessosSelecionadosIds] = useState<string[]>([]);
 
@@ -31,9 +41,10 @@ export default function CasoForm() {
     area_direito: 'Trabalhista',
     tipo_demanda: 'judicial',
     status: 'em_andamento',
-    visibilidade: 'colegiado',
+    visibilidade: 'privado',
     fase_funil: 'negociacao',
     etapa_id: null,
+    compartilhado_com: [],
   });
 
   useEffect(() => {
@@ -59,6 +70,14 @@ export default function CasoForm() {
         .select('*')
         .order('ordem');
       if (dataEtapas) setEtapas(dataEtapas as EtapaFunil[]);
+
+      // Carrega membros da equipe para compartilhamento
+      const { data: dataPerfis } = await supabase
+        .from('perfis')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome');
+      if (dataPerfis) setPerfis(dataPerfis);
 
       if (isEditing && id) {
         setFetching(true);
@@ -195,14 +214,16 @@ export default function CasoForm() {
           </div>
         </div>
 
-        <Button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="bg-cta-gold hover:opacity-90 text-primary font-bold rounded-xl shadow-lg flex items-center gap-2"
-        >
-          <Save className="w-4 h-4" />
-          {loading ? 'Salvando...' : 'Salvar Caso'}
-        </Button>
+        <PermissionGuard modulo="casos" acao={isEditing ? 'editar' : 'criar'}>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="bg-cta-gold hover:opacity-90 text-primary font-bold rounded-xl shadow-lg flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            {loading ? 'Salvando...' : 'Salvar Caso'}
+          </Button>
+        </PermissionGuard>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -218,37 +239,42 @@ export default function CasoForm() {
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Cliente Vinculado *
               </label>
-              <select
-                required
+              <Select
                 value={formData.cliente_id || ''}
-                onChange={(e) => handleChange('cliente_id', e.target.value)}
-                className="w-full h-10 px-3 bg-slate-900/50 border border-white/10 rounded-xl text-white text-sm focus:border-secondary"
+                onValueChange={(val) => handleChange('cliente_id', val)}
               >
-                <option value="">Selecione o cliente...</option>
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome_razao_social} ({c.tipo_pessoa}) - {c.status_ciclo.toUpperCase()}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione o cliente..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {clientes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nome_razao_social} ({c.tipo_pessoa}) - {c.status_ciclo.toUpperCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Área do Direito *
               </label>
-              <select
-                required
+              <Select
                 value={formData.area_direito || 'Trabalhista'}
-                onChange={(e) => handleChange('area_direito', e.target.value)}
-                className="w-full h-10 px-3 bg-slate-900/50 border border-white/10 rounded-xl text-white text-sm focus:border-secondary"
+                onValueChange={(val) => handleChange('area_direito', val)}
               >
-                {AREAS_DIREITO_PADRAO.map((area) => (
-                  <option key={area} value={area}>
-                    {area}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione a área..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {AREAS_DIREITO_PADRAO.map((area) => (
+                    <SelectItem key={area} value={area}>
+                      {area}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -261,7 +287,7 @@ export default function CasoForm() {
               value={formData.titulo || ''}
               onChange={(e) => handleChange('titulo', e.target.value)}
               placeholder="Ex: Ação Trabalhista c/c Pedido de Insalubridade e Horas Extras"
-              className="bg-slate-900/50 border-white/10 text-white rounded-xl"
+              className="h-11 bg-slate-950/50 border-white/10 text-white rounded-xl"
             />
           </div>
 
@@ -270,96 +296,116 @@ export default function CasoForm() {
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Tipo de Demanda
               </label>
-              <select
+              <Select
                 value={formData.tipo_demanda || 'judicial'}
-                onChange={(e) => handleChange('tipo_demanda', e.target.value as TipoDemanda)}
-                className="w-full h-10 px-3 bg-slate-900/50 border border-white/10 rounded-xl text-white text-sm focus:border-secondary"
+                onValueChange={(val) => handleChange('tipo_demanda', val as TipoDemanda)}
               >
-                <option value="judicial">Judicial (Contencioso em Tribunal)</option>
-                <option value="extrajudicial">Extrajudicial (Cartório / Notificação / Acordo)</option>
-                <option value="consultivo">Consultivo (Elaboração Contratual / Parecer)</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="judicial">Judicial (Contencioso em Tribunal)</SelectItem>
+                  <SelectItem value="extrajudicial">Extrajudicial (Cartório / Notificação / Acordo)</SelectItem>
+                  <SelectItem value="consultivo">Consultivo (Elaboração Contratual / Parecer)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">Status do Caso</label>
-              <select
+              <Select
                 value={formData.status || 'em_andamento'}
-                onChange={(e) => handleChange('status', e.target.value as StatusCaso)}
-                className="w-full h-10 px-3 bg-slate-900/50 border border-white/10 rounded-xl text-white text-sm focus:border-secondary"
+                onValueChange={(val) => handleChange('status', val as StatusCaso)}
               >
-                <option value="analise">Em Análise Inicial</option>
-                <option value="em_andamento">Em Andamento</option>
-                <option value="aguardando_documentos">Aguardando Documentos</option>
-                <option value="concluido">Concluído</option>
-                <option value="arquivado">Arquivado</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="analise">Em Análise Inicial</SelectItem>
+                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                  <SelectItem value="aguardando_documentos">Aguardando Documentos</SelectItem>
+                  <SelectItem value="concluido">Concluído</SelectItem>
+                  <SelectItem value="arquivado">Arquivado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Visibilidade da Carteira
               </label>
-              <select
+              <Select
                 value={formData.visibilidade || 'colegiado'}
-                onChange={(e) => handleChange('visibilidade', e.target.value as VisibilidadeRegistro)}
-                className="w-full h-10 px-3 bg-slate-900/50 border border-white/10 rounded-xl text-white text-sm focus:border-secondary"
+                onValueChange={(val) => handleChange('visibilidade', val as VisibilidadeRegistro)}
               >
-                <option value="colegiado">Colegiado (Toda a banca jurídica)</option>
-                <option value="privado">Privado (Restrito ao responsável/delegados)</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="colegiado">Colegiado (Toda a banca jurídica)</SelectItem>
+                  <SelectItem value="privado">Privado (Restrito ao responsável/delegados)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Posicionamento no Funil Processual (ADVBOX) */}
+          {/* Posicionamento no Funil Processual */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/[0.02] p-4 rounded-xl border border-white/10">
             <div>
               <label className="block text-xs font-bold text-secondary mb-1.5 flex items-center gap-1.5">
                 <Kanban className="w-3.5 h-3.5" />
                 Fase do Funil Processual
               </label>
-              <select
+              <Select
                 value={formData.fase_funil || 'negociacao'}
-                onChange={(e) => {
-                  const novaFase = e.target.value as FaseFunil;
+                onValueChange={(novaFase) => {
+                  const fase = novaFase as FaseFunil;
                   const primeira = etapas
-                    .filter((et) => et.fase === novaFase)
+                    .filter((et) => et.fase === fase)
                     .sort((a, b) => a.ordem - b.ordem)[0];
                   setFormData((prev) => ({
                     ...prev,
-                    fase_funil: novaFase,
+                    fase_funil: fase,
                     etapa_id: primeira?.id || null,
                   }));
                 }}
-                className="w-full h-10 px-3 bg-slate-900/50 border border-white/10 rounded-xl text-secondary font-semibold text-sm focus:border-secondary uppercase"
               >
-                {FASES_FUNIL_CONFIG.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.label.toUpperCase()}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full text-secondary font-semibold uppercase">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FASES_FUNIL_CONFIG.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.label.toUpperCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-secondary mb-1.5">
                 Etapa da Fase
               </label>
-              <select
-                value={formData.etapa_id || ''}
-                onChange={(e) => handleChange('etapa_id', e.target.value || null)}
-                className="w-full h-10 px-3 bg-slate-900/50 border border-white/10 rounded-xl text-white text-sm focus:border-secondary"
+              <Select
+                value={formData.etapa_id || 'sem_etapa'}
+                onValueChange={(val) => handleChange('etapa_id', val === 'sem_etapa' ? null : val)}
               >
-                <option value="">Sem etapa definida</option>
-                {etapas
-                  .filter((et) => et.fase === (formData.fase_funil || 'negociacao'))
-                  .sort((a, b) => a.ordem - b.ordem)
-                  .map((et) => (
-                    <option key={et.id} value={et.id}>
-                      {et.nome}
-                    </option>
-                  ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sem etapa definida" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sem_etapa">Sem etapa definida</SelectItem>
+                  {etapas
+                    .filter((et) => et.fase === (formData.fase_funil || 'negociacao'))
+                    .sort((a, b) => a.ordem - b.ordem)
+                    .map((et) => (
+                      <SelectItem key={et.id} value={et.id}>
+                        {et.nome}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -425,17 +471,75 @@ export default function CasoForm() {
           )}
         </div>
 
+        {/* Bloco 3: Compartilhamento com a Equipe */}
+        <div className="bg-card border border-white/10 rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="border-b border-white/10 pb-3 flex items-center justify-between">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Users className="w-4 h-4 text-secondary" />
+              Compartilhar com outros membros da equipe
+            </h2>
+            <span className="text-xs text-slate-400 font-mono">
+              {(formData.compartilhado_com || []).length} selecionado(s)
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Selecione quais outros advogados ou assistentes do escritório terão acesso para visualizar este caso no funil processual.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+            {perfis
+              .filter((p) => p.id !== (formData.responsavel_id || user?.id))
+              .map((p) => {
+                const selecionados = formData.compartilhado_com || [];
+                const isSelected = selecionados.includes(p.id);
+                return (
+                  <label
+                    key={p.id}
+                    className={cn(
+                      'flex items-center justify-between p-3 rounded-xl border text-xs cursor-pointer transition-all',
+                      isSelected
+                        ? 'bg-secondary/15 border-secondary/40 text-white'
+                        : 'bg-slate-900/40 border-white/5 text-slate-400 hover:border-white/15'
+                    )}
+                  >
+                    <span className="font-medium text-slate-200">{p.nome}</span>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const atual = formData.compartilhado_com || [];
+                        const novo = e.target.checked
+                          ? [...atual, p.id]
+                          : atual.filter((id) => id !== p.id);
+                        handleChange('compartilhado_com', novo);
+                      }}
+                      className="rounded border-white/20 text-secondary focus:ring-secondary/30 h-4 w-4"
+                    />
+                  </label>
+                );
+              })}
+            {perfis.filter((p) => p.id !== (formData.responsavel_id || user?.id)).length === 0 && (
+              <div className="col-span-2 p-3 text-slate-500 text-xs italic">
+                Nenhum outro membro cadastrado no escritório.
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="flex items-center justify-end gap-3">
           <Button asChild variant="ghost" className="rounded-xl text-slate-300 hover:text-white">
             <Link to="/admin/crm/casos">Cancelar</Link>
           </Button>
-          <Button
-            type="submit"
-            disabled={loading}
-            className="bg-cta-gold hover:opacity-90 text-primary font-bold rounded-xl shadow-lg px-6"
-          >
-            {loading ? 'Salvando...' : isEditing ? 'Atualizar Caso' : 'Cadastrar Caso'}
-          </Button>
+          <PermissionGuard modulo="casos" acao={isEditing ? 'editar' : 'criar'}>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-cta-gold hover:opacity-90 text-primary font-bold rounded-xl shadow-lg px-6"
+            >
+              {loading ? 'Salvando...' : isEditing ? 'Atualizar Caso' : 'Cadastrar Caso'}
+            </Button>
+          </PermissionGuard>
         </div>
       </form>
     </div>

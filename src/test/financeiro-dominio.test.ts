@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   ContratoFinanceiro,
   TipoHonorario,
@@ -33,12 +33,15 @@ describe('Domínio de CRM: Isolamento Financeiro e Contratos de Honorários', ()
     expect(resultado.erros).toContain('Percentual de êxito é obrigatório para honorários no êxito ou mistos');
   });
 
-  it('permite acesso a honorários estritamente para o papel "advogado"', () => {
-    // Advogados têm acesso
+  it('permite acesso a honorários para os papéis "advogado" e administradores', () => {
+    // Advogados e administradores têm acesso
     expect(podeVisualizarHonorarios('advogado')).toBe(true);
+    expect(podeVisualizarHonorarios('admin')).toBe(true);
+    expect(podeVisualizarHonorarios('administrador')).toBe(true);
 
     // Estagiários e Secretárias são bloqueados
     expect(podeVisualizarHonorarios('estagiario')).toBe(false);
     expect(podeVisualizarHonorarios('secretaria')).toBe(false);
+    expect(podeVisualizarHonorarios(null)).toBe(false);
   });
 });

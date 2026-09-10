@@ -9,7 +9,13 @@
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
 
-    gtag('config', 'G-93G09485Y9');
+    if (document.prerendering) {
+      document.addEventListener('prerenderingchange', function () {
+        gtag('config', 'G-93G09485Y9');
+      }, { once: true });
+    } else {
+      gtag('config', 'G-93G09485Y9');
+    }
   </script>
 
   <meta charset="UTF-8" />
@@ -162,6 +168,42 @@
       "addressRegion": "SP",
       "addressCountry": "BR"
     }
+  }
+  </script>
+
+  <!-- Speculation Rules API (Prerender e Prefetch para navegadores Chromium) -->
+  <script type="speculationrules">
+  {
+    "prerender": [
+      {
+        "where": {
+          "and": [
+            { "href_matches": "/*" },
+            {
+              "not": {
+                "href_matches": [
+                  "/login",
+                  "/admin/*",
+                  "/politica-de-privacidade",
+                  "/termos-de-uso"
+                ]
+              }
+            },
+            { "not": { "selector_matches": ".do-not-prerender" } },
+            { "not": { "selector_matches": "[rel~=nofollow]" } }
+          ]
+        },
+        "eagerness": "moderate"
+      }
+    ],
+    "prefetch": [
+      {
+        "where": {
+          "not": { "href_matches": "/*" }
+        },
+        "eagerness": "moderate"
+      }
+    ]
   }
   </script>
 </head>

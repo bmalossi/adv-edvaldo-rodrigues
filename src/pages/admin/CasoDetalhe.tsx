@@ -13,7 +13,8 @@ import {
   ExternalLink,
   Save,
   CheckCircle2,
-  FileDown
+  FileDown,
+  Trash2
 } from 'lucide-react';
 import {
   supabase,
@@ -30,6 +31,9 @@ import {
   podeVisualizarHonorarios,
   TIPOS_HONORARIO_CONFIG,
 } from '@/domain/crm/financeiro';
+import { usePermission } from '@/hooks/usePermission';
+import { useRBAC } from '@/contexts/RBACContext';
+import { PermissionGuard } from '@/components/admin/PermissionGuard';
 import { ModalGerarMinuta } from '@/components/admin/ModalGerarMinuta';
 import { PainelDocumentosCaso } from '@/components/admin/PainelDocumentosCaso';
 import { Button } from '@/components/ui/button';
@@ -55,6 +59,14 @@ export default function CasoDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { papel } = useAuth();
+  const { isAdmin } = useRBAC();
+  const canVerFinanceiro = usePermission('financeiro', 'visualizar');
+  const canCriarFinanceiro = usePermission('financeiro', 'criar');
+  const canEditarFinanceiro = usePermission('financeiro', 'editar');
+  const canExcluirCaso = usePermission('casos', 'excluir');
+
+  const canAcessarFinanceiro = isAdmin || canVerFinanceiro || podeVisualizarHonorarios(papel);
+  const canSalvarFinanceiro = isAdmin || canEditarFinanceiro || canCriarFinanceiro || podeVisualizarHonorarios(papel);
 
   const [caso, setCaso] = useState<Caso | null>(null);
   const [cliente, setCliente] = useState<Cliente | null>(null);
@@ -79,24 +91,26 @@ export default function CasoDetalhe() {
   const fetchCasoCompleto = async () => {
     if (!id) return;
     setLoading(true);
-    const { data: casoData, error } = await supabase
+
+    // Carrega dados do caso
+    const { data: casoData, error: casoError } = await supabase
       .from('casos')
       .select('*, responsavel:perfis(nome)')
       .eq('id', id)
       .single();
 
-    if (error || !casoData) {
-      toast.error('Caso não encontrado');
+    if (casoError || !casoData) {
+      toast.error('Caso não encontrado.');
       navigate('/admin/crm/casos');
       return;
     }
 
     setCaso({
       ...casoData,
-      responsavel_nome: casoData.responsavel?.nome || 'Advogado Responsável',
+      responsavel_nome: (casoData as any).responsavel?.nome || 'Advogado do Escritório',
     } as Caso);
 
-    // Carrega cliente
+    // Carrega dados do cliente vinculado
     if (casoData.cliente_id) {
       const { data: cliData } = await supabase
         .from('clientes')
@@ -114,8 +128,8 @@ export default function CasoDetalhe() {
       .order('updated_at', { ascending: false });
     if (procData) setProcessosConexos(procData);
 
-    // Se o usuário for advogado, busca dados da tabela de contratos financeiros
-    if (podeVisualizarHonorarios(papel)) {
+    // Se o usuário tem permissão para visualizar financeiro, busca dados da tabela de contratos financeiros
+    if (canAcessarFinanceiro) {
       const { data: finData } = await supabase
         .from('contratos_financeiros')
         .select('*')
@@ -144,11 +158,34 @@ export default function CasoDetalhe() {
 
   useEffect(() => {
     fetchCasoCompleto();
-  }, [id, papel]);
+  }, [id, papel, canVerFinanceiro, isAdmin]);
+
+  const handleExcluirCaso = async () => {
+    if (!caso) return;
+    const confirmar = window.confirm('Deseja realmente mover este caso para o arquivo / lixeira?');
+    if (!confirmar) return;
+
+    const { error } = await supabase
+      .from('casos')
+      .delete()
+      .eq('id', caso.id);
+
+    if (error) {
+      toast.error('Erro ao excluir caso: ' + error.message);
+    } else {
+      toast.success('Caso excluído com sucesso');
+      navigate('/admin/crm/casos');
+    }
+  };
 
   const handleSalvarFinanceiro = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !podeVisualizarHonorarios(papel)) return;
+    if (!id) return;
+
+    if (!canSalvarFinanceiro) {
+      toast.error('Você não possui permissão para salvar contratos de honorários.');
+      return;
+    }
 
     const validacao = validarContratoFinanceiro({
       ...formFinanceiro,
@@ -162,11 +199,37 @@ export default function CasoDetalhe() {
 
     setSalvandoFinanceiro(true);
     try {
+      const payload = {
+        caso_id: id,
+        tipo_honorario: formFinanceiro.tipo_honorario || 'fixo',
+        valor_total:
+          formFinanceiro.valor_total !== undefined &&
+          formFinanceiro.valor_total !== null &&
+          !isNaN(Number(formFinanceiro.valor_total))
+            ? Number(formFinanceiro.valor_total)
+            : null,
+        valor_entrada:
+          formFinanceiro.valor_entrada !== undefined &&
+          formFinanceiro.valor_entrada !== null &&
+          !isNaN(Number(formFinanceiro.valor_entrada))
+            ? Number(formFinanceiro.valor_entrada)
+            : null,
+        numero_parcelas: formFinanceiro.numero_parcelas ? Number(formFinanceiro.numero_parcelas) : 1,
+        percentual_exito:
+          formFinanceiro.percentual_exito !== undefined &&
+          formFinanceiro.percentual_exito !== null &&
+          !isNaN(Number(formFinanceiro.percentual_exito))
+            ? Number(formFinanceiro.percentual_exito)
+            : null,
+        condicoes_pagamento: formFinanceiro.condicoes_pagamento ? String(formFinanceiro.condicoes_pagamento).trim() : null,
+        dados_bancarios: formFinanceiro.dados_bancarios ? String(formFinanceiro.dados_bancarios).trim() : null,
+      };
+
       if (contratoFinanceiro?.id) {
         const { data, error } = await supabase
           .from('contratos_financeiros')
           .update({
-            ...formFinanceiro,
+            ...payload,
             updated_at: new Date().toISOString(),
           })
           .eq('id', contratoFinanceiro.id)
@@ -179,10 +242,7 @@ export default function CasoDetalhe() {
       } else {
         const { data, error } = await supabase
           .from('contratos_financeiros')
-          .insert({
-            ...formFinanceiro,
-            caso_id: id,
-          })
+          .insert(payload)
           .select()
           .single();
 
@@ -239,21 +299,36 @@ export default function CasoDetalhe() {
 
         <div className="flex items-center gap-2">
           {cliente && (
-            <Button
-              onClick={() => setModalMinutaOpen(true)}
-              className="rounded-xl gap-1.5 bg-secondary hover:opacity-90 text-primary font-bold shadow-md"
-            >
-              <FileDown className="w-4 h-4" />
-              Gerar Minuta (.docx)
-            </Button>
+            <PermissionGuard modulo="documentos" acao="visualizar">
+              <Button
+                onClick={() => setModalMinutaOpen(true)}
+                className="rounded-xl gap-1.5 bg-secondary hover:opacity-90 text-primary font-bold shadow-md"
+              >
+                <FileDown className="w-4 h-4" />
+                Gerar Minuta (.docx)
+              </Button>
+            </PermissionGuard>
           )}
 
-          <Button asChild variant="outline" className="border-white/10 text-white rounded-xl gap-1.5">
-            <Link to={`/admin/crm/casos/${caso.id}/editar`}>
-              <Edit className="w-4 h-4 text-secondary" />
-              Editar Caso
-            </Link>
-          </Button>
+          <PermissionGuard modulo="casos" acao="editar">
+            <Button asChild variant="outline" className="border-white/10 text-white rounded-xl gap-1.5">
+              <Link to={`/admin/crm/casos/${caso.id}/editar`}>
+                <Edit className="w-4 h-4 text-secondary" />
+                Editar Caso
+              </Link>
+            </Button>
+          </PermissionGuard>
+
+          <PermissionGuard modulo="casos" acao="excluir">
+            <Button
+              variant="ghost"
+              onClick={handleExcluirCaso}
+              className="text-destructive hover:bg-destructive/10 rounded-xl"
+              title="Excluir Caso"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -327,8 +402,8 @@ export default function CasoDetalhe() {
             )}
           </div>
 
-          {/* Módulo de Contrato de Honorários (Issue #5 - Blindado para Advogados) */}
-          {podeVisualizarHonorarios(papel) ? (
+          {/* Módulo de Contrato de Honorários (Blindado por RBAC em dupla camada) */}
+          <PermissionGuard modulo="financeiro" acao="visualizar">
             <div className="bg-card border border-amber-500/20 rounded-2xl p-6 shadow-sm space-y-5">
               <div className="border-b border-white/10 pb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -338,7 +413,7 @@ export default function CasoDetalhe() {
                   </h2>
                 </div>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 flex items-center gap-1">
-                  <Lock className="w-3 h-3" /> Apenas Advogados
+                  <Lock className="w-3 h-3" /> Apenas Autorizados
                 </span>
               </div>
 
@@ -377,14 +452,16 @@ export default function CasoDetalhe() {
                   )}
 
                   <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditandoFinanceiro(true)}
-                      className="border-white/10 text-white rounded-xl text-xs"
-                    >
-                      Atualizar Termos de Honorários
-                    </Button>
+                    <PermissionGuard modulo="financeiro" acao="editar">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditandoFinanceiro(true)}
+                        className="border-white/10 text-white rounded-xl text-xs"
+                      >
+                        Atualizar Termos de Honorários
+                      </Button>
+                    </PermissionGuard>
                   </div>
                 </div>
               ) : (
@@ -532,7 +609,7 @@ export default function CasoDetalhe() {
                 </form>
               )}
             </div>
-          ) : null}
+          </PermissionGuard>
 
           {/* Módulo de Documentos e Google Drive (Issue #8) */}
           <PainelDocumentosCaso caso={caso} cliente={cliente} />

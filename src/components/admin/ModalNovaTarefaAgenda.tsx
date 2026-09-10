@@ -18,6 +18,7 @@ import { supabase, TipoPendencia, StatusPendencia, PendenciaCRM } from '@/lib/su
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PermissionGuard } from '@/components/admin/PermissionGuard';
 import {
   Dialog,
   DialogContent,
@@ -489,16 +490,18 @@ export function ModalNovaTarefaAgenda({
                   )}
                 </Button>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleExcluir}
-                  disabled={excluindo}
-                  className="text-xs text-red-400 hover:bg-red-500/10 gap-1.5"
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> Excluir
-                </Button>
+                <PermissionGuard modulo="agenda" acao="excluir">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleExcluir}
+                    disabled={excluindo}
+                    className="text-xs text-red-400 hover:bg-red-500/10 gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Excluir
+                  </Button>
+                </PermissionGuard>
               </div>
             )}
           </div>
@@ -513,23 +516,25 @@ export function ModalNovaTarefaAgenda({
             >
               Cancelar
             </Button>
-            <Button
-              type="button"
-              onClick={handleSalvar}
-              disabled={salvando || excluindo}
-              className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 h-9 font-medium shadow-lg shadow-blue-600/20"
-            >
-              {salvando ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                  Salvando...
-                </>
-              ) : tarefaEmEdicao ? (
-                'Salvar Alterações'
-              ) : (
-                'Criar nova tarefa'
-              )}
-            </Button>
+            <PermissionGuard modulo="agenda" acao={tarefaEmEdicao ? 'editar' : 'criar'}>
+              <Button
+                type="button"
+                onClick={handleSalvar}
+                disabled={salvando || excluindo}
+                className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 h-9 font-medium shadow-lg shadow-blue-600/20"
+              >
+                {salvando ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                    Salvando...
+                  </>
+                ) : tarefaEmEdicao ? (
+                  'Salvar Alterações'
+                ) : (
+                  'Criar nova tarefa'
+                )}
+              </Button>
+            </PermissionGuard>
           </div>
         </div>
       </DialogContent>

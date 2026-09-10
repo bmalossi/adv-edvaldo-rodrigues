@@ -8,7 +8,8 @@ import {
   Folder,
   FileText,
   Save,
-  CheckCircle2
+  CheckCircle2,
+  Users
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Caso, ResultadoCaso, RESULTADO_LABELS } from '@/domain/crm/caso';
@@ -50,6 +51,7 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
   const [responsavelId, setResponsavelId] = useState('');
   const [faseFunil, setFaseFunil] = useState<FaseFunil>('negociacao');
   const [etapaId, setEtapaId] = useState('');
+  const [compartilhadoCom, setCompartilhadoCom] = useState<string[]>([]);
 
   // Carregar perfis e etapas globais
   useEffect(() => {
@@ -78,6 +80,7 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
     setResponsavelId(caso.responsavel_id || '');
     setFaseFunil(caso.fase_funil || 'negociacao');
     setEtapaId(caso.etapa_id || '');
+    setCompartilhadoCom(caso.compartilhado_com || []);
   }, [caso]);
 
   if (!caso) return null;
@@ -113,6 +116,7 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
         data_transito_julgado: dataTransitoJulgado ? new Date(dataTransitoJulgado + 'T12:00:00Z').toISOString() : null,
         resultado_final: resultadoFinal || null,
         responsavel_id: responsavelId || caso.responsavel_id,
+        compartilhado_com: compartilhadoCom,
         fase_funil: faseFunil,
         etapa_id: etapaId || null,
         updated_at: new Date().toISOString(),
@@ -186,14 +190,14 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
         onClick={onFechar}
       />
 
-      {/* Painel lateral deslizante ADVBOX */}
+      {/* Painel lateral deslizante de detalhes do processo */}
       <div className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-primary border-l border-white/10 shadow-2xl flex flex-col overflow-hidden text-slate-200">
         {/* Barra superior de ícones */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-primary/80">
           <div className="flex items-center gap-3 text-slate-400">
             <span className="text-secondary font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
               <Folder className="w-4 h-4" />
-              ADVBOX Flow
+              Flow Processual
             </span>
           </div>
 
@@ -232,7 +236,7 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
           )}
         </div>
 
-        {/* Formulário com scroll vertical (estilo ADVBOX) */}
+        {/* Formulário com scroll vertical */}
         <form onSubmit={handleSalvar} className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-xs">
           {/* Tipo de ação* */}
           <div>
@@ -375,7 +379,7 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
             </select>
           </div>
 
-          {/* Seção Fase do Processo (ADVBOX) */}
+          {/* Seção Fase do Processo */}
           <div className="pt-4 border-t border-white/10 space-y-3 bg-white/[0.02] p-3 rounded-xl border">
             <h4 className="text-[11px] font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-secondary" />
@@ -444,6 +448,57 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Compartilhamento Individualizado com a Equipe */}
+          <div className="pt-4 border-t border-white/10 space-y-3 bg-white/[0.02] p-3 rounded-xl border border-white/5">
+            <div className="flex items-center justify-between">
+              <h4 className="text-[11px] font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-secondary" />
+                Compartilhar com a equipe
+              </h4>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {compartilhadoCom.length} selecionado(s)
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              Permita que outros usuários visualizem e acompanhem este caso no funil processual.
+            </p>
+            <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+              {perfis
+                .filter((p) => p.id !== (responsavelId || caso.responsavel_id))
+                .map((p) => {
+                  const isChecked = compartilhadoCom.includes(p.id);
+                  return (
+                    <label
+                      key={p.id}
+                      className={cn(
+                        'flex items-center justify-between p-2 rounded-lg border text-xs cursor-pointer transition-all',
+                        isChecked
+                          ? 'bg-secondary/15 border-secondary/40 text-white'
+                          : 'bg-[#15203b] border-white/5 text-slate-400 hover:border-white/15'
+                      )}
+                    >
+                      <span className="font-medium text-slate-200">{p.nome}</span>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setCompartilhadoCom((prev) => [...prev, p.id]);
+                          } else {
+                            setCompartilhadoCom((prev) => prev.filter((id) => id !== p.id));
+                          }
+                        }}
+                        className="rounded border-white/20 text-secondary focus:ring-secondary/30 h-3.5 w-3.5"
+                      />
+                    </label>
+                  );
+                })}
+              {perfis.filter((p) => p.id !== (responsavelId || caso.responsavel_id)).length === 0 && (
+                <span className="text-slate-500 italic text-[11px]">Nenhum outro membro cadastrado.</span>
+              )}
             </div>
           </div>
 

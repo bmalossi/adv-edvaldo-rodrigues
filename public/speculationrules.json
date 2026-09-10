@@ -1,0 +1,32 @@
+{
+  "prerender": [
+    {
+      "where": {
+        "and": [
+          { "href_matches": "/*" },
+          {
+            "not": {
+              "href_matches": [
+                "/login",
+                "/admin/*",
+                "/politica-de-privacidade",
+                "/termos-de-uso"
+              ]
+            }
+          },
+          { "not": { "selector_matches": ".do-not-prerender" } },
+          { "not": { "selector_matches": "[rel~=nofollow]" } }
+        ]
+      },
+      "eagerness": "moderate"
+    }
+  ],
+  "prefetch": [
+    {
+      "where": {
+        "not": { "href_matches": "/*" }
+      },
+      "eagerness": "moderate"
+    }
+  ]
+}

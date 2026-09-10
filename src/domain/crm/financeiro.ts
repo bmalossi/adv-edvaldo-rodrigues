@@ -1,4 +1,4 @@
-﻿import { PapelUsuario } from './cliente';
+import { PapelUsuario } from './cliente';
 
 export type TipoHonorario = 'fixo' | 'exito' | 'misto' | 'mensal';
 
@@ -67,7 +67,9 @@ export function validarContratoFinanceiro(
   };
 }
 
-export function podeVisualizarHonorarios(papel: PapelUsuario): boolean {
-  // Apenas advogados têm autorização de acesso e visualização a dados pecuniários e honorários
-  return papel === 'advogado';
+export function podeVisualizarHonorarios(papel?: string | null): boolean {
+  if (!papel) return false;
+  const p = papel.toLowerCase().trim();
+  // Advogados e administradores têm autorização de acesso e visualização a dados pecuniários e honorários
+  return p === 'advogado' || p === 'admin' || p === 'administrador' || p.includes('admin');
 }

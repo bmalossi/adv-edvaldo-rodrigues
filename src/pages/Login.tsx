@@ -27,7 +27,7 @@ export default function Login() {
             return
         }
 
-        navigate('/admin', { replace: true })
+        navigate('/admin/crm/funil', { replace: true })
     }
 
     const handleResetPassword = async () => {

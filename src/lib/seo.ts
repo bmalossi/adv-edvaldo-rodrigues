@@ -188,10 +188,16 @@ export function buildArticleSchema(params: {
   dateModified?: string | null;
   imageUrl?: string | null;
   authorName?: string;
+  categoryName?: string | null;
+  tags?: string[] | { name: string }[] | null;
 }) {
+  const tagNames: string[] = Array.isArray(params.tags)
+    ? params.tags.map((t) => (typeof t === 'string' ? t : t.name)).filter(Boolean)
+    : [];
+
   return {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": ["Article", "LegalScholarlyArticle"],
     headline: params.title,
     description: params.description,
     mainEntityOfPage: {
@@ -215,6 +221,25 @@ export function buildArticleSchema(params: {
         url: "https://edvaldorodrigues.com.br/logo.png",
       },
     },
+    isPartOf: {
+      "@id": SEO.websiteId,
+    },
+    ...(params.categoryName
+      ? {
+          about: {
+            "@type": "Thing",
+            name: params.categoryName,
+          },
+        }
+      : {}),
+    ...(tagNames.length > 0
+      ? {
+          mentions: tagNames.map((name) => ({
+            "@type": "Thing",
+            name,
+          })),
+        }
+      : {}),
   };
 }
 

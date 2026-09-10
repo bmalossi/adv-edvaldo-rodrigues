@@ -1,6 +1,14 @@
 import { Helmet } from "react-helmet-async";
 import { SEO } from "@/lib/seo";
 
+export interface ArticleMeta {
+  publishedTime?: string | null;
+  modifiedTime?: string | null;
+  author?: string | null;
+  section?: string | null;
+  tags?: string[] | null;
+}
+
 interface SEOHeadProps {
   title?: string;
   description?: string;
@@ -8,6 +16,7 @@ interface SEOHeadProps {
   image?: string;
   noIndex?: boolean;
   jsonLd?: object | object[];
+  articleMeta?: ArticleMeta;
 }
 
 /**
@@ -21,6 +30,7 @@ export function SEOHead({
   image = SEO.defaultImage,
   noIndex = false,
   jsonLd,
+  articleMeta,
 }: SEOHeadProps) {
   const canonicalUrl = canonical
     ? `${SEO.siteUrl}${canonical}`
@@ -48,9 +58,26 @@ export function SEOHead({
       <meta property="og:image" content={image} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
-      <meta property="og:type" content="website" />
+      <meta property="og:type" content={articleMeta ? "article" : "website"} />
       <meta property="og:site_name" content={SEO.siteName} />
       <meta property="og:locale" content="pt_BR" />
+
+      {/* Article Open Graph tags */}
+      {articleMeta?.publishedTime && (
+        <meta property="article:published_time" content={articleMeta.publishedTime} />
+      )}
+      {articleMeta?.modifiedTime && (
+        <meta property="article:modified_time" content={articleMeta.modifiedTime} />
+      )}
+      {articleMeta?.author && (
+        <meta property="article:author" content={articleMeta.author} />
+      )}
+      {articleMeta?.section && (
+        <meta property="article:section" content={articleMeta.section} />
+      )}
+      {articleMeta?.tags?.map((tag, idx) => (
+        <meta key={idx} property="article:tag" content={tag} />
+      ))}
 
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />

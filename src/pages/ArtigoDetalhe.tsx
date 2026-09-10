@@ -155,6 +155,14 @@ export default function ArtigoDetalhe() {
         title={`${article.seo_title || article.title} | Dr. Edvaldo Rodrigues Ferreira`}
         description={article.seo_description || article.excerpt || ''}
         canonical={`/conteudo-juridico/${article.slug}`}
+        image={article.cover_image_url || undefined}
+        articleMeta={{
+          publishedTime: article.published_at,
+          modifiedTime: article.updated_at || article.published_at,
+          author: article.author_name,
+          section: article.category?.name || 'Direito',
+          tags: article.tags?.map((t) => t.name) || [],
+        }}
         jsonLd={[
           buildArticleSchema({
             title: article.title,
@@ -164,6 +172,8 @@ export default function ArtigoDetalhe() {
             dateModified: article.updated_at,
             imageUrl: article.cover_image_url,
             authorName: article.author_name,
+            categoryName: article.category?.name,
+            tags: article.tags?.map((t) => t.name),
           }),
           buildBreadcrumb([
             { name: 'Início', url: SEO.siteUrl },
@@ -172,6 +182,17 @@ export default function ArtigoDetalhe() {
           ]),
         ]}
       />
+
+      {/* Fallback semântico para motores de busca e crawlers de IA sem suporte a JavaScript */}
+      <noscript>
+        <div className="container max-w-4xl py-6 my-4 bg-amber-50 border border-amber-200 rounded-lg text-slate-800">
+          <h1 className="font-serif text-2xl font-bold mb-2">{article.title}</h1>
+          {article.excerpt && <p className="text-slate-600 mb-4">{article.excerpt}</p>}
+          <p className="text-xs text-slate-500">
+            Publicação jurídica por {article.author_name} ({article.author_oab || 'OAB/SP nº 465.818'}).
+          </p>
+        </div>
+      </noscript>
 
       {/* Banner de Pré-visualização para Admin */}
       {articleStatus !== 'published' && user && (

@@ -1,3 +1,5 @@
+import { Role } from './rbac';
+
 export type PapelUsuario = 'advogado' | 'estagiario' | 'secretaria';
 
 export type StatusCicloCliente = 'lead' | 'consulta' | 'ativo' | 'encerrado';
@@ -10,9 +12,13 @@ export interface PerfilUsuario {
   id: string;
   nome: string;
   email: string;
-  papel: PapelUsuario;
+  papel?: PapelUsuario;
+  role_id?: string | null;
+  role?: Role | null;
+  must_change_password?: boolean;
   oab: string | null;
   telefone: string | null;
+  assinatura_url?: string | null;
   ativo: boolean;
   created_at: string;
   updated_at: string;

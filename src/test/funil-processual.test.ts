@@ -130,12 +130,12 @@ describe('podeAcessarCaso com compartilhado_com', () => {
   });
 });
 
-// ── Campos ADVBOX e Inclusão de Processos no Funil ─────────────────────────────
+// ── Campos Complementares e Inclusão de Processos no Funil ─────────────────────────────
 
-describe('Campos ADVBOX no Caso e Funil', () => {
-  it('permite instanciar caso com todos os campos ADVBOX (protocolo, originario, pasta, requerimento)', () => {
-    const casoAdvbox: Caso = {
-      id: 'caso-advbox-1',
+describe('Campos Complementares no Caso e Funil', () => {
+  it('permite instanciar caso com todos os campos complementares (protocolo, originario, pasta, requerimento)', () => {
+    const casoComplementar: Caso = {
+      id: 'caso-complementar-1',
       cliente_id: 'cliente-123',
       titulo: 'NULIDADE DE LICITAÇÃO',
       area_direito: 'Administrativo',
@@ -154,9 +154,9 @@ describe('Campos ADVBOX no Caso e Funil', () => {
       resultado_final: 'procedente',
     };
 
-    expect(casoAdvbox.numero_protocolo).toBe('123456789-0');
-    expect(casoAdvbox.identificacao_pasta).toBe('PASTA-2026/01');
-    expect(casoAdvbox.fase_funil).toBe('administrativo');
-    expect(casoAdvbox.valor_causa).toBe(999999.99);
+    expect(casoComplementar.numero_protocolo).toBe('123456789-0');
+    expect(casoComplementar.identificacao_pasta).toBe('PASTA-2026/01');
+    expect(casoComplementar.fase_funil).toBe('administrativo');
+    expect(casoComplementar.valor_causa).toBe(999999.99);
   });
 });

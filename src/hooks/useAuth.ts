@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Session, User } from '@supabase/supabase-js'
-import { supabase, Advogado, PerfilUsuario, PapelUsuario } from '@/lib/supabase'
+import { supabase, Advogado, PerfilUsuario, Role } from '@/lib/supabase'
 
 type AuthState = {
     session: Session | null
     user: User | null
     advogado: Advogado | null
     perfil: PerfilUsuario | null
-    papel: PapelUsuario
+    role: Role | null
+    papel: string
+    mustChangePassword: boolean
     loading: boolean
 }
 
@@ -17,7 +19,9 @@ export function useAuth() {
         user: null,
         advogado: null,
         perfil: null,
+        role: null,
         papel: 'advogado',
+        mustChangePassword: false,
         loading: true,
     })
 
@@ -34,7 +38,18 @@ export function useAuth() {
 
         const loadProfile = async (session: Session | null) => {
             if (!session?.user) {
-                if (mounted) setState({ session: null, user: null, advogado: null, perfil: null, papel: 'advogado', loading: false })
+                if (mounted) {
+                    setState({
+                        session: null,
+                        user: null,
+                        advogado: null,
+                        perfil: null,
+                        role: null,
+                        papel: 'advogado',
+                        mustChangePassword: false,
+                        loading: false
+                    })
+                }
                 return
             }
 
@@ -42,19 +57,40 @@ export function useAuth() {
             isFetching = true
 
             try {
-                // Tenta carregar perfil da tabela perfis (RBAC CRM)
+                // Carrega perfil completo com o papel (role) associado
                 let perfilCarregado: PerfilUsuario | null = null
-                let papelResolvido: PapelUsuario = 'advogado'
+                let roleCarregada: Role | null = null
+                let papelResolvido = 'advogado'
+                let mustChange = false
 
-                const { data: perfilData } = await supabase
+                const { data: perfilData, error: perfilError } = await supabase
                     .from('perfis')
-                    .select('*')
+                    .select(`
+                        *,
+                        role:roles (
+                            id,
+                            nome,
+                            descricao,
+                            escopo,
+                            is_default,
+                            created_by,
+                            created_at
+                        )
+                    `)
                     .eq('id', session.user.id)
                     .maybeSingle()
 
+                if (perfilError) {
+                    console.warn('[useAuth] Aviso ao buscar perfil com role:', perfilError)
+                }
+
                 if (perfilData) {
                     perfilCarregado = perfilData as PerfilUsuario
-                    papelResolvido = perfilData.papel || 'advogado'
+                    roleCarregada = (perfilData.role as Role) || null
+                    mustChange = Boolean(perfilData.must_change_password)
+                    if (roleCarregada?.nome) {
+                        papelResolvido = roleCarregada.nome
+                    }
                 }
 
                 // Carrega advogado para compatibilidade com JusTrack
@@ -82,7 +118,9 @@ export function useAuth() {
                             user: session.user,
                             advogado: insertError ? null : newAdvogado,
                             perfil: perfilCarregado,
+                            role: roleCarregada,
                             papel: papelResolvido,
+                            mustChangePassword: mustChange,
                             loading: false
                         })
                     }
@@ -95,13 +133,26 @@ export function useAuth() {
                         user: session.user,
                         advogado: advData || null,
                         perfil: perfilCarregado,
+                        role: roleCarregada,
                         papel: papelResolvido,
+                        mustChangePassword: mustChange,
                         loading: false
                     })
                 }
             } catch (err) {
                 console.error('[useAuth] Exceção no loadProfile:', err)
-                if (mounted) setState({ session, user: session.user, advogado: null, perfil: null, papel: 'advogado', loading: false })
+                if (mounted) {
+                    setState({
+                        session,
+                        user: session.user,
+                        advogado: null,
+                        perfil: null,
+                        role: null,
+                        papel: 'advogado',
+                        mustChangePassword: false,
+                        loading: false
+                    })
+                }
             } finally {
                 isFetching = false
             }

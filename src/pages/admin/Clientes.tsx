@@ -1,11 +1,14 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Users, Phone, Building2, UserCheck, Eye, ShieldAlert } from 'lucide-react';
+import { Plus, Search, Users, Phone, Building2, UserCheck, Eye, ShieldAlert, FileSpreadsheet } from 'lucide-react';
 import { supabase, Cliente, StatusCicloCliente } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { ModalImportarClientes } from '@/components/admin/ModalImportarClientes';
+
+import { PermissionGuard } from '@/components/admin/PermissionGuard';
 
 const STATUS_CICLO_BADGES: Record<StatusCicloCliente, { label: string; color: string }> = {
   lead: { label: 'Lead / Prospecção', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
@@ -21,6 +24,7 @@ export default function Clientes() {
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>('');
   const [filtroTipo, setFiltroTipo] = useState<string>('');
+  const [modalImportarOpen, setModalImportarOpen] = useState(false);
 
   const fetchClientes = async () => {
     setLoading(true);
@@ -72,12 +76,28 @@ export default function Clientes() {
           </p>
         </div>
 
-        <Button asChild className="bg-cta-gold hover:opacity-90 text-primary font-bold shadow-lg rounded-xl">
-          <Link to="/admin/crm/clientes/novo" className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Novo Cliente / Lead
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <PermissionGuard modulo="clientes" acao="criar">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setModalImportarOpen(true)}
+              className="border-white/15 text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-secondary" />
+              Importar Planilha
+            </Button>
+          </PermissionGuard>
+
+          <PermissionGuard modulo="clientes" acao="criar">
+            <Button asChild className="bg-cta-gold hover:opacity-90 text-primary font-bold shadow-lg rounded-xl">
+              <Link to="/admin/crm/clientes/novo" className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Novo Cliente / Lead
+              </Link>
+            </Button>
+          </PermissionGuard>
+        </div>
       </div>
 
       {/* Barra de Filtros e Busca */}
@@ -221,6 +241,13 @@ export default function Clientes() {
           </div>
         )}
       </div>
+
+      <ModalImportarClientes
+        open={modalImportarOpen}
+        onOpenChange={setModalImportarOpen}
+        clientesExistentes={clientes}
+        onSuccess={fetchClientes}
+      />
     </div>
   );
 }

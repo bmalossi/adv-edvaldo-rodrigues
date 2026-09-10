@@ -1,292 +1,689 @@
-import { useEffect, useState } from 'react'
-import { Loader2, Save } from 'lucide-react'
-import { supabase, Advogado, ConfiguracoesAdvogado } from '@/lib/supabase'
+import { useEffect, useState, useRef } from 'react'
+import {
+    Loader2,
+    Save,
+    FileText,
+    Upload,
+    Trash2,
+    Image as ImageIcon,
+    Shield,
+    User as UserIcon,
+    Users,
+    History,
+    Lock,
+    PenTool,
+    Building2
+} from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermission } from '@/hooks/usePermission'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { TabPerfisAcesso } from '@/components/admin/rbac/TabPerfisAcesso'
+import { TabUsuarios } from '@/components/admin/rbac/TabUsuarios'
+import { TabAuditLog } from '@/components/admin/rbac/TabAuditLog'
 import { toast } from 'sonner'
+import {
+    carregarConfigDocumentosLocal,
+    salvarConfigDocumentosLocal,
+    carregarLogoLocal,
+    salvarLogoLocal,
+    removerLogoLocal,
+    carregarAssinaturaLocal,
+    salvarAssinaturaLocal,
+    removerAssinaturaLocal,
+    DEFAULTS_CONFIG
+} from '@/domain/crm/documentos/config-local'
+import { ConfigDocumentos } from '@/domain/crm/documentos/tipos'
 
 export default function Configuracoes() {
-    const { advogado } = useAuth()
+    const { user, advogado, perfil, role, papel } = useAuth()
+    const isAdm = role?.nome === 'Administrador' || papel === 'Administrador' || papel === 'admin'
+    const canVerPerfis = usePermission('perfis_acesso', 'visualizar')
+    const canVerUsuarios = usePermission('usuarios', 'visualizar')
+    const [abaAtiva, setAbaAtiva] = useState<'geral' | 'perfis' | 'usuarios' | 'auditoria'>('geral')
 
-    // Perfil
+    // Dados do Perfil
     const [nome, setNome] = useState('')
     const [oab, setOab] = useState('')
     const [telefone, setTelefone] = useState('')
     const [email, setEmail] = useState('')
+    const [assinaturaUrl, setAssinaturaUrl] = useState<string | null>(null)
     const [salvandoPerfil, setSalvandoPerfil] = useState(false)
-
-    // Preferências
-    const [notificarWhatsapp, setNotificarWhatsapp] = useState(true)
-    const [consolidarNotificacoes, setConsolidarNotificacoes] = useState(false)
-    const [horario, setHorario] = useState('07:00')
-    const [salvandoPrefs, setSalvandoPrefs] = useState(false)
+    const fileAssinaturaRef = useRef<HTMLInputElement>(null)
 
     // Segurança
     const [novaSenha, setNovaSenha] = useState('')
     const [confirmarSenha, setConfirmarSenha] = useState('')
     const [salvandoSenha, setSalvandoSenha] = useState(false)
 
+    // Configurações de Documentos Jurídicos & Logotipo (Apenas Administrador)
+    const [docConfig, setDocConfig] = useState<ConfigDocumentos>(DEFAULTS_CONFIG)
+    const [logoUrl, setLogoUrl] = useState<string | null>(null)
+    const [salvandoDocs, setSalvandoDocs] = useState(false)
+    const fileLogoRef = useRef<HTMLInputElement>(null)
+
     const [loading, setLoading] = useState(true)
-    const [inicializado, setInicializado] = useState(false)
 
     useEffect(() => {
-        if (!advogado || inicializado) return
-        setNome(advogado.nome)
-        setOab(advogado.oab ?? '')
-        setTelefone(advogado.telefone_whatsapp ?? '')
-        setEmail(advogado.email ?? '')
+        if (!user && !perfil && !advogado) return
 
-        supabase
-            .from('configuracoes_advogado')
-            .select('*')
-            .eq('advogado_id', advogado.id)
-            .single()
-            .then(({ data }) => {
-                if (data) {
-                    setNotificarWhatsapp(data.notificar_whatsapp)
-                    setConsolidarNotificacoes(data.consolidar_notificacoes)
-                    setHorario(data.horario_notificacao?.slice(0, 5) ?? '07:00')
-                }
-                setLoading(false)
-                setInicializado(true)
-            })
-    }, [advogado, inicializado])
+        setNome(perfil?.nome || advogado?.nome || '')
+        setOab(perfil?.oab || advogado?.oab || '')
+        setTelefone(perfil?.telefone || advogado?.telefone_whatsapp || '')
+        setEmail(perfil?.email || advogado?.email || '')
+
+        // Assinatura digital exclusiva de cada perfil
+        const assinaturaSalva = perfil?.assinatura_url || (user?.id ? carregarAssinaturaLocal(user.id) : null)
+        setAssinaturaUrl(assinaturaSalva)
+
+        // Configurações institucionais
+        setDocConfig(carregarConfigDocumentosLocal())
+        setLogoUrl(carregarLogoLocal())
+
+        setLoading(false)
+    }, [user?.id, perfil?.id, perfil?.assinatura_url, advogado?.id])
 
     const handleSalvarPerfil = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!advogado) return
+        if (!user && !advogado) return
         setSalvandoPerfil(true)
-        const { data, error } = await supabase
-            .from('advogados')
-            .update({ nome, oab, telefone_whatsapp: telefone, email, updated_at: new Date().toISOString() })
-            .eq('id', advogado.id)
-            .select()
-            .single()
 
-        setSalvandoPerfil(false)
-        if (error || !data) {
-            console.error("Erro no update perfil:", error);
-            toast.error('Não foi possível salvar o perfil. Verifique seus dados.');
-            return
+        try {
+            if (user?.id) {
+                const { error: perfilErr } = await supabase
+                    .from('perfis')
+                    .update({
+                        nome: nome.trim(),
+                        oab: oab.trim() || null,
+                        telefone: telefone.trim() || null,
+                        email: email.trim(),
+                        assinatura_url: assinaturaUrl,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', user.id)
+
+                if (perfilErr) throw perfilErr
+            }
+
+            if (advogado?.id && advogado?.user_id === user?.id) {
+                await supabase
+                    .from('advogados')
+                    .update({
+                        nome: nome.trim(),
+                        oab: oab.trim() || null,
+                        telefone_whatsapp: telefone.trim() || null,
+                        email: email.trim(),
+                        assinatura_url: assinaturaUrl,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', advogado.id)
+            }
+
+            toast.success('Perfil atualizado com sucesso!')
+        } catch (err: any) {
+            console.error('Erro ao atualizar perfil:', err)
+            toast.error(err?.message || 'Falha ao salvar dados do perfil.')
+        } finally {
+            setSalvandoPerfil(false)
         }
-
-        toast.success('Perfil atualizado com sucesso')
-        // Forçar um pequeno delay e atualizar a página para que o Sidebar e todos 
-        // os componentes consumam o novo contexto atualizado.
-        setTimeout(() => {
-            window.location.reload()
-        }, 1000)
-    }
-
-    const handleSalvarPrefs = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!advogado) return
-        setSalvandoPrefs(true)
-        const { error } = await supabase
-            .from('configuracoes_advogado')
-            .upsert({
-                advogado_id: advogado.id,
-                notificar_whatsapp: notificarWhatsapp,
-                consolidar_notificacoes: consolidarNotificacoes,
-                horario_notificacao: horario,
-                updated_at: new Date().toISOString(),
-            }, { onConflict: 'advogado_id' })
-        setSalvandoPrefs(false)
-        if (error) { toast.error('Erro ao salvar preferências'); return }
-        toast.success('Preferências salvas')
     }
 
     const handleSalvarSenha = async (e: React.FormEvent) => {
         e.preventDefault()
         if (novaSenha !== confirmarSenha) {
-            toast.error('As senhas não coincidem')
+            toast.error('As senhas não coincidem.')
             return
         }
-        if (novaSenha.length < 6) {
-            toast.error('A senha deve ter pelo menos 6 caracteres')
-            return
-        }
-
-        setSalvandoSenha(true)
-        const { error } = await supabase.auth.updateUser({ password: novaSenha })
-        setSalvandoSenha(false)
-
-        if (error) {
-            toast.error('Erro ao atualizar senha: ' + error.message)
+        if (novaSenha.length < 8) {
+            toast.error('A nova senha deve ter no mínimo 8 caracteres.')
             return
         }
 
-        toast.success('Senha atualizada com sucesso')
-        setNovaSenha('')
-        setConfirmarSenha('')
+        try {
+            setSalvandoSenha(true)
+            const { error } = await supabase.auth.updateUser({ password: novaSenha })
+            if (error) throw error
+
+            toast.success('Senha atualizada com sucesso!')
+            setNovaSenha('')
+            setConfirmarSenha('')
+        } catch (err: any) {
+            console.error('Erro ao atualizar senha:', err)
+            toast.error(err?.message || 'Erro ao alterar a senha.')
+        } finally {
+            setSalvandoSenha(false)
+        }
+    }
+
+    // Assinatura Digital do Perfil Individual
+    const handleUploadAssinatura = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (!file.type.startsWith('image/')) {
+            toast.error('Selecione uma imagem válida (PNG, JPG, WebP).')
+            return
+        }
+
+        const reader = new FileReader()
+        reader.onload = async () => {
+            const dataUrl = reader.result as string
+            salvarAssinaturaLocal(dataUrl, user?.id)
+            setAssinaturaUrl(dataUrl)
+
+            if (user?.id) {
+                await supabase
+                    .from('perfis')
+                    .update({ assinatura_url: dataUrl, updated_at: new Date().toISOString() })
+                    .eq('id', user.id)
+            }
+            if (advogado?.id && advogado?.user_id === user?.id) {
+                await supabase
+                    .from('advogados')
+                    .update({ assinatura_url: dataUrl, updated_at: new Date().toISOString() })
+                    .eq('id', advogado.id)
+            }
+
+            toast.success('Assinatura digitalizada salva!')
+        }
+        reader.readAsDataURL(file)
+    }
+
+    const handleRemoverAssinatura = async () => {
+        if (user?.id) {
+            removerAssinaturaLocal(user.id)
+        }
+        setAssinaturaUrl(null)
+        if (fileAssinaturaRef.current) fileAssinaturaRef.current.value = ''
+
+        if (user?.id) {
+            await supabase
+                .from('perfis')
+                .update({ assinatura_url: null, updated_at: new Date().toISOString() })
+                .eq('id', user.id)
+        }
+        if (advogado?.id && advogado?.user_id === user?.id) {
+            await supabase
+                .from('advogados')
+                .update({ assinatura_url: null, updated_at: new Date().toISOString() })
+                .eq('id', advogado.id)
+        }
+
+        toast.info('Assinatura digitalizada removida.')
+    }
+
+    // Logotipo Institucional (Exclusivo Administrador)
+    const handleUploadLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (!file.type.startsWith('image/')) {
+            toast.error('Selecione uma imagem válida (PNG, JPG, WebP).')
+            return
+        }
+        const reader = new FileReader()
+        reader.onload = () => {
+            const dataUrl = reader.result as string
+            salvarLogoLocal(dataUrl)
+            setLogoUrl(dataUrl)
+            toast.success('Logotipo institucional atualizado!')
+        }
+        reader.readAsDataURL(file)
+    }
+
+    const handleRemoverLogo = () => {
+        removerLogoLocal()
+        setLogoUrl(null)
+        if (fileLogoRef.current) fileLogoRef.current.value = ''
+        toast.info('Logotipo institucional removido.')
+    }
+
+    const handleSalvarDocConfig = (e: React.FormEvent) => {
+        e.preventDefault()
+        setSalvandoDocs(true)
+        salvarConfigDocumentosLocal(docConfig)
+        setSalvandoDocs(false)
+        toast.success('Dados institucionais salvos com sucesso!')
     }
 
     if (loading) {
         return (
             <div className="flex items-center justify-center py-24">
-                <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+                <Loader2 className="w-6 h-6 animate-spin text-secondary" />
             </div>
         )
     }
 
     return (
-        <div className="max-w-xl space-y-8">
-            <div>
-                <h1 className="font-serif text-3xl font-bold text-white tracking-tight">Configurações</h1>
-                <p className="text-slate-300 text-sm mt-1">Gerencie seu perfil profissional e preferências de automação.</p>
+        <div className="space-y-6 max-w-5xl">
+            {/* Header da Página */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10">
+                <div>
+                    <h1 className="font-serif text-2xl sm:text-3xl font-bold text-white tracking-tight">Configurações</h1>
+                    <p className="text-slate-400 text-xs sm:text-sm mt-1">Gerencie seu perfil profissional, credenciais de acesso e parâmetros do escritório.</p>
+                </div>
             </div>
 
-            {/* Perfil */}
-            <section className="bg-card border-premium rounded-2xl p-8 shadow-card relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-8">
-                    <div className="p-2 bg-secondary/10 rounded-lg text-secondary">
-                        <Save className="w-4 h-4" />
-                    </div>
-                    <h2 className="font-serif text-xl font-bold text-white tracking-tight">Dados do advogado</h2>
-                </div>
-                <form onSubmit={handleSalvarPerfil} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="sm:col-span-2">
-                            <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-2">Nome completo</Label>
-                            <Input value={nome} onChange={(e) => setNome(e.target.value)}
-                                className="h-12 bg-slate-900 border-border/60 text-white focus:border-secondary focus:ring-1 focus:ring-secondary/20 rounded-xl transition-all" />
-                        </div>
-                        <div>
-                            <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-2">OAB</Label>
-                            <Input value={oab} onChange={(e) => setOab(e.target.value)}
-                                placeholder="SP 123456"
-                                className="h-12 bg-slate-900 border-border/60 text-white placeholder:text-slate-500 focus:border-secondary focus:ring-1 focus:ring-secondary/20 rounded-xl transition-all" />
-                        </div>
-                        <div>
-                            <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-2">WhatsApp</Label>
-                            <Input value={telefone} onChange={(e) => setTelefone(e.target.value)}
-                                placeholder="5511999999999"
-                                className="h-12 bg-slate-900 border-border/60 text-white placeholder:text-slate-500 focus:border-secondary focus:ring-1 focus:ring-secondary/20 rounded-xl transition-all" />
-                        </div>
-                        <div className="sm:col-span-2">
-                            <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-2">E-mail de contato</Label>
-                            <Input value={email} onChange={(e) => setEmail(e.target.value)}
-                                type="email"
-                                className="h-12 bg-slate-900 border-border/60 text-white focus:border-secondary focus:ring-1 focus:ring-secondary/20 rounded-xl transition-all" />
-                        </div>
-                    </div>
-                    <div className="flex justify-end mt-4">
-                        <Button type="submit" disabled={salvandoPerfil} className="px-8 h-11 bg-cta-gold hover:opacity-90 text-primary font-bold rounded-xl shadow-lg shadow-secondary/10 transition-all active:scale-[0.98]">
-                            {salvandoPerfil ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Atualizando</> : 'Salvar alterações'}
-                        </Button>
-                    </div>
-                </form>
-            </section>
+            {/* Abas de Navegação Responsivas */}
+            <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto no-scrollbar scroll-smooth">
+                <button
+                    type="button"
+                    onClick={() => setAbaAtiva('geral')}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 transition-all ${
+                        abaAtiva === 'geral'
+                            ? 'bg-secondary text-primary font-bold shadow-md shadow-secondary/20'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                    <UserIcon className="w-4 h-4" />
+                    Geral & Perfil
+                </button>
 
-            {/* Notificações */}
-            <section className="bg-card border-premium rounded-2xl p-8 shadow-card relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-8">
-                    <div className="p-2 bg-secondary/10 rounded-lg text-secondary">
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.593-.466-.511-.643-.52-.164-.008-.353-.01-.541-.01-.188 0-.422.05-.623.238-.201.188-.767.75-0.767 1.83 0 1.08.788 2.126.897 2.274.11.148 1.551 2.368 3.758 3.321.524.226.933.361 1.253.463.526.168 1.004.144 1.381.088.421-.063 1.298-.531 1.48-.94.183-.41.183-.762.128-.836-.055-.075-.201-.115-.497-.265zM12 2C6.477 2 2 6.477 2 12c0 1.786.468 3.463 1.287 4.914L2 22l5.244-1.377A9.972 9.972 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" /></svg>
+                {canVerPerfis && (
+                    <button
+                        type="button"
+                        onClick={() => setAbaAtiva('perfis')}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 transition-all ${
+                            abaAtiva === 'perfis'
+                                ? 'bg-secondary text-primary font-bold shadow-md shadow-secondary/20'
+                                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <Shield className="w-4 h-4" />
+                        Perfis de Acesso
+                    </button>
+                )}
+
+                {canVerUsuarios && (
+                    <button
+                        type="button"
+                        onClick={() => setAbaAtiva('usuarios')}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 transition-all ${
+                            abaAtiva === 'usuarios'
+                                ? 'bg-secondary text-primary font-bold shadow-md shadow-secondary/20'
+                                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <Users className="w-4 h-4" />
+                        Usuários
+                    </button>
+                )}
+
+                {canVerPerfis && (
+                    <button
+                        type="button"
+                        onClick={() => setAbaAtiva('auditoria')}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 transition-all ${
+                            abaAtiva === 'auditoria'
+                                ? 'bg-secondary text-primary font-bold shadow-md shadow-secondary/20'
+                                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <History className="w-4 h-4" />
+                        Auditoria
+                    </button>
+                )}
+            </div>
+
+            {/* Conteúdo Dinâmico por Aba */}
+            {abaAtiva === 'perfis' && canVerPerfis ? (
+                <TabPerfisAcesso />
+            ) : abaAtiva === 'usuarios' && canVerUsuarios ? (
+                <TabUsuarios />
+            ) : abaAtiva === 'auditoria' && canVerPerfis ? (
+                <TabAuditLog />
+            ) : (
+                <div className="space-y-6">
+                    {/* Grid Superior: Dados do Perfil e Segurança */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                        {/* Seção: Dados do Perfil (Colunas 1 e 2) */}
+                        <section className="lg:col-span-2 bg-card border border-white/[0.08] rounded-2xl p-6 relative shadow-lg">
+                            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/5">
+                                <div className="p-2 bg-secondary/10 rounded-xl text-secondary border border-secondary/20">
+                                    <UserIcon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-bold text-white tracking-tight">Dados do Perfil</h2>
+                                    <p className="text-slate-400 text-xs mt-0.5">Suas informações de identificação e assinatura pessoal no sistema.</p>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleSalvarPerfil} className="space-y-5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="sm:col-span-2 space-y-1.5">
+                                        <Label className="text-xs font-medium text-slate-300">Nome completo</Label>
+                                        <Input
+                                            value={nome}
+                                            onChange={(e) => setNome(e.target.value)}
+                                            placeholder="Seu nome completo"
+                                            className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-medium text-slate-300">Inscrição OAB (se aplicável)</Label>
+                                        <Input
+                                            value={oab}
+                                            onChange={(e) => setOab(e.target.value)}
+                                            placeholder="Ex: SP 123456"
+                                            className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-medium text-slate-300">WhatsApp / Celular</Label>
+                                        <Input
+                                            value={telefone}
+                                            onChange={(e) => setTelefone(e.target.value)}
+                                            placeholder="(11) 99999-9999"
+                                            className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                        />
+                                    </div>
+                                    <div className="sm:col-span-2 space-y-1.5">
+                                        <Label className="text-xs font-medium text-slate-300">E-mail de acesso</Label>
+                                        <Input
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            type="email"
+                                            placeholder="seuemail@advocacia.com"
+                                            className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Bloco: Assinatura Digital Exclusiva do Perfil */}
+                                <div className="p-4 bg-slate-950/50 rounded-xl border border-white/5 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <PenTool className="w-4 h-4 text-secondary" />
+                                        <span className="text-xs font-semibold text-white">Assinatura Digitalizada Pessoal</span>
+                                    </div>
+                                    <p className="text-xs text-slate-400">
+                                        Exclusiva do seu perfil. Será inserida automaticamente em recibos, procurações e documentos que você emitir.
+                                    </p>
+
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-1">
+                                        <div className="w-36 h-16 bg-slate-900 border border-white/10 rounded-xl flex items-center justify-center overflow-hidden p-2 shrink-0">
+                                            {assinaturaUrl ? (
+                                                <img src={assinaturaUrl} alt="Assinatura Pessoal" className="max-w-full max-h-full object-contain" />
+                                            ) : (
+                                                <span className="text-[11px] text-slate-500 font-medium">Sem assinatura</span>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <input
+                                                type="file"
+                                                ref={fileAssinaturaRef}
+                                                onChange={handleUploadAssinatura}
+                                                accept="image/*"
+                                                className="hidden"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => fileAssinaturaRef.current?.click()}
+                                                className="h-9 px-3 text-xs bg-slate-900 border-white/10 text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg gap-1.5"
+                                            >
+                                                <Upload className="w-3.5 h-3.5 text-secondary" />
+                                                {assinaturaUrl ? 'Trocar assinatura' : 'Enviar assinatura'}
+                                            </Button>
+                                            {assinaturaUrl && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={handleRemoverAssinatura}
+                                                    className="h-9 px-2.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg gap-1"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                    Remover
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end pt-2">
+                                    <Button
+                                        type="submit"
+                                        disabled={salvandoPerfil}
+                                        className="h-10 px-5 bg-cta-gold hover:opacity-90 text-primary font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-secondary/20 transition-all active:scale-[0.98]"
+                                    >
+                                        {salvandoPerfil ? (
+                                            <span className="flex items-center gap-2">
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Salvando...
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-2">
+                                                <Save className="w-4 h-4" />
+                                                Salvar Dados do Perfil
+                                            </span>
+                                        )}
+                                    </Button>
+                                </div>
+                            </form>
+                        </section>
+
+                        {/* Seção: Segurança da Conta (Coluna 3) */}
+                        <section className="bg-card border border-white/[0.08] rounded-2xl p-6 relative shadow-lg">
+                            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/5">
+                                <div className="p-2 bg-secondary/10 rounded-xl text-secondary border border-secondary/20">
+                                    <Lock className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-bold text-white tracking-tight">Segurança</h2>
+                                    <p className="text-slate-400 text-xs mt-0.5">Altere sua senha de acesso.</p>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleSalvarSenha} className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-medium text-slate-300">Nova senha</Label>
+                                    <Input
+                                        type="password"
+                                        value={novaSenha}
+                                        onChange={(e) => setNovaSenha(e.target.value)}
+                                        placeholder="Mínimo 8 caracteres"
+                                        className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-medium text-slate-300">Confirmar nova senha</Label>
+                                    <Input
+                                        type="password"
+                                        value={confirmarSenha}
+                                        onChange={(e) => setConfirmarSenha(e.target.value)}
+                                        placeholder="Repita a nova senha"
+                                        className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="pt-2">
+                                    <Button
+                                        type="submit"
+                                        disabled={salvandoSenha || !novaSenha}
+                                        className="w-full h-10 bg-cta-gold hover:opacity-90 text-primary font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-secondary/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                                    >
+                                        {salvandoSenha ? (
+                                            <span className="flex items-center gap-2">
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Atualizando...
+                                            </span>
+                                        ) : (
+                                            'Atualizar Senha'
+                                        )}
+                                    </Button>
+                                </div>
+                            </form>
+                        </section>
                     </div>
-                    <h2 className="font-serif text-xl font-bold text-white tracking-tight">Notificações WhatsApp</h2>
-                </div>
-                <form onSubmit={handleSalvarPrefs} className="space-y-5">
-                    <ToggleOption
-                        id="notificar-whatsapp"
-                        label="Ativar notificações WhatsApp"
-                        description="Receber alerta sempre que houver nova movimentação"
-                        checked={notificarWhatsapp}
-                        onChange={setNotificarWhatsapp}
-                    />
-                    <ToggleOption
-                        id="consolidar"
-                        label="Resumo diário"
-                        description="Receber um único resumo por dia, no horário definido, em vez de um alerta por movimento"
-                        checked={consolidarNotificacoes}
-                        onChange={setConsolidarNotificacoes}
-                    />
-                    {consolidarNotificacoes && (
-                        <div className="space-y-2 pl-15">
-                            <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest">Horário do resumo diário</Label>
-                            <Input
-                                type="time"
-                                value={horario}
-                                onChange={(e) => setHorario(e.target.value)}
-                                className="h-12 bg-slate-900/50 border-border/40 text-white focus:border-secondary/50 rounded-xl w-36 [color-scheme:dark]"
-                            />
-                        </div>
+
+                    {/* Seção: Documentos Jurídicos & Logotipo — EXCLUSIVO ADMINISTRADOR */}
+                    {isAdm && (
+                        <section className="bg-card border border-white/[0.08] rounded-2xl p-6 relative shadow-lg">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 pb-4 border-b border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-secondary/10 rounded-xl text-secondary border border-secondary/20">
+                                        <Building2 className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2.5">
+                                            <h2 className="text-base font-bold text-white tracking-tight">Documentos Jurídicos & Logotipo</h2>
+                                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-secondary/15 text-secondary border border-secondary/25">
+                                                Exclusivo Administrador
+                                            </span>
+                                        </div>
+                                        <p className="text-slate-400 text-xs mt-0.5">Parâmetros institucionais e identidade visual aplicados a contratos, procurações e minutas de todo o escritório.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Bloco de Logotipo Institucional */}
+                            <div className="p-4 sm:p-5 bg-slate-950/50 rounded-xl border border-white/5 mb-6">
+                                <Label className="text-xs font-semibold text-white block mb-2">Logotipo do Cabeçalho dos Documentos</Label>
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                                    <div className="w-36 sm:w-44 h-16 sm:h-18 bg-slate-900 border border-white/10 rounded-xl flex items-center justify-center overflow-hidden p-2 shrink-0">
+                                        {logoUrl ? (
+                                            <img src={logoUrl} alt="Logotipo do Escritório" className="max-w-full max-h-full object-contain" />
+                                        ) : (
+                                            <div className="flex items-center gap-1.5 text-slate-500 text-xs">
+                                                <ImageIcon className="w-4 h-4" />
+                                                <span>Sem logo</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <input
+                                            type="file"
+                                            ref={fileLogoRef}
+                                            onChange={handleUploadLogo}
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => fileLogoRef.current?.click()}
+                                            className="h-9 px-3.5 text-xs bg-slate-900 border-white/10 text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg gap-1.5"
+                                        >
+                                            <Upload className="w-3.5 h-3.5 text-secondary" />
+                                            {logoUrl ? 'Trocar logotipo' : 'Enviar logotipo'}
+                                        </Button>
+                                        {logoUrl && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={handleRemoverLogo}
+                                                className="h-9 px-2.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg gap-1"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                                Remover
+                                            </Button>
+                                        )}
+                                        <p className="text-[11px] text-slate-400 w-full sm:w-auto mt-1 sm:mt-0 sm:ml-2">
+                                            Recomendado: PNG com fundo transparente.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Formulário de Parâmetros Institucionais */}
+                            <form onSubmit={handleSalvarDocConfig} className="space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="sm:col-span-2 lg:col-span-3 space-y-1.5">
+                                        <Label className="text-xs font-medium text-slate-300">Razão Social da Sociedade</Label>
+                                        <Input
+                                            value={docConfig.empresa}
+                                            onChange={(e) => setDocConfig({ ...docConfig, empresa: e.target.value })}
+                                            placeholder="EDVALDO RODRIGUES FERREIRA SOCIEDADE INDIVIDUAL DE ADVOCACIA"
+                                            className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-medium text-slate-300">OAB Societária</Label>
+                                        <Input
+                                            value={docConfig.socOab}
+                                            onChange={(e) => setDocConfig({ ...docConfig, socOab: e.target.value })}
+                                            placeholder="62.067"
+                                            className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-medium text-slate-300">CNPJ da Sociedade</Label>
+                                        <Input
+                                            value={docConfig.cnpj}
+                                            onChange={(e) => setDocConfig({ ...docConfig, cnpj: e.target.value })}
+                                            placeholder="00.000.000/0001-00"
+                                            className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-medium text-slate-300">CPF do Advogado Titular (para Recibos)</Label>
+                                        <Input
+                                            value={docConfig.lawyerCpf}
+                                            onChange={(e) => setDocConfig({ ...docConfig, lawyerCpf: e.target.value })}
+                                            placeholder="000.000.000-00"
+                                            className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-medium text-slate-300">Chave PIX do Escritório</Label>
+                                        <Input
+                                            value={docConfig.pix}
+                                            onChange={(e) => setDocConfig({ ...docConfig, pix: e.target.value })}
+                                            placeholder="(13) 99682-4364 ou e-mail/CNPJ"
+                                            className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-medium text-slate-300">Foro Padrão dos Contratos</Label>
+                                        <Input
+                                            value={docConfig.foro}
+                                            onChange={(e) => setDocConfig({ ...docConfig, foro: e.target.value })}
+                                            placeholder="Comarca de Praia Grande/SP"
+                                            className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-medium text-slate-300">Prefixo da Numeração</Label>
+                                        <Input
+                                            value={docConfig.prefixo}
+                                            onChange={(e) => setDocConfig({ ...docConfig, prefixo: e.target.value })}
+                                            placeholder="ERF"
+                                            className="h-10 bg-slate-950/60 border-white/10 text-sm text-white placeholder:text-slate-500 rounded-xl focus:border-secondary focus:ring-1 focus:ring-secondary/20"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end pt-2">
+                                    <Button
+                                        type="submit"
+                                        disabled={salvandoDocs}
+                                        className="h-10 px-5 bg-cta-gold hover:opacity-90 text-primary font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-secondary/20 transition-all active:scale-[0.98]"
+                                    >
+                                        {salvandoDocs ? (
+                                            <span className="flex items-center gap-2">
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Salvando...
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-2">
+                                                <FileText className="w-4 h-4" />
+                                                Salvar Dados do Escritório
+                                            </span>
+                                        )}
+                                    </Button>
+                                </div>
+                            </form>
+                        </section>
                     )}
-                    <div className="flex justify-end mt-4">
-                        <Button type="submit" disabled={salvandoPrefs} className="px-8 h-11 bg-cta-gold hover:opacity-90 text-primary font-bold rounded-xl shadow-lg shadow-secondary/10 transition-all active:scale-[0.98]">
-                            {salvandoPrefs ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processando</> : 'Confirmar preferências'}
-                        </Button>
-                    </div>
-                </form>
-            </section>
-
-            {/* Segurança */}
-            <section className="bg-card border-premium rounded-2xl p-8 shadow-card relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-8">
-                    <div className="p-2 bg-secondary/10 rounded-lg text-secondary">
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    </div>
-                    <h2 className="font-serif text-xl font-bold text-white tracking-tight">Segurança</h2>
                 </div>
-                <form onSubmit={handleSalvarSenha} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-2">Nova senha</Label>
-                            <Input
-                                type="password"
-                                value={novaSenha}
-                                onChange={(e) => setNovaSenha(e.target.value)}
-                                className="h-12 bg-slate-900 border-border/60 text-white focus:border-secondary focus:ring-1 focus:ring-secondary/20 rounded-xl transition-all"
-                            />
-                        </div>
-                        <div>
-                            <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-2">Confirmar senha</Label>
-                            <Input
-                                type="password"
-                                value={confirmarSenha}
-                                onChange={(e) => setConfirmarSenha(e.target.value)}
-                                className="h-12 bg-slate-900 border-border/60 text-white focus:border-secondary focus:ring-1 focus:ring-secondary/20 rounded-xl transition-all"
-                            />
-                        </div>
-                    </div>
-                    <div className="flex justify-end mt-4">
-                        <Button type="submit" disabled={salvandoSenha} className="px-8 h-11 bg-cta-gold hover:opacity-90 text-primary font-bold rounded-xl shadow-lg shadow-secondary/10 transition-all active:scale-[0.98]">
-                            {salvandoSenha ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Atualizando</> : 'Alterar senha'}
-                        </Button>
-                    </div>
-                </form>
-            </section>
-        </div>
-    )
-}
-
-function ToggleOption({
-    id, label, description, checked, onChange,
-}: {
-    id: string
-    label: string
-    description: string
-    checked: boolean
-    onChange: (v: boolean) => void
-}) {
-    return (
-        <div className="flex items-start gap-5 group">
-            <button
-                type="button"
-                id={id}
-                onClick={() => onChange(!checked)}
-                className={`relative flex-shrink-0 w-12 h-6.5 rounded-full transition-all duration-300 mt-0.5 border border-border/30 ${checked ? 'bg-secondary/40 border-secondary/50 shadow-[0_0_10px_rgba(201,169,97,0.2)]' : 'bg-slate-800'}`}
-            >
-                <span
-                    className={`absolute top-1 left-1 w-4.5 h-4.5 bg-white rounded-full shadow-lg transition-transform duration-300 ${checked ? 'translate-x-[22px] bg-white' : 'translate-x-0 bg-slate-500'}`}
-                />
-            </button>
-            <label htmlFor={id} className="flex-1 cursor-pointer select-none">
-                <p className="text-[15px] text-white font-bold group-hover:text-secondary transition-colors">{label}</p>
-                <p className="text-sm text-slate-300 mt-1 leading-relaxed font-medium">{description}</p>
-            </label>
+            )}
         </div>
     )
 }
