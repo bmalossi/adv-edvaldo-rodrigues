@@ -245,6 +245,10 @@ export function buildContrato(
   <p><strong>7.1.</strong> Constituem justa causa, além do inadimplemento: documento ou informação falsa; omissão essencial; recusa reiterada em entregar documentos ou cumprir orientação necessária; falta de custas; exigência de ato ilegal, antiético ou tecnicamente inadequado; ofensa, ameaça, assédio ou grave quebra de confiança; acordo, contato ou recebimento ocultado; ausência injustificada em ato; contratação paralela incompatível; ou qualquer conduta que inviabilize ou comprometa a defesa.</p>
   <p><strong>7.2.</strong> Verificada a justa causa, a CONTRATADA comunicará o encerramento por escrito e adotará a renúncia ou substituição prevista em lei, mantendo apenas as providências indispensáveis durante o prazo legal. Permanecerão devidos os honorários vencidos, os proporcionais ao trabalho executado, as despesas, o êxito implementado e a sucumbência.</p></div>`
 
+  const textoExecutivo = o.incluirTestemunhas
+    ? 'Este contrato constitui título executivo extrajudicial nos termos do art. 24 da Lei nº 8.906/1994 e, com duas testemunhas, também do art. 784, III, do CPC. Assinaturas físicas ou eletrônicas que comprovem autoria e integridade produzem os mesmos efeitos.'
+    : 'Este contrato constitui título executivo extrajudicial nos termos do art. 24 da Lei nº 8.906/1994. Assinaturas físicas ou eletrônicas que comprovem autoria e integridade produzem os mesmos efeitos.'
+
   const pg4 = `<div class="clause"><div class="clause-title">CLÁUSULA 8ª – REVOGAÇÃO, RENÚNCIA E ENCERRAMENTO</div>
   <p><strong>8.1.</strong> A CONTRATANTE poderá revogar o mandato e a CONTRATADA poderá renunciar, mediante comunicação formal. Revogação, substituição, desistência, perda do objeto ou encerramento por decisão da CONTRATANTE não afastam os honorários vencidos, despesas e remuneração proporcional aos atos úteis e etapas realizadas, inclusive êxito posterior decorrente da atuação, quando juridicamente cabível.</p>
   <p><strong>8.2.</strong> Havendo culpa exclusiva comprovada da CONTRATADA que impossibilite o serviço, serão devidos apenas os honorários proporcionais aos atos úteis realizados, sem prejuízo das responsabilidades legais cabíveis.</p></div>
@@ -253,11 +257,30 @@ export function buildContrato(
   <p><strong>9.2.</strong> A CONTRATANTE manterá cópia dos documentos originais. Encerrado o contrato, documentos físicos deverão ser retirados em 90 dias; depois poderão ser digitalizados, arquivados ou descartados de modo seguro, respeitados os deveres legais de guarda.</p>
   <p><strong>9.3.</strong> A CONTRATANTE autoriza o tratamento de dados e documentos para execução do contrato, exercício de direitos, prevenção à fraude, faturamento, cobrança, arquivo e comunicação com autoridades, tribunais, cartórios, peritos e auxiliares. A CONTRATADA manterá sigilo e medidas razoáveis de segurança.</p></div>
   <div class="clause"><div class="clause-title">CLÁUSULA 10ª – TÍTULO EXECUTIVO, ASSINATURA E FORO</div>
-  <p><strong>10.1.</strong> Este contrato constitui título executivo extrajudicial nos termos do art. 24 da Lei nº 8.906/1994 e, com duas testemunhas, também do art. 784, III, do CPC. Assinaturas físicas ou eletrônicas que comprovem autoria e integridade produzem os mesmos efeitos.</p>
+  <p><strong>10.1.</strong> ${textoExecutivo}</p>
   <p><strong>10.2.</strong> Tolerância não implica renúncia, novação ou alteração. A invalidade de uma disposição não prejudica as demais. O contrato obriga as partes e sucessores nos limites legais e patrimoniais.</p>
   <p><strong>10.3.</strong> Fica eleito o foro da <strong>${esc(foro)}</strong>, ressalvada competência legal inderrogável.</p>
   ${o.clausulaExtra ? `<p><strong>10.4. Cláusula adicional:</strong> ${esc(o.clausulaExtra)}</p>` : ''}
   <p style="margin-top:3mm;"><strong>Por estarem de acordo, as partes declaram ter lido, compreendido e aceitado integralmente este contrato.</strong></p></div>`
+
+  const blocoTestemunhas = o.incluirTestemunhas
+    ? `<div class="party-signatures" style="margin-top:20mm;">
+    <div class="sigbox">
+      <div class="sig-space"></div>
+      <div class="line"></div>
+      <strong>TESTEMUNHA 1</strong><br>
+      ${o.testemunha1Nome ? `Nome: ${esc(o.testemunha1Nome)}<br>` : 'Nome:<br>'}
+      ${o.testemunha1Cpf ? `CPF: ${esc(o.testemunha1Cpf)}` : 'CPF:'}
+    </div>
+    <div class="sigbox">
+      <div class="sig-space"></div>
+      <div class="line"></div>
+      <strong>TESTEMUNHA 2</strong><br>
+      ${o.testemunha2Nome ? `Nome: ${esc(o.testemunha2Nome)}<br>` : 'Nome:<br>'}
+      ${o.testemunha2Cpf ? `CPF: ${esc(o.testemunha2Cpf)}` : 'CPF:'}
+    </div>
+  </div>`
+    : ''
 
   const pg5 = `<p>${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
   <div class="party-signatures" style="margin-top:16mm;">
@@ -274,18 +297,7 @@ export function buildContrato(
       <strong>${esc(adv.nome)}</strong><br>Advogado<br>${esc(adv.oab)}
     </div>
   </div>
-  <div class="party-signatures" style="margin-top:20mm;">
-    <div class="sigbox">
-      <div class="sig-space"></div>
-      <div class="line"></div>
-      <strong>TESTEMUNHA 1</strong><br>Nome:<br>CPF:
-    </div>
-    <div class="sigbox">
-      <div class="sig-space"></div>
-      <div class="line"></div>
-      <strong>TESTEMUNHA 2</strong><br>Nome:<br>CPF:
-    </div>
-  </div>`
+  ${blocoTestemunhas}`
 
-  return `<div class="document">${buildPage(pg1, '', num, adv, logo)}${buildPage(pg2, '', num, adv, logo)}${buildPage(pg3, '', num, adv, logo)}${buildPage(pg4, '', num, adv, logo)}${buildPage(pg5, '', num, adv, logo)}</div>`
+  return `<div class="document">${buildPage(pg1, 'CONTRATO DE HONORÁRIOS ADVOCATÍCIOS', num, adv, logo)}${buildPage(pg2, '', num, adv, logo)}${buildPage(pg3, '', num, adv, logo)}${buildPage(pg4, '', num, adv, logo)}${buildPage(pg5, '', num, adv, logo)}</div>`
 }

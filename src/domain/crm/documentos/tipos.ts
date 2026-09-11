@@ -34,6 +34,11 @@ export interface OpcaoContrato {
   foro: string
   clausulaExtra?: string
   useSignature?: boolean
+  incluirTestemunhas?: boolean
+  testemunha1Nome?: string
+  testemunha1Cpf?: string
+  testemunha2Nome?: string
+  testemunha2Cpf?: string
 }
 
 export interface OpcaoProcuracao {

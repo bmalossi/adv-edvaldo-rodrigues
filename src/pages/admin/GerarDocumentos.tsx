@@ -110,7 +110,12 @@ export default function GerarDocumentos() {
       multa: '10',
       foro: 'Comarca de Praia Grande/SP',
       clausulaExtra: '',
-      useSignature: false
+      useSignature: false,
+      incluirTestemunhas: false,
+      testemunha1Nome: '',
+      testemunha1Cpf: '',
+      testemunha2Nome: '',
+      testemunha2Cpf: ''
     },
     procuracao: {
       receber: true,
@@ -767,6 +772,99 @@ export default function GerarDocumentos() {
                       onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, clausulaExtra: e.target.value } })}
                       className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
                     />
+                  </div>
+
+                  {/* Bloco de Testemunhas */}
+                  <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 space-y-3">
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-200">
+                      <Checkbox
+                        checked={formData.contrato.incluirTestemunhas || false}
+                        onCheckedChange={v =>
+                          setFormData({
+                            ...formData,
+                            contrato: { ...formData.contrato, incluirTestemunhas: !!v }
+                          })
+                        }
+                      />
+                      <span>Incluir campo de testemunhas no contrato</span>
+                    </label>
+
+                    {formData.contrato.incluirTestemunhas && (
+                      <div className="space-y-3 pt-2 border-t border-white/5">
+                        <p className="text-[11px] text-slate-400">
+                          Preencha os dados das testemunhas ou deixe em branco para assinatura manual com caneta.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2 p-3 rounded-lg bg-slate-950/40 border border-white/5">
+                            <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
+                              Testemunha 1
+                            </span>
+                            <div>
+                              <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">Nome Completo</Label>
+                              <Input
+                                placeholder="Nome da testemunha 1..."
+                                value={formData.contrato.testemunha1Nome || ''}
+                                onChange={e =>
+                                  setFormData({
+                                    ...formData,
+                                    contrato: { ...formData.contrato, testemunha1Nome: e.target.value }
+                                  })
+                                }
+                                className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">CPF</Label>
+                              <Input
+                                placeholder="000.000.000-00"
+                                value={formData.contrato.testemunha1Cpf || ''}
+                                onChange={e =>
+                                  setFormData({
+                                    ...formData,
+                                    contrato: { ...formData.contrato, testemunha1Cpf: e.target.value }
+                                  })
+                                }
+                                className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2 p-3 rounded-lg bg-slate-950/40 border border-white/5">
+                            <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
+                              Testemunha 2
+                            </span>
+                            <div>
+                              <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">Nome Completo</Label>
+                              <Input
+                                placeholder="Nome da testemunha 2..."
+                                value={formData.contrato.testemunha2Nome || ''}
+                                onChange={e =>
+                                  setFormData({
+                                    ...formData,
+                                    contrato: { ...formData.contrato, testemunha2Nome: e.target.value }
+                                  })
+                                }
+                                className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">CPF</Label>
+                              <Input
+                                placeholder="000.000.000-00"
+                                value={formData.contrato.testemunha2Cpf || ''}
+                                onChange={e =>
+                                  setFormData({
+                                    ...formData,
+                                    contrato: { ...formData.contrato, testemunha2Cpf: e.target.value }
+                                  })
+                                }
+                                className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
