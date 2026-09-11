@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Folder,
   FolderPlus,
@@ -429,7 +429,7 @@ export function DriveFileExplorer({
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Pastas ({foldersFiltradas.length})
               </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 max-h-[180px] overflow-y-auto pr-1">
                 {foldersFiltradas.map((pasta) => (
                   <button
                     key={pasta.id}
@@ -471,7 +471,7 @@ export function DriveFileExplorer({
                 Nenhum arquivo encontrado diretamente nesta pasta (apenas subpastas acima).
               </p>
             ) : (
-              <div className="border border-white/5 rounded-lg overflow-hidden bg-slate-950/30 divide-y divide-white/5">
+              <div className="border border-white/5 rounded-lg bg-slate-950/30 divide-y divide-white/5 max-h-[420px] overflow-y-auto pr-1">
                 {filesFiltrados.map((arq) => (
                   <div
                     key={arq.id}
