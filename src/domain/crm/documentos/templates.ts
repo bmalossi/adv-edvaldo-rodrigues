@@ -9,7 +9,7 @@ import {
   OpcaoRecibo,
   OpcaoResidencia
 } from './tipos'
-import { esc, dateLong, dateShort, money, clienteEndereco, clienteQualificacao } from './formatacao'
+import { esc, dateLong, dateShort, formatarDataBr, money, clienteEndereco, clienteQualificacao } from './formatacao'
 
 function buildHeader(logo?: string | null): string {
   if (!logo) {
@@ -212,7 +212,7 @@ export function buildContrato(
   const parcelas = Number(o.parcelas) || 1
   const valorParcela = parcelas > 0 ? (fix - entrada) / parcelas : 0
   const dia = o.diaVencimento || '10'
-  const primeiro = o.primeiroVencimento || 'no mês subsequente'
+  const primeiro = o.primeiroVencimento ? formatarDataBr(o.primeiroVencimento) : 'no mês subsequente'
 
   const objTxt = o.objetoDescricao || 'prestação de serviços jurídicos e assessoria advocatícia'
   const atuacaoTxt = o.areaAtuacao ? ` na área de ${o.areaAtuacao}` : ''

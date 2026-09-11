@@ -24,6 +24,37 @@ export function dateShort(v?: string): string {
   return new Intl.DateTimeFormat('pt-BR').format(d)
 }
 
+export function formatarDataBr(v?: string | null): string {
+  if (!v) return ''
+  const s = String(v).trim()
+  if (!s) return ''
+
+  // Se for formato ISO yyyy-MM-dd
+  const matchIso = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (matchIso) {
+    const [, ano, mes, dia] = matchIso
+    return `${dia}/${mes}/${ano}`
+  }
+
+  // Se já for formato dd/MM/yyyy
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    return s
+  }
+
+  // Se for formato dd-MM-yyyy, converte para dd/MM/yyyy
+  if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
+    return s.replace(/-/g, '/')
+  }
+
+  // Se for uma data ISO com timestamp
+  const d = new Date(s.includes('T') ? s : s + 'T12:00:00')
+  if (!isNaN(d.getTime())) {
+    return new Intl.DateTimeFormat('pt-BR').format(d)
+  }
+
+  return s
+}
+
 export function parseMoney(v: string | number | null | undefined): number {
   return Number(String(v || 0).replace(/\./g, '').replace(',', '.')) || 0
 }

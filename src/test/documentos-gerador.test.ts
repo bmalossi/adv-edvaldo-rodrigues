@@ -107,4 +107,14 @@ describe('Gerador de Documentos: Contrato de Honorários', () => {
     expect(html).toContain('Nome:<br>');
     expect(html).toContain('CPF:');
   });
+
+  it('deve formatar a data do primeiro vencimento no padrão brasileiro dd/MM/yyyy na Cláusula 4ª', () => {
+    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      primeiroVencimento: '2026-10-15',
+    });
+
+    expect(html).toContain('iniciando-se em 15/10/2026');
+    expect(html).not.toContain('iniciando-se em 2026-10-15');
+  });
 });
