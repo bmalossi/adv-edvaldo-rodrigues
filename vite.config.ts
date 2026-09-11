@@ -129,47 +129,57 @@ function prerenderStaticPagesPlugin(): Plugin {
 
       const baseHtml = fs.readFileSync(rootHtmlPath, "utf-8");
 
-      // Tenta renderizar via Puppeteer se disponível
+      // No ambiente de CI/Vercel (ou por padrão), evitamos o Puppeteer porque o ambiente Linux
+      // da Vercel não possui bibliotecas nativas de GUI (libnspr4.so, libnss3.so etc.).
+      // O gerador estático semântico abaixo já injeta todos os metadados SEO, Open Graph e JSON-LD
+      // com 100% de precisão e em alta velocidade.
       let puppeteerRenderSuccess = false;
-      try {
-        const Prerenderer = require("@prerenderer/prerenderer");
-        const PuppeteerRenderer = require("@prerenderer/renderer-puppeteer");
+      const isCI = Boolean(process.env.VERCEL || process.env.CI || process.env.NOW_BUILDER || process.env.NETLIFY);
+      const enablePuppeteer = !isCI && process.env.ENABLE_PUPPETEER === "true";
 
-        const prerenderer = new Prerenderer({
-          staticDir: distDir,
-          server: {
-            host: "127.0.0.1",
-            port: 0,
-          },
-          renderer: new PuppeteerRenderer({
-            headless: true,
-            renderAfterDocumentEvent: "render-event",
-            maxConcurrentRoutes: 1,
-            timeout: 10000,
-          }),
-        });
+      if (enablePuppeteer) {
+        try {
+          const Prerenderer = require("@prerenderer/prerenderer");
+          const PuppeteerRenderer = require("@prerenderer/renderer-puppeteer");
 
-        console.log("[prerender] Tentando renderização dinâmica via Puppeteer...");
-        await prerenderer.initialize();
-        const routes = STATIC_METADATA.map((m) => m.route);
-        const renderedRoutes = await prerenderer.renderRoutes(routes);
+          const prerenderer = new Prerenderer({
+            staticDir: distDir,
+            server: {
+              host: "127.0.0.1",
+              port: 0,
+            },
+            renderer: new PuppeteerRenderer({
+              headless: true,
+              renderAfterDocumentEvent: "render-event",
+              maxConcurrentRoutes: 1,
+              timeout: 10000,
+            }),
+          });
 
-        for (const route of renderedRoutes) {
-          const routePath = route.route === "/" ? "" : route.route.replace(/^\//, "");
-          const targetDir = path.join(distDir, routePath);
-          if (!fs.existsSync(targetDir)) {
-            fs.mkdirSync(targetDir, { recursive: true });
+          console.log("[prerender] Tentando renderização dinâmica via Puppeteer...");
+          await prerenderer.initialize();
+          const routes = STATIC_METADATA.map((m) => m.route);
+          const renderedRoutes = await prerenderer.renderRoutes(routes);
+
+          for (const route of renderedRoutes) {
+            const routePath = route.route === "/" ? "" : route.route.replace(/^\//, "");
+            const targetDir = path.join(distDir, routePath);
+            if (!fs.existsSync(targetDir)) {
+              fs.mkdirSync(targetDir, { recursive: true });
+            }
+            const targetFile = path.join(targetDir, "index.html");
+            fs.writeFileSync(targetFile, route.html.trim(), "utf-8");
+            console.log(`[prerender-puppeteer] Gerado com sucesso: ${route.route}`);
           }
-          const targetFile = path.join(targetDir, "index.html");
-          fs.writeFileSync(targetFile, route.html.trim(), "utf-8");
-          console.log(`[prerender-puppeteer] Gerado com sucesso: ${route.route}`);
-        }
 
-        await prerenderer.destroy();
-        puppeteerRenderSuccess = true;
-        console.log("[prerender] Renderização dinâmica via Puppeteer concluída com sucesso!");
-      } catch (err) {
-        console.warn("[prerender] Puppeteer indisponível ou falhou. Usando gerador estático semântico de fallback:", (err as Error).message);
+          await prerenderer.destroy();
+          puppeteerRenderSuccess = true;
+          console.log("[prerender] Renderização dinâmica via Puppeteer concluída com sucesso!");
+        } catch (err) {
+          console.warn("[prerender] Puppeteer indisponível ou falhou. Usando gerador estático semântico de fallback:", (err as Error).message);
+        }
+      } else {
+        console.log("[prerender] Modo estático semântico ativo (Puppeteer ignorado para compatibilidade com Vercel/CI).");
       }
 
       // Se Puppeteer não foi bem-sucedido (ex: ambiente Windows sem Chrome binário),
