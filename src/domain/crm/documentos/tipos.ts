@@ -18,6 +18,12 @@ export interface ConfigDocumentos {
   pix: string
 }
 
+export interface ClausulaContrato {
+  id: string
+  titulo: string
+  conteudo: string
+}
+
 export interface OpcaoContrato {
   objeto: string
   incluidos: string
@@ -39,6 +45,7 @@ export interface OpcaoContrato {
   testemunha1Cpf?: string
   testemunha2Nome?: string
   testemunha2Cpf?: string
+  clausulas?: ClausulaContrato[]
 }
 
 export interface OpcaoProcuracao {

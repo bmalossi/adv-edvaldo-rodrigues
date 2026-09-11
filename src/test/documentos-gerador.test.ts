@@ -173,4 +173,76 @@ describe('Gerenciamento de Modelos Padrão do Escritório (Opção A)', () => {
     expect(padroes.contrato).toBeUndefined();
     expect(padroes.recibo?.referenciaRecibo).toBe('honorários iniciais de consultoria');
   });
+
+  it('deve compilar e renderizar cláusulas estruturadas com interpolação de tags dinâmicas', () => {
+    const customClausulas = [
+      {
+        id: 'c1',
+        titulo: 'CLÁUSULA 1ª – OBJETO DO CONTRATO',
+        conteudo: '1.1. O presente contrato visa {objeto}.',
+      },
+      {
+        id: 'c2',
+        titulo: 'CLÁUSULA 4ª – VALOR E FORMA DE PAGAMENTO',
+        conteudo: '4.1. Fica ajustado o valor de {honorarios_fixos} iniciando em {primeiro_vencimento}.',
+      },
+    ];
+
+    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      objeto: 'assessoria jurídica tributária especializada',
+      valorFixo: '8.000,00',
+      primeiroVencimento: '2026-11-20',
+      clausulas: customClausulas,
+    });
+
+    expect(html).toContain('CLÁUSULA 1ª – OBJETO DO CONTRATO');
+    expect(html).toContain('assessoria jurídica tributária especializada');
+    expect(html).toContain('CLÁUSULA 4ª – VALOR E FORMA DE PAGAMENTO');
+    expect(html).toContain('R$ 8.000,00');
+    expect(html).toContain('20/11/2026');
+  });
+
+  it('deve incluir nova cláusula personalizada (ex: Cláusula 11ª – LGPD) no documento final', () => {
+    const clausulaExtra = {
+      id: 'c11',
+      titulo: 'CLÁUSULA 11ª – PRIVACIDADE E PROTEÇÃO DE DADOS (LGPD)',
+      conteudo: '11.1. O CONTRATANTE autoriza expressamente a CONTRATADA a realizar o tratamento de dados pessoais para execução deste contrato.',
+    };
+
+    const clausulasComNova = [
+      ...DEFAULTS_FORM_DOCUMENTO.contrato.clausulas!,
+      clausulaExtra,
+    ];
+
+    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      clausulas: clausulasComNova,
+    });
+
+    expect(html).toContain('CLÁUSULA 11ª – PRIVACIDADE E PROTEÇÃO DE DADOS (LGPD)');
+    expect(html).toContain('tratamento de dados pessoais para execução deste contrato');
+  });
+
+  it('deve permitir salvar novas cláusulas no padrão do escritório e recarregá-las', () => {
+    const clausulaNova = {
+      id: 'c-nova-arbitragem',
+      titulo: 'CLÁUSULA 11ª – JUÍZO ARBITRAL',
+      conteudo: '11.1. As partes elegem câmara arbitral para dirimir litígios.',
+    };
+
+    const contratoPersonalizado = {
+      ...DEFAULTS_FORM_DOCUMENTO.contrato,
+      clausulas: [
+        ...(DEFAULTS_FORM_DOCUMENTO.contrato.clausulas || []),
+        clausulaNova,
+      ],
+    };
+
+    salvarPadraoDocumentoLocal('contrato', contratoPersonalizado);
+
+    const padroes = carregarPadroesDocumentosLocal();
+    expect(padroes.contrato?.clausulas).toHaveLength(11);
+    expect(padroes.contrato?.clausulas?.[10].titulo).toBe('CLÁUSULA 11ª – JUÍZO ARBITRAL');
+  });
 });

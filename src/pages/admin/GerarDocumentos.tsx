@@ -21,7 +21,11 @@ import {
   X,
   FileSpreadsheet,
   Save,
-  RotateCcw
+  RotateCcw,
+  Plus,
+  Sparkles,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react'
 import { supabase, Cliente, Advogado } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -44,7 +48,8 @@ import {
   ConfigDocumentos,
   OpcoesDocumentoForm,
   DocumentoEmitido,
-  AdvogadoConfigDoc
+  AdvogadoConfigDoc,
+  ClausulaContrato
 } from '@/domain/crm/documentos/tipos'
 import {
   carregarConfigDocumentosLocal,
@@ -53,6 +58,7 @@ import {
   proximoNumeroDoc,
   DEFAULTS_CONFIG,
   DEFAULTS_FORM_DOCUMENTO,
+  CLAUSULAS_PADRAO_CONTRATO,
   carregarPadroesDocumentosLocal,
   salvarPadraoDocumentoLocal,
   restaurarPadraoDocumentoFabrica
@@ -103,7 +109,8 @@ export default function GerarDocumentos() {
       ...padroes,
       contrato: {
         ...DEFAULTS_FORM_DOCUMENTO.contrato,
-        ...(padroes.contrato || {})
+        ...(padroes.contrato || {}),
+        clausulas: padroes.contrato?.clausulas || DEFAULTS_FORM_DOCUMENTO.contrato.clausulas
       },
       procuracao: {
         ...DEFAULTS_FORM_DOCUMENTO.procuracao,
@@ -147,6 +154,9 @@ export default function GerarDocumentos() {
     residencia: true,
     recibo: true
   })
+
+  // Sub-aba do contrato: 'parametros' ou 'clausulas'
+  const [abaContrato, setAbaContrato] = useState<'parametros' | 'clausulas'>('parametros')
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -410,6 +420,68 @@ export default function GerarDocumentos() {
     toast.info(`Padrão de fábrica de "${nomeAmigavel}" restaurado.`)
   }
 
+  // Manipulação de cláusulas do contrato
+  const handleAdicionarClausula = () => {
+    const atuais = formData.contrato.clausulas || []
+    const proximoNum = atuais.length + 1
+    const nova: ClausulaContrato = {
+      id: `clausula-${Date.now()}`,
+      titulo: `CLÁUSULA ${proximoNum}ª – DISPOSIÇÕES ESPECIAIS`,
+      conteudo: `${proximoNum}.1. As partes convencionam que...`
+    }
+    setFormData(prev => ({
+      ...prev,
+      contrato: {
+        ...prev.contrato,
+        clausulas: [...(prev.contrato.clausulas || []), nova]
+      }
+    }))
+    setAbaContrato('clausulas')
+    toast.success(`Cláusula ${proximoNum}ª adicionada ao contrato.`, {
+      description: 'Você pode editar o título e o texto livremente e salvá-la como padrão do escritório.'
+    })
+  }
+
+  const handleRemoverClausula = (id: string, titulo: string) => {
+    if (!confirm(`Deseja remover a cláusula "${titulo}" deste contrato?`)) return
+    setFormData(prev => ({
+      ...prev,
+      contrato: {
+        ...prev.contrato,
+        clausulas: (prev.contrato.clausulas || []).filter(c => c.id !== id)
+      }
+    }))
+    toast.info('Cláusula removida.')
+  }
+
+  const handleMoverClausula = (index: number, direcao: 'cima' | 'baixo') => {
+    const atuais = [...(formData.contrato.clausulas || [])]
+    const novoIndex = direcao === 'cima' ? index - 1 : index + 1
+    if (novoIndex < 0 || novoIndex >= atuais.length) return
+    const temp = atuais[index]
+    atuais[index] = atuais[novoIndex]
+    atuais[novoIndex] = temp
+    setFormData(prev => ({
+      ...prev,
+      contrato: {
+        ...prev.contrato,
+        clausulas: atuais
+      }
+    }))
+  }
+
+  const handleAtualizarClausula = (id: string, campo: 'titulo' | 'conteudo', valor: string) => {
+    setFormData(prev => ({
+      ...prev,
+      contrato: {
+        ...prev.contrato,
+        clausulas: (prev.contrato.clausulas || []).map(c =>
+          c.id === id ? { ...c, [campo]: valor } : c
+        )
+      }
+    }))
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       {/* Cabeçalho da Página */}
@@ -657,212 +729,386 @@ export default function GerarDocumentos() {
 
               {secaoAberta.contrato && (
                 <div className="space-y-4 pt-2 border-t border-white/5">
-                  <div>
-                    <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Objeto da Contratação</Label>
-                    <textarea
-                      rows={2}
-                      value={formData.contrato.objeto}
-                      onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, objeto: e.target.value } })}
-                      className="w-full bg-slate-900 border border-border/60 rounded-xl p-3 text-white text-xs focus:border-secondary"
-                    />
-                  </div>
+                  {/* Seletor de visualização do Contrato: Parâmetros vs Cláusulas */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-900/90 border border-white/10">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setAbaContrato('parametros')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                          abaContrato === 'parametros'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        Parâmetros Comerciais & Financeiros
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaContrato('clausulas')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaContrato === 'clausulas'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-secondary" />
+                        Texto das Cláusulas do Modelo
+                        <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-secondary/20 text-secondary font-bold">
+                          {formData.contrato.clausulas?.length || 10}
+                        </span>
+                      </button>
+                    </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Atos Incluídos</Label>
-                      <textarea
-                        rows={3}
-                        value={formData.contrato.incluidos}
-                        onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, incluidos: e.target.value } })}
-                        className="w-full bg-slate-900 border border-border/60 rounded-xl p-3 text-white text-xs focus:border-secondary"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Atos Excluídos</Label>
-                      <textarea
-                        rows={3}
-                        value={formData.contrato.excluidos}
-                        onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, excluidos: e.target.value } })}
-                        className="w-full bg-slate-900 border border-border/60 rounded-xl p-3 text-white text-xs focus:border-secondary"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Honorários Fixos (R$)</Label>
-                      <Input
-                        value={formData.contrato.valorFixo}
-                        onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, valorFixo: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Valor por Extenso</Label>
-                      <Input
-                        value={formData.contrato.valorExtenso}
-                        onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, valorExtenso: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Entrada (R$)</Label>
-                      <Input
-                        value={formData.contrato.entrada}
-                        onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, entrada: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Nº Parcelas</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={formData.contrato.parcelas}
-                        onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, parcelas: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Valor da Parcela (R$)</Label>
-                      <Input
-                        value={formData.contrato.valorParcela}
-                        onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, valorParcela: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Dia Vencimento</Label>
-                      <Input
-                        value={formData.contrato.diaVencimento}
-                        onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, diaVencimento: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Primeiro Vencimento</Label>
-                      <Input
-                        type="date"
-                        value={formData.contrato.primeiroVencimento}
-                        onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, primeiroVencimento: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs [color-scheme:dark]"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Êxito (%)</Label>
-                      <Input
-                        value={formData.contrato.percentualExito}
-                        onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, percentualExito: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Cláusula Adicional (opcional)</Label>
-                    <Input
-                      placeholder="Deixe em branco caso não haja cláusula personalizada"
-                      value={formData.contrato.clausulaExtra}
-                      onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, clausulaExtra: e.target.value } })}
-                      className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                    />
-                  </div>
-
-                  {/* Bloco de Testemunhas */}
-                  <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 space-y-3">
-                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-200">
-                      <Checkbox
-                        checked={formData.contrato.incluirTestemunhas || false}
-                        onCheckedChange={v =>
-                          setFormData({
-                            ...formData,
-                            contrato: { ...formData.contrato, incluirTestemunhas: !!v }
-                          })
-                        }
-                      />
-                      <span>Incluir campo de testemunhas no contrato</span>
-                    </label>
-
-                    {formData.contrato.incluirTestemunhas && (
-                      <div className="space-y-3 pt-2 border-t border-white/5">
-                        <p className="text-[11px] text-slate-400">
-                          Preencha os dados das testemunhas ou deixe em branco para assinatura manual com caneta.
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-2 p-3 rounded-lg bg-slate-950/40 border border-white/5">
-                            <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
-                              Testemunha 1
-                            </span>
-                            <div>
-                              <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">Nome Completo</Label>
-                              <Input
-                                placeholder="Nome da testemunha 1..."
-                                value={formData.contrato.testemunha1Nome || ''}
-                                onChange={e =>
-                                  setFormData({
-                                    ...formData,
-                                    contrato: { ...formData.contrato, testemunha1Nome: e.target.value }
-                                  })
-                                }
-                                className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">CPF</Label>
-                              <Input
-                                placeholder="000.000.000-00"
-                                value={formData.contrato.testemunha1Cpf || ''}
-                                onChange={e =>
-                                  setFormData({
-                                    ...formData,
-                                    contrato: { ...formData.contrato, testemunha1Cpf: e.target.value }
-                                  })
-                                }
-                                className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-2 p-3 rounded-lg bg-slate-950/40 border border-white/5">
-                            <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
-                              Testemunha 2
-                            </span>
-                            <div>
-                              <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">Nome Completo</Label>
-                              <Input
-                                placeholder="Nome da testemunha 2..."
-                                value={formData.contrato.testemunha2Nome || ''}
-                                onChange={e =>
-                                  setFormData({
-                                    ...formData,
-                                    contrato: { ...formData.contrato, testemunha2Nome: e.target.value }
-                                  })
-                                }
-                                className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">CPF</Label>
-                              <Input
-                                placeholder="000.000.000-00"
-                                value={formData.contrato.testemunha2Cpf || ''}
-                                onChange={e =>
-                                  setFormData({
-                                    ...formData,
-                                    contrato: { ...formData.contrato, testemunha2Cpf: e.target.value }
-                                  })
-                                }
-                                className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                    {abaContrato === 'clausulas' && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleAdicionarClausula}
+                        className="bg-secondary text-slate-950 hover:bg-secondary/90 h-7 text-xs font-bold gap-1 rounded-lg"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Adicionar Nova Cláusula
+                      </Button>
                     )}
                   </div>
+
+                  {abaContrato === 'parametros' && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Objeto da Contratação</Label>
+                        <textarea
+                          rows={2}
+                          value={formData.contrato.objeto}
+                          onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, objeto: e.target.value } })}
+                          className="w-full bg-slate-900 border border-border/60 rounded-xl p-3 text-white text-xs focus:border-secondary"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Atos Incluídos</Label>
+                          <textarea
+                            rows={3}
+                            value={formData.contrato.incluidos}
+                            onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, incluidos: e.target.value } })}
+                            className="w-full bg-slate-900 border border-border/60 rounded-xl p-3 text-white text-xs focus:border-secondary"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Atos Excluídos</Label>
+                          <textarea
+                            rows={3}
+                            value={formData.contrato.excluidos}
+                            onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, excluidos: e.target.value } })}
+                            className="w-full bg-slate-900 border border-border/60 rounded-xl p-3 text-white text-xs focus:border-secondary"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Honorários Fixos (R$)</Label>
+                          <Input
+                            value={formData.contrato.valorFixo}
+                            onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, valorFixo: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Valor por Extenso</Label>
+                          <Input
+                            value={formData.contrato.valorExtenso}
+                            onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, valorExtenso: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Entrada (R$)</Label>
+                          <Input
+                            value={formData.contrato.entrada}
+                            onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, entrada: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Nº Parcelas</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={formData.contrato.parcelas}
+                            onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, parcelas: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Valor da Parcela (R$)</Label>
+                          <Input
+                            value={formData.contrato.valorParcela}
+                            onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, valorParcela: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Dia Vencimento</Label>
+                          <Input
+                            value={formData.contrato.diaVencimento}
+                            onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, diaVencimento: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Primeiro Vencimento</Label>
+                          <Input
+                            type="date"
+                            value={formData.contrato.primeiroVencimento}
+                            onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, primeiroVencimento: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs [color-scheme:dark]"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Êxito (%)</Label>
+                          <Input
+                            value={formData.contrato.percentualExito}
+                            onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, percentualExito: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Cláusula Adicional (opcional)</Label>
+                        <Input
+                          placeholder="Deixe em branco caso não haja cláusula personalizada"
+                          value={formData.contrato.clausulaExtra}
+                          onChange={e => setFormData({ ...formData, contrato: { ...formData.contrato, clausulaExtra: e.target.value } })}
+                          className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                        />
+                      </div>
+
+                      {/* Bloco de Testemunhas */}
+                      <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 space-y-3">
+                        <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-200">
+                          <Checkbox
+                            checked={formData.contrato.incluirTestemunhas || false}
+                            onCheckedChange={v =>
+                              setFormData({
+                                ...formData,
+                                contrato: { ...formData.contrato, incluirTestemunhas: !!v }
+                              })
+                            }
+                          />
+                          <span>Incluir campo de testemunhas no contrato</span>
+                        </label>
+
+                        {formData.contrato.incluirTestemunhas && (
+                          <div className="space-y-3 pt-2 border-t border-white/5">
+                            <p className="text-[11px] text-slate-400">
+                              Preencha os dados das testemunhas ou deixe em branco para assinatura manual com caneta.
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-2 p-3 rounded-lg bg-slate-950/40 border border-white/5">
+                                <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
+                                  Testemunha 1
+                                </span>
+                                <div>
+                                  <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">Nome Completo</Label>
+                                  <Input
+                                    placeholder="Nome da testemunha 1..."
+                                    value={formData.contrato.testemunha1Nome || ''}
+                                    onChange={e =>
+                                      setFormData({
+                                        ...formData,
+                                        contrato: { ...formData.contrato, testemunha1Nome: e.target.value }
+                                      })
+                                    }
+                                    className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">CPF</Label>
+                                  <Input
+                                    placeholder="000.000.000-00"
+                                    value={formData.contrato.testemunha1Cpf || ''}
+                                    onChange={e =>
+                                      setFormData({
+                                        ...formData,
+                                        contrato: { ...formData.contrato, testemunha1Cpf: e.target.value }
+                                      })
+                                    }
+                                    className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-2 p-3 rounded-lg bg-slate-950/40 border border-white/5">
+                                <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
+                                  Testemunha 2
+                                </span>
+                                <div>
+                                  <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">Nome Completo</Label>
+                                  <Input
+                                    placeholder="Nome da testemunha 2..."
+                                    value={formData.contrato.testemunha2Nome || ''}
+                                    onChange={e =>
+                                      setFormData({
+                                        ...formData,
+                                        contrato: { ...formData.contrato, testemunha2Nome: e.target.value }
+                                      })
+                                    }
+                                    className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-slate-400 text-[10px] uppercase font-bold pl-1 mb-1 block">CPF</Label>
+                                  <Input
+                                    placeholder="000.000.000-00"
+                                    value={formData.contrato.testemunha2Cpf || ''}
+                                    onChange={e =>
+                                      setFormData({
+                                        ...formData,
+                                        contrato: { ...formData.contrato, testemunha2Cpf: e.target.value }
+                                      })
+                                    }
+                                    className="h-9 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {abaContrato === 'clausulas' && (
+                    <div className="space-y-4 pt-1">
+                      {/* Banner de Ajuda e Tags */}
+                      <div className="p-3.5 rounded-xl bg-slate-900/60 border border-secondary/20 text-xs text-slate-300 space-y-2">
+                        <div className="flex items-center gap-2 text-secondary font-bold">
+                          <Sparkles className="w-4 h-4" />
+                          <span>Editor de Cláusulas Contratuais do Modelo</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400">
+                          Edite o texto de qualquer cláusula, altere a ordem ou adicione novas cláusulas personalizadas. As variáveis entre chaves são preenchidas dinamicamente pelos parâmetros comerciais da emissão.
+                        </p>
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider self-center mr-1">
+                            Tags disponíveis:
+                          </span>
+                          {[
+                            '{objeto}',
+                            '{honorarios_fixos}',
+                            '{honorarios_extenso}',
+                            '{entrada}',
+                            '{parcelas}',
+                            '{valor_parcela}',
+                            '{dia_vencimento}',
+                            '{primeiro_vencimento}',
+                            '{percentual_exito}',
+                            '{multa}',
+                            '{foro}',
+                            '{texto_executivo}',
+                            '{nome_cliente}',
+                            '{cpf_cliente}',
+                            '{nome_advogado}',
+                            '{oab_advogado}'
+                          ].map(tag => (
+                            <code
+                              key={tag}
+                              className="px-1.5 py-0.5 rounded bg-slate-950 text-secondary text-[10px] font-mono border border-secondary/20 cursor-default"
+                              title="Substituído automaticamente pelos dados da emissão"
+                            >
+                              {tag}
+                            </code>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Lista de Cláusulas */}
+                      <div className="space-y-3">
+                        {(formData.contrato.clausulas || []).map((clausula, idx) => (
+                          <div
+                            key={clausula.id}
+                            className="p-3.5 rounded-xl bg-slate-900/90 border border-white/10 space-y-3 shadow-sm hover:border-white/20 transition-all"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 flex-1">
+                                <span className="px-2 py-1 rounded-md text-[10px] font-extrabold bg-slate-800 text-secondary border border-secondary/20 shrink-0">
+                                  #{idx + 1}
+                                </span>
+                                <Input
+                                  value={clausula.titulo}
+                                  onChange={e => handleAtualizarClausula(clausula.id, 'titulo', e.target.value)}
+                                  placeholder="Título da Cláusula (ex: CLÁUSULA 1ª – OBJETO DO CONTRATO)"
+                                  className="h-8 bg-slate-950/70 border-border/60 text-white font-bold text-xs rounded-lg flex-1"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1 self-end sm:self-center">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={idx === 0}
+                                  onClick={() => handleMoverClausula(idx, 'cima')}
+                                  className="h-7 w-7 text-slate-400 hover:text-white disabled:opacity-20"
+                                  title="Mover para cima"
+                                >
+                                  <ArrowUp className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={idx === (formData.contrato.clausulas?.length || 1) - 1}
+                                  onClick={() => handleMoverClausula(idx, 'baixo')}
+                                  className="h-7 w-7 text-slate-400 hover:text-white disabled:opacity-20"
+                                  title="Mover para baixo"
+                                >
+                                  <ArrowDown className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoverClausula(clausula.id, clausula.titulo)}
+                                  className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                  title="Remover esta cláusula"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div>
+                              <textarea
+                                rows={4}
+                                value={clausula.conteudo}
+                                onChange={e => handleAtualizarClausula(clausula.id, 'conteudo', e.target.value)}
+                                placeholder="Conteúdo textual da cláusula..."
+                                className="w-full bg-slate-950/80 border border-border/60 rounded-lg p-3 text-white text-xs leading-relaxed focus:border-secondary font-mono"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Botão de Adicionar Nova Cláusula */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleAdicionarClausula}
+                        className="w-full border-dashed border-white/20 text-slate-300 hover:text-white hover:border-secondary hover:bg-secondary/5 h-10 gap-2 rounded-xl text-xs font-semibold"
+                      >
+                        <Plus className="w-4 h-4 text-secondary" />
+                        Adicionar Nova Cláusula ao Contrato
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Rodapé de Ações de Padrão */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">

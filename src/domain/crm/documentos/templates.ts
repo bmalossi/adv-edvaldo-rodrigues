@@ -7,7 +7,8 @@ import {
   OpcaoHipossuficiencia,
   OpcaoIrpf,
   OpcaoRecibo,
-  OpcaoResidencia
+  OpcaoResidencia,
+  ClausulaContrato
 } from './tipos'
 import { esc, dateLong, dateShort, formatarDataBr, money, clienteEndereco, clienteQualificacao } from './formatacao'
 
@@ -193,6 +194,88 @@ export function buildResidencia(
   return `<div class="document">${buildPage(body, 'DECLARAÇÃO DE RESIDÊNCIA', num, adv, logo)}</div>`
 }
 
+function interpolarTexto(texto: string, tags: Record<string, string>): string {
+  return texto.replace(/\{([a-zA-Z0-9_-]+)\}/g, (match, key) => {
+    const k = key.toLowerCase()
+    return tags[k] !== undefined ? tags[k] : match
+  })
+}
+
+function renderClauseHtml(clause: ClausulaContrato, tags: Record<string, string>): string {
+  const interpolatedTitle = interpolarTexto(clause.titulo, tags)
+  const interpolatedContent = interpolarTexto(clause.conteudo, tags)
+
+  const lines = interpolatedContent
+    .split(/\n+/)
+    .map(l => l.trim())
+    .filter(Boolean)
+
+  const paragraphsHtml = lines
+    .map(line => {
+      const matchPrefix = line.match(/^(\d+\.\d+\.?\s*)(.*)$/)
+      if (matchPrefix) {
+        return `<p><strong>${esc(matchPrefix[1])}</strong>${esc(matchPrefix[2])}</p>`
+      }
+      return `<p>${esc(line)}</p>`
+    })
+    .join('')
+
+  return `<div class="clause"><div class="clause-title">${esc(interpolatedTitle)}</div>${paragraphsHtml}</div>`
+}
+
+function distributeContractPages(
+  preambuloHtml: string,
+  clausesHtml: string[],
+  signaturesHtml: string
+): string[] {
+  const pages: string[] = []
+  let currentPageContent = preambuloHtml
+  let currentWeight = preambuloHtml.length
+
+  const PAGE_1_MAX_WEIGHT = 1600
+  const PAGE_N_MAX_WEIGHT = 1800
+
+  let index = 0
+
+  // Preenche Página 1
+  while (index < clausesHtml.length) {
+    const clause = clausesHtml[index]
+    if (currentWeight + clause.length > PAGE_1_MAX_WEIGHT && currentPageContent !== preambuloHtml) {
+      break
+    }
+    currentPageContent += clause
+    currentWeight += clause.length
+    index++
+  }
+  pages.push(currentPageContent)
+
+  // Preenche Páginas intermediárias
+  while (index < clausesHtml.length) {
+    currentPageContent = ''
+    currentWeight = 0
+
+    while (index < clausesHtml.length) {
+      const clause = clausesHtml[index]
+      if (currentWeight + clause.length > PAGE_N_MAX_WEIGHT && currentPageContent !== '') {
+        break
+      }
+      currentPageContent += clause
+      currentWeight += clause.length
+      index++
+    }
+    pages.push(currentPageContent)
+  }
+
+  // Se a última página tiver muito conteúdo, joga as assinaturas para nova página
+  if (currentWeight > 650) {
+    pages.push(signaturesHtml)
+  } else {
+    pages[pages.length - 1] += signaturesHtml
+  }
+
+  return pages
+}
+
 export function buildContrato(
   c: Partial<Cliente>,
   adv: AdvogadoConfigDoc,
@@ -206,62 +289,33 @@ export function buildContrato(
   const num = o.number || ''
   const foro = o.foro || cfg.foro
 
-  const fix = Number(o.honorariosFixos) || 0
-  const ext = o.fixoExtenso || 'valor por extenso não informado'
-  const entrada = Number(o.entrada) || 0
-  const parcelas = Number(o.parcelas) || 1
-  const valorParcela = parcelas > 0 ? (fix - entrada) / parcelas : 0
+  const fixRaw = o.valorFixo || o.honorariosFixos || '0,00'
+  const fixFormatted = fixRaw.startsWith('R$') ? fixRaw : `R$ ${fixRaw}`
+  const ext = o.valorExtenso || o.fixoExtenso || 'valor por extenso não informado'
+  const entRaw = o.entrada || '0,00'
+  const entFormatted = entRaw.startsWith('R$') ? entRaw : `R$ ${entRaw}`
+  const parcelas = o.parcelas || '1'
+  const valParcRaw = o.valorParcela || '0,00'
+  const valParcFormatted = valParcRaw.startsWith('R$') ? valParcRaw : `R$ ${valParcRaw}`
   const dia = o.diaVencimento || '10'
   const primeiro = o.primeiroVencimento ? formatarDataBr(o.primeiroVencimento) : 'no mês subsequente'
 
-  const objTxt = o.objetoDescricao || 'prestação de serviços jurídicos e assessoria advocatícia'
+  const fix = Number(o.honorariosFixos) || 0
+  const entrada = Number(o.entrada) || 0
+  const parcelasNum = Number(o.parcelas) || 1
+  const valorParcelaCalc = parcelasNum > 0 ? (fix - entrada) / parcelasNum : 0
+
+  const percentualExito = o.percentualExito || o.honorariosExito || '30'
+  const percentualExitoFormatted = percentualExito.includes('%') ? percentualExito : `${percentualExito}%`
+  const multa = o.multa || '2'
+  const multaFormatted = multa.includes('%') ? multa : `${multa}%`
+
+  const objTxt = o.objeto || o.objetoDescricao || 'análise, preparação, ajuizamento e acompanhamento da ação judicial, em primeiro grau, até a sentença'
   const atuacaoTxt = o.areaAtuacao ? ` na área de ${o.areaAtuacao}` : ''
-
-  const pg1 = `<p><strong>CONTRATANTE:</strong> ${esc(clienteQualificacao(c))}.</p>
-  <p><strong>CONTRATADA:</strong> <strong>${esc(cfg.empresa)}</strong>, sociedade de advogados inscrita no CNPJ nº ${esc(cfg.cnpj)}, com registro na OAB sob nº ${esc(cfg.socOab)}, com sede em ${esc(adv.endereco || cfg.foro)}, neste ato representada por seu sócio <strong>${esc(adv.nome)}</strong>, advogado inscrito na ${esc(adv.oab)}, e-mail ${esc(adv.email)}, telefone ${esc(adv.telefone)}.</p>
-  <p>As partes têm, entre si, justo e contratado o que se contém nas cláusulas seguintes:</p>
-  <div class="clause"><div class="clause-title">CLÁUSULA 1ª – OBJETO DO CONTRATO</div>
-  <p><strong>1.1.</strong> O presente contrato tem por objeto a ${esc(objTxt)}${esc(atuacaoTxt)}, compreendendo a prática de todos os atos inerentes ao patrocínio dos interesses da CONTRATANTE, em âmbito consultivo, preventivo, administrativo ou judicial, em primeira instância ou instâncias ordinárias correlatas à contratação.</p>
-  <p><strong>1.2.</strong> Recursos para Tribunais Superiores (STJ e STF), medidas cautelares autônomas, ações rescisórias, mandados de segurança não incidentais e a fase de cumprimento de sentença com impugnação complexa dependerão de aditivo ou contratação específica, caso não expressamente previstos.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 2ª – OBRIGAÇÕES DA CONTRATADA</div>
-  <p><strong>2.1.</strong> A CONTRATADA obriga-se a prestar os serviços profissionais com zelo, técnica, independência e estrita observância ao Código de Ética e Disciplina da OAB e ao Estatuto da Advocacia (Lei nº 8.906/1994).</p>
-  <p><strong>2.2.</strong> A atividade advocatícia é de <em>meio</em>, e não de <em>resultado</em>, não assegurando a CONTRATADA o êxito da demanda, mas comprometendo-se ao emprego da melhor técnica aplicável ao caso.</p></div>`
-
-  const pg2 = `<div class="clause">
-  <p><strong>2.3.</strong> A CONTRATADA manterá a CONTRATANTE informada acerca dos principais andamentos processuais e prestará contas ao término da prestação ou sempre que solicitada formalmente.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 3ª – OBRIGAÇÕES DA CONTRATANTE</div>
-  <p><strong>3.1.</strong> A CONTRATANTE compromete-se a fornecer informações verdadeiras, documentos, provas e subsídios indispensáveis à defesa de seus interesses, sob pena de exclusiva responsabilidade pelos prejuízos decorrentes de omissões ou atrasos.</p>
-  <p><strong>3.2.</strong> Correm por conta da CONTRATANTE todas as custas judiciais, despesas com perícias, viagens indispensáveis, certidões, cópias, preparos recursais e demais encargos processuais, ressalvada eventual concessão de gratuidade da justiça.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 4ª – HONORÁRIOS FIXOS E FORMA DE PAGAMENTO</div>
-  <p><strong>4.1.</strong> A CONTRATANTE pagará <strong>${money(fix)} (${esc(ext)})</strong>: ${money(entrada)} na assinatura e ${esc(parcelas)} parcela(s) mensal(is) de ${money(valorParcela)}, vencível(is) todo dia ${esc(dia)}, iniciando-se em ${esc(primeiro)}. A quitação depende da efetiva compensação.</p>
-  <p><strong>4.2.</strong> Pagamentos por boleto ou PIX serão emitidos pela CONTRATADA. A mora incorre em multa de 2%, juros de 1% ao mês e correção pelo IPCA/IBGE.</p></div>`
-
-  const pg3 = `<div class="clause"><div class="clause-title">CLÁUSULA 5ª – HONORÁRIOS DE ÊXITO E SUCUMBÊNCIA</div>
-  <p><strong>5.1.</strong> Sobre o proveito econômico obtido (acordo, condenação ou economia direta), incidirá o percentual de <strong>${esc(o.honorariosExito || '20%')}</strong>, devido imediatamente após o recebimento, levantamento ou compensação de valores.</p>
-  <p><strong>5.2.</strong> Os honorários de sucumbência arbitrados judicialmente pertencem exclusivamente aos advogados da CONTRATADA, nos termos do art. 23 da Lei nº 8.906/1994, não se compensando com os honorários contratuais ajustados.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 6ª – INADIMPLEMENTO E MORA</div>
-  <p><strong>6.1.</strong> O atraso superior a 30 (trinta) dias no pagamento de qualquer parcela facultará à CONTRATADA a suspensão da prática de atos não urgentes e, persistindo a inadimplência, a rescisão contratual com a cobrança integral do saldo devedor e das perdas decorrentes.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 7ª – RESOLUÇÃO ANTECIPADA POR CAUSA DA CONTRATANTE</div>
-  <p><strong>7.1.</strong> Constituem justa causa, além do inadimplemento: documento ou informação falsa; omissão essencial; recusa reiterada em entregar documentos ou cumprir orientação necessária; falta de custas; exigência de ato ilegal, antiético ou tecnicamente inadequado; ofensa, ameaça, assédio ou grave quebra de confiança; acordo, contato ou recebimento ocultado; ausência injustificada em ato; contratação paralela incompatível; ou qualquer conduta que inviabilize ou comprometa a defesa.</p>
-  <p><strong>7.2.</strong> Verificada a justa causa, a CONTRATADA comunicará o encerramento por escrito e adotará a renúncia ou substituição prevista em lei, mantendo apenas as providências indispensáveis durante o prazo legal. Permanecerão devidos os honorários vencidos, os proporcionais ao trabalho executado, as despesas, o êxito implementado e a sucumbência.</p></div>`
 
   const textoExecutivo = o.incluirTestemunhas
     ? 'Este contrato constitui título executivo extrajudicial nos termos do art. 24 da Lei nº 8.906/1994 e, com duas testemunhas, também do art. 784, III, do CPC. Assinaturas físicas ou eletrônicas que comprovem autoria e integridade produzem os mesmos efeitos.'
     : 'Este contrato constitui título executivo extrajudicial nos termos do art. 24 da Lei nº 8.906/1994. Assinaturas físicas ou eletrônicas que comprovem autoria e integridade produzem os mesmos efeitos.'
-
-  const pg4 = `<div class="clause"><div class="clause-title">CLÁUSULA 8ª – REVOGAÇÃO, RENÚNCIA E ENCERRAMENTO</div>
-  <p><strong>8.1.</strong> A CONTRATANTE poderá revogar o mandato e a CONTRATADA poderá renunciar, mediante comunicação formal. Revogação, substituição, desistência, perda do objeto ou encerramento por decisão da CONTRATANTE não afastam os honorários vencidos, despesas e remuneração proporcional aos atos úteis e etapas realizadas, inclusive êxito posterior decorrente da atuação, quando juridicamente cabível.</p>
-  <p><strong>8.2.</strong> Havendo culpa exclusiva comprovada da CONTRATADA que impossibilite o serviço, serão devidos apenas os honorários proporcionais aos atos úteis realizados, sem prejuízo das responsabilidades legais cabíveis.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 9ª – COMUNICAÇÕES, DOCUMENTOS, DADOS E SIGILO</div>
-  <p><strong>9.1.</strong> São válidas as comunicações enviadas aos últimos telefones, WhatsApp e e-mails informados, inclusive avisos de atos, solicitações, cobrança, resolução e ciência de renúncia, quando comprovável o envio ou recebimento. Mensagens fora do horário comercial serão respondidas em prazo razoável, salvo urgência contratada.</p>
-  <p><strong>9.2.</strong> A CONTRATANTE manterá cópia dos documentos originais. Encerrado o contrato, documentos físicos deverão ser retirados em 90 dias; depois poderão ser digitalizados, arquivados ou descartados de modo seguro, respeitados os deveres legais de guarda.</p>
-  <p><strong>9.3.</strong> A CONTRATANTE autoriza o tratamento de dados e documentos para execução do contrato, exercício de direitos, prevenção à fraude, faturamento, cobrança, arquivo e comunicação com autoridades, tribunais, cartórios, peritos e auxiliares. A CONTRATADA manterá sigilo e medidas razoáveis de segurança.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 10ª – TÍTULO EXECUTIVO, ASSINATURA E FORO</div>
-  <p><strong>10.1.</strong> ${textoExecutivo}</p>
-  <p><strong>10.2.</strong> Tolerância não implica renúncia, novação ou alteração. A invalidade de uma disposição não prejudica as demais. O contrato obriga as partes e sucessores nos limites legais e patrimoniais.</p>
-  <p><strong>10.3.</strong> Fica eleito o foro da <strong>${esc(foro)}</strong>, ressalvada competência legal inderrogável.</p>
-  ${o.clausulaExtra ? `<p><strong>10.4. Cláusula adicional:</strong> ${esc(o.clausulaExtra)}</p>` : ''}
-  <p style="margin-top:3mm;"><strong>Por estarem de acordo, as partes declaram ter lido, compreendido e aceitado integralmente este contrato.</strong></p></div>`
 
   const blocoTestemunhas = o.incluirTestemunhas
     ? `<div class="party-signatures" style="margin-top:20mm;">
@@ -282,7 +336,7 @@ export function buildContrato(
   </div>`
     : ''
 
-  const pg5 = `<p>${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
+  const assinaturasHtml = `<p>${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
   <div class="party-signatures" style="margin-top:16mm;">
     <div class="sigbox">
       <div class="sig-space"></div>
@@ -298,6 +352,95 @@ export function buildContrato(
     </div>
   </div>
   ${blocoTestemunhas}`
+
+  const preambuloHtml = `<p><strong>CONTRATANTE:</strong> ${esc(clienteQualificacao(c))}.</p>
+  <p><strong>CONTRATADA:</strong> <strong>${esc(cfg.empresa)}</strong>, sociedade de advogados inscrita no CNPJ nº ${esc(cfg.cnpj)}, com registro na OAB sob nº ${esc(cfg.socOab)}, com sede em ${esc(adv.endereco || cfg.foro)}, neste ato representada por seu sócio <strong>${esc(adv.nome)}</strong>, advogado inscrito na ${esc(adv.oab)}, e-mail ${esc(adv.email)}, telefone ${esc(adv.telefone)}.</p>
+  <p>As partes têm, entre si, justo e contratado o que se contém nas cláusulas seguintes:</p>`
+
+  // Se houver cláusulas estruturadas configuradas, compila e pagina dinamicamente
+  if (o.clausulas && o.clausulas.length > 0) {
+    const tags: Record<string, string> = {
+      objeto: `${objTxt}${atuacaoTxt}`,
+      honorarios_fixos: fixFormatted,
+      honorarios_extenso: ext,
+      entrada: entFormatted,
+      parcelas: String(parcelas),
+      valor_parcela: valParcFormatted,
+      dia_vencimento: String(dia),
+      primeiro_vencimento: primeiro,
+      percentual_exito: percentualExitoFormatted,
+      multa: multaFormatted,
+      foro: foro,
+      texto_executivo: textoExecutivo,
+      nome_cliente: c.nome_razao_social || '',
+      cpf_cliente: c.cpf_cnpj || '',
+      nome_advogado: adv.nome || '',
+      oab_advogado: adv.oab || '',
+      empresa_advogado: cfg.empresa || '',
+      cidade: city,
+      uf: uf,
+      data: dateLong(date)
+    }
+
+    const clausesHtml = o.clausulas.map(clause => renderClauseHtml(clause, tags))
+
+    if (o.clausulaExtra) {
+      clausesHtml.push(
+        `<div class="clause"><div class="clause-title">CLÁUSULA ADICIONAL</div><p>${esc(o.clausulaExtra)}</p></div>`
+      )
+    }
+
+    const pages = distributeContractPages(preambuloHtml, clausesHtml, assinaturasHtml)
+    const renderedPages = pages.map((pContent, idx) => {
+      const pTitle = idx === 0 ? 'CONTRATO DE HONORÁRIOS ADVOCATÍCIOS' : ''
+      return buildPage(pContent, pTitle, num, adv, logo)
+    })
+
+    return `<div class="document">${renderedPages.join('')}</div>`
+  }
+
+  // Fallback padrão se não houver clausulas informadas
+  const pg1 = `${preambuloHtml}
+  <div class="clause"><div class="clause-title">CLÁUSULA 1ª – OBJETO DO CONTRATO</div>
+  <p><strong>1.1.</strong> O presente contrato tem por objeto a ${esc(objTxt)}${esc(atuacaoTxt)}, compreendendo a prática de todos os atos inerentes ao patrocínio dos interesses da CONTRATANTE, em âmbito consultivo, preventivo, administrativo ou judicial, em primeira instância ou instâncias ordinárias correlatas à contratação.</p>
+  <p><strong>1.2.</strong> Recursos para Tribunais Superiores (STJ e STF), medidas cautelares autônomas, ações rescisórias, mandados de segurança não incidentais e a fase de cumprimento de sentença com impugnação complexa dependerão de aditivo ou contratação específica, caso não expressamente previstos.</p></div>
+  <div class="clause"><div class="clause-title">CLÁUSULA 2ª – OBRIGAÇÕES DA CONTRATADA</div>
+  <p><strong>2.1.</strong> A CONTRATADA obriga-se a prestar os serviços profissionais com zelo, técnica, independência e estrita observância ao Código de Ética e Disciplina da OAB e ao Estatuto da Advocacia (Lei nº 8.906/1994).</p>
+  <p><strong>2.2.</strong> A atividade advocatícia é de <em>meio</em>, e não de <em>resultado</em>, não assegurando a CONTRATADA o êxito da demanda, mas comprometendo-se ao emprego da melhor técnica aplicável ao caso.</p></div>`
+
+  const pg2 = `<div class="clause">
+  <p><strong>2.3.</strong> A CONTRATADA manterá a CONTRATANTE informada acerca dos principais andamentos processuais e prestará contas ao término da prestação ou sempre que solicitada formalmente.</p></div>
+  <div class="clause"><div class="clause-title">CLÁUSULA 3ª – OBRIGAÇÕES DA CONTRATANTE</div>
+  <p><strong>3.1.</strong> A CONTRATANTE compromete-se a fornecer informações verdadeiras, documentos, provas e subsídios indispensáveis à defesa de seus interesses, sob pena de exclusiva responsabilidade pelos prejuízos decorrentes de omissões ou atrasos.</p>
+  <p><strong>3.2.</strong> Correm por conta da CONTRATANTE todas as custas judiciais, despesas com perícias, viagens indispensáveis, certidões, cópias, preparos recursais e demais encargos processuais, ressalvada eventual concessão de gratuidade da justiça.</p></div>
+  <div class="clause"><div class="clause-title">CLÁUSULA 4ª – HONORÁRIOS FIXOS E FORMA DE PAGAMENTO</div>
+  <p><strong>4.1.</strong> A CONTRATANTE pagará <strong>${money(fix)} (${esc(ext)})</strong>: ${money(entrada)} na assinatura e ${esc(parcelas)} parcela(s) mensal(is) de ${money(valorParcelaCalc)}, vencível(is) todo dia ${esc(dia)}, iniciando-se em ${esc(primeiro)}. A quitação depende da efetiva compensação.</p>
+  <p><strong>4.2.</strong> Pagamentos por boleto ou PIX serão emitidos pela CONTRATADA. A mora incorre em multa de 2%, juros de 1% ao mês e correção pelo IPCA/IBGE.</p></div>`
+
+  const pg3 = `<div class="clause"><div class="clause-title">CLÁUSULA 5ª – HONORÁRIOS DE ÊXITO E SUCUMBÊNCIA</div>
+  <p><strong>5.1.</strong> Sobre o proveito econômico obtido (acordo, condenação ou economia direta), incidirá o percentual de <strong>${esc(o.honorariosExito || '20%')}</strong>, devido imediatamente após o recebimento, levantamento ou compensação de valores.</p>
+  <p><strong>5.2.</strong> Os honorários de sucumbência arbitrados judicialmente pertencem exclusivamente aos advogados da CONTRATADA, nos termos do art. 23 da Lei nº 8.906/1994, não se compensando com os honorários contratuais ajustados.</p></div>
+  <div class="clause"><div class="clause-title">CLÁUSULA 6ª – INADIMPLEMENTO E MORA</div>
+  <p><strong>6.1.</strong> O atraso superior a 30 (trinta) dias no pagamento de qualquer parcela facultará à CONTRATADA a suspensão da prática de atos não urgentes e, persistindo a inadimplência, a rescisão contratual com a cobrança integral do saldo devedor e das perdas decorrentes.</p></div>
+  <div class="clause"><div class="clause-title">CLÁUSULA 7ª – RESOLUÇÃO ANTECIPADA POR CAUSA DA CONTRATANTE</div>
+  <p><strong>7.1.</strong> Constituem justa causa, além do inadimplemento: documento ou informação falsa; omissão essencial; recusa reiterada em entregar documentos ou cumprir orientação necessária; falta de custas; exigência de ato ilegal, antiético ou tecnicamente inadequado; ofensa, ameaça, assédio ou grave quebra de confiança; acordo, contato ou recebimento ocultado; ausência injustificada em ato; contratação paralela incompatível; ou qualquer conduta que inviabilize ou comprometa a defesa.</p>
+  <p><strong>7.2.</strong> Verificada a justa causa, a CONTRATADA comunicará o encerramento por escrito e adotará a renúncia ou substituição prevista em lei, mantendo apenas as providências indispensáveis durante o prazo legal. Permanecerão devidos os honorários vencidos, os proporcionais ao trabalho executado, as despesas, o êxito implementado e a sucumbência.</p></div>`
+
+  const pg4 = `<div class="clause"><div class="clause-title">CLÁUSULA 8ª – REVOGAÇÃO, RENÚNCIA E ENCERRAMENTO</div>
+  <p><strong>8.1.</strong> A CONTRATANTE poderá revogar o mandato e a CONTRATADA poderá renunciar, mediante comunicação formal. Revogação, substituição, desistência, perda do objeto ou encerramento por decisão da CONTRATANTE não afastam os honorários vencidos, despesas e remuneração proporcional aos atos úteis e etapas realizadas, inclusive êxito posterior decorrente da atuação, quando juridicamente cabível.</p>
+  <p><strong>8.2.</strong> Havendo culpa exclusiva comprovada da CONTRATADA que impossibilite o serviço, serão devidos apenas os honorários proporcionais aos atos úteis realizados, sem prejuízo das responsabilidades legais cabíveis.</p></div>
+  <div class="clause"><div class="clause-title">CLÁUSULA 9ª – COMUNICAÇÕES, DOCUMENTOS, DADOS E SIGILO</div>
+  <p><strong>9.1.</strong> São válidas as comunicações enviadas aos últimos telefones, WhatsApp e e-mails informados, inclusive avisos de atos, solicitações, cobrança, resolução e ciência de renúncia, quando comprovável o envio ou recebimento. Mensagens fora do horário comercial serão respondidas em prazo razoável, salvo urgência contratada.</p>
+  <p><strong>9.2.</strong> A CONTRATANTE manterá cópia dos documentos originais. Encerrado o contrato, documentos físicos deverão ser retirados em 90 dias; depois poderão ser digitalizados, arquivados ou descartados de modo seguro, respeitados os deveres legais de guarda.</p>
+  <p><strong>9.3.</strong> A CONTRATANTE autoriza o tratamento de dados e documentos para execução do contrato, exercício de direitos, prevenção à fraude, faturamento, cobrança, arquivo e comunicação com autoridades, tribunais, cartórios, peritos e auxiliares. A CONTRATADA manterá sigilo e medidas razoáveis de segurança.</p></div>
+  <div class="clause"><div class="clause-title">CLÁUSULA 10ª – TÍTULO EXECUTIVO, ASSINATURA E FORO</div>
+  <p><strong>10.1.</strong> ${textoExecutivo}</p>
+  <p><strong>10.2.</strong> Tolerância não implica renúncia, novação ou alteração. A invalidade de uma disposição não prejudica as demais. O contrato obriga as partes e sucessores nos limites legais e patrimoniais.</p>
+  <p><strong>10.3.</strong> Fica eleito o foro da <strong>${esc(foro)}</strong>, ressalvada competência legal inderrogável.</p>
+  ${o.clausulaExtra ? `<p><strong>10.4. Cláusula adicional:</strong> ${esc(o.clausulaExtra)}</p>` : ''}
+  <p style="margin-top:3mm;"><strong>Por estarem de acordo, as partes declaram ter lido, compreendido e aceitado integralmente este contrato.</strong></p></div>`
+
+  const pg5 = `${assinaturasHtml}`
 
   return `<div class="document">${buildPage(pg1, 'CONTRATO DE HONORÁRIOS ADVOCATÍCIOS', num, adv, logo)}${buildPage(pg2, '', num, adv, logo)}${buildPage(pg3, '', num, adv, logo)}${buildPage(pg4, '', num, adv, logo)}${buildPage(pg5, '', num, adv, logo)}</div>`
 }
