@@ -17,12 +17,16 @@ import {
   Trash2,
   Loader2,
   X,
-  Plus
+  Plus,
+  HardDrive,
+  FolderOpen
 } from 'lucide-react';
 import { supabase, DocumentoCliente, Cliente } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DriveFileExplorer } from '@/components/crm/DriveFileExplorer';
+import { vincularPastaClienteCRM } from '@/domain/crm/drive-service';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +57,13 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
   const [busca, setBusca] = useState('');
   const [ordemCrescente, setOrdemCrescente] = useState(true);
 
+  // Abas e Google Drive
+  const [abaDocumentos, setAbaDocumentos] = useState<'drive' | 'local'>('drive');
+  const [driveFolderId, setDriveFolderId] = useState<string | null>(cliente.google_drive_folder_id || null);
+  const [modalVincularOpen, setModalVincularOpen] = useState(false);
+  const [inputFolderId, setInputFolderId] = useState('');
+  const [salvandoVinculo, setSalvandoVinculo] = useState(false);
+
   // Modal Renomear
   const [docParaRenomear, setDocParaRenomear] = useState<DocumentoCliente | null>(null);
   const [novoNome, setNovoNome] = useState('');
@@ -61,6 +72,33 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
   // Modal Excluir
   const [docParaExcluir, setDocParaExcluir] = useState<DocumentoCliente | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+
+  const handleSalvarVinculoPasta = async (e: React.FormEvent) => {
+    e.preventDefault();
+    let limpo = inputFolderId.trim();
+    if (limpo.includes('/folders/')) {
+      const match = limpo.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) limpo = match[1];
+    }
+
+    if (!limpo) {
+      toast.error('Informe o ID ou link da pasta no Google Drive.');
+      return;
+    }
+
+    setSalvandoVinculo(true);
+    try {
+      await vincularPastaClienteCRM(cliente.id, limpo);
+      setDriveFolderId(limpo);
+      toast.success('Pasta do Google Drive vinculada ao cliente!');
+      setModalVincularOpen(false);
+      setInputFolderId('');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao vincular pasta.');
+    } finally {
+      setSalvandoVinculo(false);
+    }
+  };
 
   const carregarDocumentos = async () => {
     setLoading(true);
@@ -313,12 +351,95 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
     });
 
   return (
-    <div className="bg-[#111622] border border-white/10 rounded-2xl p-5 shadow-lg space-y-4 text-slate-200">
-      {/* Botões de Ação Topo */}
-      <div className="flex items-center gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
+    <div className="space-y-4">
+      {/* ─── Seletor de Origem: Google Drive vs Armazenamento Interno ─── */}
+      <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+        <button
+          type="button"
+          onClick={() => setAbaDocumentos('drive')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+            abaDocumentos === 'drive'
+              ? 'bg-[#C9A961]/15 text-[#C9A961] border border-[#C9A961]/30 shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+          }`}
+        >
+          <HardDrive className="w-4 h-4" />
+          Google Drive (Pastas & Arquivos)
+          {driveFolderId && (
+            <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block ml-1" title="Pasta vinculada" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAbaDocumentos('local')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+            abaDocumentos === 'local'
+              ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30 shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+          }`}
+        >
+          <FolderOpen className="w-4 h-4" />
+          Armazenamento do Sistema ({documentos.length})
+        </button>
+      </div>
+
+      {abaDocumentos === 'drive' ? (
+        driveFolderId ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] text-slate-400">
+                Pasta no Drive: <span className="font-mono text-slate-300">{driveFolderId}</span>
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setInputFolderId(driveFolderId);
+                  setModalVincularOpen(true);
+                }}
+                className="text-xs text-slate-400 hover:text-white h-7 px-2"
+              >
+                Alterar Pasta Vinculada
+              </Button>
+            </div>
+            <DriveFileExplorer
+              initialFolderId={driveFolderId}
+              initialFolderName={cliente.nome_razao_social}
+              tituloPersonalizado={`Google Drive — ${cliente.nome_razao_social}`}
+            />
+          </div>
+        ) : (
+          <div className="border border-dashed border-white/15 rounded-2xl p-10 text-center flex flex-col items-center justify-center gap-3 bg-slate-900/40">
+            <div className="w-12 h-12 rounded-full bg-[#C9A961]/10 border border-[#C9A961]/20 flex items-center justify-center text-[#C9A961]">
+              <HardDrive className="w-6 h-6" />
+            </div>
+            <h4 className="font-semibold text-white text-sm">
+              Nenhuma pasta do Google Drive vinculada a este cliente
+            </h4>
+            <p className="text-xs text-slate-400 max-w-md">
+              Vincule a pasta existente de <strong className="text-slate-200">{cliente.nome_razao_social}</strong> no Google Drive para navegar em tempo real por todas as subpastas, certidões e documentos de processos.
+            </p>
+            <Button
+              type="button"
+              onClick={() => {
+                setInputFolderId('');
+                setModalVincularOpen(true);
+              }}
+              className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-medium text-xs h-8 gap-1.5 px-4 shadow-sm mt-1"
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              Vincular Pasta do Google Drive
+            </Button>
+          </div>
+        )
+      ) : (
+        <div className="bg-[#111622] border border-white/10 rounded-2xl p-5 shadow-lg space-y-4 text-slate-200">
+          {/* Botões de Ação Topo */}
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
           multiple
           className="hidden"
           onChange={handleUpload}
@@ -551,6 +672,65 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
               {excluindo ? 'Excluindo...' : 'Excluir definitivamente'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+        </div>
+      )}
+
+      {/* Modal Vincular Pasta do Google Drive */}
+      <Dialog open={modalVincularOpen} onOpenChange={setModalVincularOpen}>
+        <DialogContent className="bg-slate-900 border-white/10 text-slate-100 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold flex items-center gap-2 text-white">
+              <Link2 className="w-4 h-4 text-[#C9A961]" />
+              Vincular Pasta do Google Drive
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSalvarVinculoPasta} className="flex flex-col gap-4 mt-2">
+            <div>
+              <label className="text-xs text-slate-300 block mb-1">
+                Cole o ID da Pasta ou o Link Completo do Google Drive:
+              </label>
+              <Input
+                autoFocus
+                value={inputFolderId}
+                onChange={(e) => setInputFolderId(e.target.value)}
+                placeholder="Ex.: 1A2b3C4d5E6f... ou https://drive.google.com/drive/folders/..."
+                className="bg-slate-950 border-white/10 text-white text-xs h-9 font-mono"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                Ao vincular, o sistema exibirá automaticamente todas as subpastas e documentos existentes do cliente.
+              </p>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 mt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setModalVincularOpen(false)}
+                className="text-slate-400 hover:text-white text-xs"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={salvandoVinculo || !inputFolderId.trim()}
+                className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-medium text-xs px-4"
+              >
+                {salvandoVinculo ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                    Salvando...
+                  </>
+                ) : (
+                  'Salvar Vínculo'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

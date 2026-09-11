@@ -18,6 +18,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DriveFileExplorer } from '@/components/crm/DriveFileExplorer';
 import { toast } from 'sonner';
 
 interface PainelDocumentosCasoProps {
@@ -31,6 +32,7 @@ export function PainelDocumentosCaso({ caso, cliente }: PainelDocumentosCasoProp
   const [loading, setLoading] = useState(true);
   const [uploadando, setUploadando] = useState(false);
   const [driveFolderId, setDriveFolderId] = useState<string | null>(caso.google_drive_folder_id || null);
+  const [modoVisualizacao, setModoVisualizacao] = useState<'explorador' | 'lista'>('explorador');
 
   // Form de novo documento / upload
   const [mostrandoForm, setMostrandoForm] = useState(false);
@@ -192,6 +194,33 @@ export function PainelDocumentosCaso({ caso, cliente }: PainelDocumentosCasoProp
         </div>
 
         <div className="flex items-center gap-2">
+          {driveFolderId && (
+            <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setModoVisualizacao('explorador')}
+                className={`px-3 py-1 rounded-lg font-medium transition-colors ${
+                  modoVisualizacao === 'explorador'
+                    ? 'bg-[#C9A961] text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Explorador de Pastas
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoVisualizacao('lista')}
+                className={`px-3 py-1 rounded-lg font-medium transition-colors ${
+                  modoVisualizacao === 'lista'
+                    ? 'bg-[#C9A961] text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Lista ({documentos.length})
+              </button>
+            </div>
+          )}
+
           <a
             href={linkPastaDrive}
             target="_blank"
@@ -292,75 +321,85 @@ export function PainelDocumentosCaso({ caso, cliente }: PainelDocumentosCasoProp
         </form>
       )}
 
-      {/* Listagem de Documentos */}
-      {loading ? (
-        <div className="py-6 text-center text-xs text-muted-foreground italic">
-          Carregando documentos sincronizados...
-        </div>
-      ) : documentos.length === 0 ? (
-        <div className="py-8 text-center text-slate-400 text-xs italic">
-          Nenhum documento anexado a este caso ainda. Clique em "Anexar Documento" para sincronizar com o Drive.
-        </div>
+      {/* Listagem ou Explorador de Pastas */}
+      {driveFolderId && modoVisualizacao === 'explorador' ? (
+        <DriveFileExplorer
+          initialFolderId={driveFolderId}
+          initialFolderName={caso.titulo}
+          tituloPersonalizado={`Google Drive — ${caso.titulo}`}
+        />
       ) : (
-        <div className="divide-y divide-white/5">
-          {documentos.map((doc) => {
-            const configTipo = TIPOS_DOCUMENTO_CASO[doc.tipo_documento] || TIPOS_DOCUMENTO_CASO.outros;
-            return (
-              <div
-                key={doc.id}
-                className="py-3 flex items-center justify-between gap-3 text-xs"
-              >
-                <div className="flex items-start gap-3 min-w-0">
-                  <FileText className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <div className="font-semibold text-white truncate">
-                      {doc.nome_arquivo}
+        <>
+          {loading ? (
+            <div className="py-6 text-center text-xs text-muted-foreground italic">
+              Carregando documentos sincronizados...
+            </div>
+          ) : documentos.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-xs italic">
+              Nenhum documento anexado a este caso ainda. Clique em "Anexar Documento" para sincronizar com o Drive.
+            </div>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {documentos.map((doc) => {
+                const configTipo = TIPOS_DOCUMENTO_CASO[doc.tipo_documento] || TIPOS_DOCUMENTO_CASO.outros;
+                return (
+                  <div
+                    key={doc.id}
+                    className="py-3 flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <FileText className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <div className="font-semibold text-white truncate">
+                          {doc.nome_arquivo}
+                        </div>
+                        <div className="text-slate-400 text-[11px] flex items-center gap-2 mt-0.5">
+                          <span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-300 font-medium">
+                            {configTipo.label}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {doc.tamanho_bytes
+                              ? `${(doc.tamanho_bytes / 1024).toFixed(1)} KB`
+                              : 'Tamanho não informado'}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {new Date(doc.created_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-slate-400 text-[11px] flex items-center gap-2 mt-0.5">
-                      <span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-300 font-medium">
-                        {configTipo.label}
-                      </span>
-                      <span>•</span>
-                      <span>
-                        {doc.tamanho_bytes
-                          ? `${(doc.tamanho_bytes / 1024).toFixed(1)} KB`
-                          : 'Tamanho não informado'}
-                      </span>
-                      <span>•</span>
-                      <span>
-                        {new Date(doc.created_at).toLocaleDateString('pt-BR')}
-                      </span>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {doc.google_drive_view_link && (
+                        <a
+                          href={doc.google_drive_view_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+                          title="Abrir no Google Drive"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      )}
+
+                      {(papel === 'advogado' || doc.criado_por === user?.id) && (
+                        <button
+                          onClick={() => handleExcluir(doc.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          title="Excluir documento"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {doc.google_drive_view_link && (
-                    <a
-                      href={doc.google_drive_view_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
-                      title="Abrir no Google Drive"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  )}
-
-                  {(papel === 'advogado' || doc.criado_por === user?.id) && (
-                    <button
-                      onClick={() => handleExcluir(doc.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      title="Excluir documento"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

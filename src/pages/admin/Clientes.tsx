@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Users, Phone, Building2, UserCheck, Eye, ShieldAlert, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, Users, Phone, Building2, UserCheck, Eye, ShieldAlert, FileSpreadsheet, FolderSync } from 'lucide-react';
 import { supabase, Cliente, StatusCicloCliente } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ModalImportarClientes } from '@/components/admin/ModalImportarClientes';
+import { ModalSincronizarDrive } from '@/components/crm/ModalSincronizarDrive';
 
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
 
@@ -25,6 +26,7 @@ export default function Clientes() {
   const [filtroStatus, setFiltroStatus] = useState<string>('');
   const [filtroTipo, setFiltroTipo] = useState<string>('');
   const [modalImportarOpen, setModalImportarOpen] = useState(false);
+  const [modalSincronizarDriveOpen, setModalSincronizarDriveOpen] = useState(false);
 
   const fetchClientes = async () => {
     setLoading(true);
@@ -77,6 +79,18 @@ export default function Clientes() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <PermissionGuard modulo="clientes" acao="criar">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setModalSincronizarDriveOpen(true)}
+              className="border-white/15 text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl"
+            >
+              <FolderSync className="w-4 h-4 mr-2 text-[#C9A961]" />
+              Sincronizar Google Drive
+            </Button>
+          </PermissionGuard>
+
           <PermissionGuard modulo="clientes" acao="criar">
             <Button
               type="button"
@@ -247,6 +261,12 @@ export default function Clientes() {
         onOpenChange={setModalImportarOpen}
         clientesExistentes={clientes}
         onSuccess={fetchClientes}
+      />
+
+      <ModalSincronizarDrive
+        open={modalSincronizarDriveOpen}
+        onOpenChange={setModalSincronizarDriveOpen}
+        onSincronizacaoConcluida={fetchClientes}
       />
     </div>
   );

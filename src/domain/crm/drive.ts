@@ -135,3 +135,131 @@ export function validarNovoDocumentoCaso(input: DocumentoCasoInput): { valido: b
     erros,
   };
 }
+
+// ─── Tipos e Utilitários do Google Drive Explorer ─────────────────────────────
+
+export interface DriveItem {
+  id: string;
+  name: string;
+  mimeType: string;
+  size?: number | null;
+  webViewLink?: string | null;
+  webContentLink?: string | null;
+  createdTime?: string | null;
+  modifiedTime?: string | null;
+  iconLink?: string | null;
+  isFolder: boolean;
+}
+
+export interface DriveBreadcrumb {
+  id: string;
+  name: string;
+}
+
+export interface DriveFolderContent {
+  currentFolder: { id: string; name: string };
+  breadcrumbs: DriveBreadcrumb[];
+  folders: DriveItem[];
+  files: DriveItem[];
+}
+
+export interface ScanClienteFolderMatch {
+  folderId: string;
+  folderName: string;
+  areaName: string;
+  matchedClienteId?: string;
+  matchedClienteNome?: string;
+  score: number;
+  status: 'matched' | 'unmatched' | 'created';
+}
+
+export interface AreaScanSummary {
+  areaName: string;
+  areaFolderId: string;
+  clientFoldersCount: number;
+}
+
+/**
+ * Normaliza nomes de pessoas/empresas para cruzamento tolerante a variações,
+ * removendo acentos, títulos jurídicos comuns (Dr., Dra., Espólio etc.) e pontuações.
+ */
+export function normalizarNomeComparacao(texto: string): string {
+  if (!texto) return '';
+
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .toLowerCase()
+    .replace(/\b(dr|dra|doutor|doutora|sr|sra|senhor|senhora|espolio\s+de|herdeiros?\s+de|inventariante)\b\.?/gi, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Extrai somente dígitos de um texto para busca de CPF ou CNPJ
+ */
+export function extrairDigitos(texto: string): string {
+  return (texto || '').replace(/\D/g, '');
+}
+
+/**
+ * Compara o nome da pasta do Google Drive com a lista de clientes cadastrados no CRM
+ * e pontua a melhor correspondência.
+ */
+export function encontrarMelhorCorrespondenciaCliente(
+  folderName: string,
+  clientes: Array<{ id: string; nome_razao_social: string; cpf_cnpj?: string | null }>
+): { clienteId?: string; clienteNome?: string; score: number } {
+  if (!folderName || !clientes || clientes.length === 0) {
+    return { score: 0 };
+  }
+
+  const digitsInFolder = extrairDigitos(folderName);
+  const normFolder = normalizarNomeComparacao(folderName);
+
+  let bestMatch: { clienteId?: string; clienteNome?: string; score: number } = { score: 0 };
+
+  for (const c of clientes) {
+    // 1. Busca por CPF/CNPJ no nome da pasta
+    const digitsInCpf = extrairDigitos(c.cpf_cnpj || '');
+    if (digitsInCpf.length >= 11 && digitsInFolder.includes(digitsInCpf)) {
+      return { clienteId: c.id, clienteNome: c.nome_razao_social, score: 1.0 };
+    }
+
+    const normCliente = normalizarNomeComparacao(c.nome_razao_social);
+    if (!normCliente) continue;
+
+    // 2. Correspondência exata após normalização
+    if (normFolder === normCliente) {
+      return { clienteId: c.id, clienteNome: c.nome_razao_social, score: 0.95 };
+    }
+
+    // 3. Contém nome completo
+    if (normFolder.includes(normCliente) || normCliente.includes(normFolder)) {
+      const score = 0.85;
+      if (score > bestMatch.score) {
+        bestMatch = { clienteId: c.id, clienteNome: c.nome_razao_social, score };
+      }
+      continue;
+    }
+
+    // 4. Correspondência de múltiplos termos (tokens)
+    const tokensFolder = normFolder.split(' ').filter((t) => t.length > 2);
+    const tokensCliente = normCliente.split(' ').filter((t) => t.length > 2);
+
+    if (tokensFolder.length > 0 && tokensCliente.length > 0) {
+      let hits = 0;
+      for (const tf of tokensFolder) {
+        if (tokensCliente.includes(tf)) hits++;
+      }
+      const ratio = hits / Math.max(tokensFolder.length, tokensCliente.length);
+      if (ratio >= 0.6 && ratio > bestMatch.score) {
+        bestMatch = { clienteId: c.id, clienteNome: c.nome_razao_social, score: parseFloat((ratio * 0.8).toFixed(2)) };
+      }
+    }
+  }
+
+  return bestMatch;
+}
+
