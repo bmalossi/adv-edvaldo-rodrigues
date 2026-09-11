@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { buildContrato } from '@/domain/crm/documentos/templates';
+import {
+  carregarPadroesDocumentosLocal,
+  salvarPadraoDocumentoLocal,
+  restaurarPadraoDocumentoFabrica,
+  DEFAULTS_FORM_DOCUMENTO,
+} from '@/domain/crm/documentos/config-local';
 import type { Cliente } from '@/domain/crm/cliente';
 import type { ConfigDocumentos, AdvogadoConfigDoc, OpcaoContrato } from '@/domain/crm/documentos/tipos';
 
@@ -116,5 +122,55 @@ describe('Gerador de Documentos: Contrato de Honorários', () => {
 
     expect(html).toContain('iniciando-se em 15/10/2026');
     expect(html).not.toContain('iniciando-se em 2026-10-15');
+  });
+});
+
+describe('Gerenciamento de Modelos Padrão do Escritório (Opção A)', () => {
+  beforeEach(() => {
+    restaurarPadraoDocumentoFabrica();
+  });
+
+  it('deve carregar objeto vazio quando nenhum padrão customizado estiver salvo', () => {
+    const padroes = carregarPadroesDocumentosLocal();
+    expect(padroes).toEqual({});
+  });
+
+  it('deve salvar e carregar personalizações de contrato como padrão do escritório', () => {
+    const customContrato = {
+      ...DEFAULTS_FORM_DOCUMENTO.contrato,
+      valorFixo: '7.500,00',
+      valorExtenso: 'sete mil e quinhentos reais',
+      percentualExito: '25',
+      incluirTestemunhas: true,
+      testemunha1Nome: 'Testemunha Padrão Escritório',
+    };
+
+    salvarPadraoDocumentoLocal('contrato', customContrato);
+
+    const padroes = carregarPadroesDocumentosLocal();
+    expect(padroes.contrato).toBeDefined();
+    expect(padroes.contrato?.valorFixo).toBe('7.500,00');
+    expect(padroes.contrato?.percentualExito).toBe('25');
+    expect(padroes.contrato?.incluirTestemunhas).toBe(true);
+    expect(padroes.contrato?.testemunha1Nome).toBe('Testemunha Padrão Escritório');
+  });
+
+  it('deve restaurar padrão de fábrica de um documento específico sem afetar os demais', () => {
+    salvarPadraoDocumentoLocal('contrato', {
+      ...DEFAULTS_FORM_DOCUMENTO.contrato,
+      valorFixo: '9.000,00',
+    });
+
+    salvarPadraoDocumentoLocal('recibo', {
+      ...DEFAULTS_FORM_DOCUMENTO.recibo,
+      referenciaRecibo: 'honorários iniciais de consultoria',
+    });
+
+    // Restaura apenas o contrato
+    restaurarPadraoDocumentoFabrica('contrato');
+
+    const padroes = carregarPadroesDocumentosLocal();
+    expect(padroes.contrato).toBeUndefined();
+    expect(padroes.recibo?.referenciaRecibo).toBe('honorários iniciais de consultoria');
   });
 });

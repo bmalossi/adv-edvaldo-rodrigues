@@ -19,7 +19,9 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Save,
+  RotateCcw
 } from 'lucide-react'
 import { supabase, Cliente, Advogado } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -49,7 +51,11 @@ import {
   carregarLogoLocal,
   carregarAssinaturaLocal,
   proximoNumeroDoc,
-  DEFAULTS_CONFIG
+  DEFAULTS_CONFIG,
+  DEFAULTS_FORM_DOCUMENTO,
+  carregarPadroesDocumentosLocal,
+  salvarPadraoDocumentoLocal,
+  restaurarPadraoDocumentoFabrica
 } from '@/domain/crm/documentos/config-local'
 import {
   buildContrato,
@@ -90,69 +96,35 @@ export default function GerarDocumentos() {
   const [assinatura, setAssinatura] = useState<string | null>(null)
 
   // Formulário de dados compartilhados e específicos
-  const [formData, setFormData] = useState<OpcoesDocumentoForm>({
-    data: new Date().toISOString().slice(0, 10),
-    cidade: 'Praia Grande',
-    uf: 'SP',
-    useSignature: false,
-    contrato: {
-      objeto: 'análise, preparação, ajuizamento e acompanhamento da ação judicial, em primeiro grau, até a sentença',
-      incluidos: 'reuniões indispensáveis; análise e organização documental; petição inicial; manifestações ordinárias; réplica; audiência; acompanhamento de perícia judicial; memoriais e acompanhamento até a sentença',
-      excluidos: 'recursos e contrarrazões; liquidação, cumprimento ou execução de sentença; ações autônomas ou conexas; reconvenção; incidentes complexos; atuação criminal, administrativa ou extrajudicial distinta; tribunais, STJ ou STF; diligências fora da Comarca; peritos, assistentes, correspondentes e outros profissionais',
-      valorFixo: '5.000,00',
-      valorExtenso: 'cinco mil reais',
-      entrada: '1.000,00',
-      parcelas: '4',
-      valorParcela: '1.000,00',
-      diaVencimento: '02',
-      primeiroVencimento: '',
-      percentualExito: '30',
-      multa: '10',
-      foro: 'Comarca de Praia Grande/SP',
-      clausulaExtra: '',
-      useSignature: false,
-      incluirTestemunhas: false,
-      testemunha1Nome: '',
-      testemunha1Cpf: '',
-      testemunha2Nome: '',
-      testemunha2Cpf: ''
-    },
-    procuracao: {
-      receber: true,
-      transigir: true,
-      hipossuf: true,
-      substabelecer: true,
-      inss: false,
-      receita: false,
-      poderesExtras: '',
-      finalidadeProc: '',
-      useSignature: false
-    },
-    hipossuficiencia: {
-      rendaMensal: '',
-      dependentes: '',
-      situacao: '',
-      hipoExtra: ''
-    },
-    irpf: {
-      exercicios: `${new Date().getFullYear() - 1} e ${new Date().getFullYear()}`,
-      finalidade: 'instrução de pedido de gratuidade da justiça'
-    },
-    recibo: {
-      valorRecibo: '1.000,00',
-      valorExtenso: 'um mil reais',
-      formaPagamento: 'PIX',
-      referenciaRecibo: 'prestação de serviços advocatícios',
-      parcelaRecibo: '1ª parcela',
-      obsRecibo: '',
-      useSignature: false
-    },
-    residencia: {
-      destinoResidencia: 'empresa ou órgão solicitante',
-      tipoResidencia: 'proprio',
-      titularResidencia: '',
-      cpfTitular: '',
-      vinculoTitular: ''
+  const [formData, setFormData] = useState<OpcoesDocumentoForm>(() => {
+    const padroes = carregarPadroesDocumentosLocal()
+    return {
+      ...DEFAULTS_FORM_DOCUMENTO,
+      ...padroes,
+      contrato: {
+        ...DEFAULTS_FORM_DOCUMENTO.contrato,
+        ...(padroes.contrato || {})
+      },
+      procuracao: {
+        ...DEFAULTS_FORM_DOCUMENTO.procuracao,
+        ...(padroes.procuracao || {})
+      },
+      hipossuficiencia: {
+        ...DEFAULTS_FORM_DOCUMENTO.hipossuficiencia,
+        ...(padroes.hipossuficiencia || {})
+      },
+      irpf: {
+        ...DEFAULTS_FORM_DOCUMENTO.irpf,
+        ...(padroes.irpf || {})
+      },
+      recibo: {
+        ...DEFAULTS_FORM_DOCUMENTO.recibo,
+        ...(padroes.recibo || {})
+      },
+      residencia: {
+        ...DEFAULTS_FORM_DOCUMENTO.residencia,
+        ...(padroes.residencia || {})
+      }
     }
   })
 
@@ -183,13 +155,16 @@ export default function GerarDocumentos() {
     const userSig = perfil?.assinatura_url || advogado?.assinatura_url || carregarAssinaturaLocal(user?.id)
     setAssinatura(userSig)
 
-    // Primeiro vencimento padrão = próximo mês
+    // Primeiro vencimento padrão = próximo mês (se não houver padrão salvo)
     const d = new Date()
     d.setMonth(d.getMonth() + 1)
     const proximoMes = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
     setFormData(prev => ({
       ...prev,
-      contrato: { ...prev.contrato, primeiroVencimento: proximoMes }
+      contrato: {
+        ...prev.contrato,
+        primeiroVencimento: prev.contrato.primeiroVencimento || proximoMes
+      }
     }))
 
     carregarClientes()
@@ -411,6 +386,28 @@ export default function GerarDocumentos() {
 
   const toggleSecao = (key: string) => {
     setSecaoAberta(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const handleSalvarPadrao = <K extends keyof OpcoesDocumentoForm>(
+    tipo: K,
+    nomeAmigavel: string
+  ) => {
+    salvarPadraoDocumentoLocal(tipo, formData[tipo])
+    toast.success(`Padrão de "${nomeAmigavel}" salvo com sucesso!`, {
+      description: 'As próximas emissões utilizarão estas configurações como padrão do escritório.'
+    })
+  }
+
+  const handleRestaurarPadrao = <K extends keyof OpcoesDocumentoForm>(
+    tipo: K,
+    nomeAmigavel: string
+  ) => {
+    restaurarPadraoDocumentoFabrica(tipo)
+    setFormData(prev => ({
+      ...prev,
+      [tipo]: DEFAULTS_FORM_DOCUMENTO[tipo]
+    }))
+    toast.info(`Padrão de fábrica de "${nomeAmigavel}" restaurado.`)
   }
 
   return (
@@ -866,6 +863,27 @@ export default function GerarDocumentos() {
                       </div>
                     )}
                   </div>
+
+                  {/* Rodapé de Ações de Padrão */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRestaurarPadrao('contrato', 'Contrato de Honorários')}
+                      className="text-slate-400 hover:text-white h-8 gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleSalvarPadrao('contrato', 'Contrato de Honorários')}
+                      className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
+                    >
+                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                    </Button>
+                  </div>
                 </div>
               )}
             </section>
@@ -951,6 +969,27 @@ export default function GerarDocumentos() {
                       />
                     </div>
                   </div>
+
+                  {/* Rodapé de Ações de Padrão */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRestaurarPadrao('procuracao', 'Procuração Ad Judicia')}
+                      className="text-slate-400 hover:text-white h-8 gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleSalvarPadrao('procuracao', 'Procuração Ad Judicia')}
+                      className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
+                    >
+                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                    </Button>
+                  </div>
                 </div>
               )}
             </section>
@@ -1011,6 +1050,27 @@ export default function GerarDocumentos() {
                       className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
                     />
                   </div>
+
+                  {/* Rodapé de Ações de Padrão */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRestaurarPadrao('hipossuficiencia', 'Declaração de Hipossuficiência')}
+                      className="text-slate-400 hover:text-white h-8 gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleSalvarPadrao('hipossuficiencia', 'Declaração de Hipossuficiência')}
+                      className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
+                    >
+                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                    </Button>
+                  </div>
                 </div>
               )}
             </section>
@@ -1030,24 +1090,47 @@ export default function GerarDocumentos() {
               </div>
 
               {secaoAberta.irpf && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/5">
-                  <div>
-                    <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Exercício(s)</Label>
-                    <Input
-                      placeholder="2025 e 2026"
-                      value={formData.irpf.exercicios}
-                      onChange={e => setFormData({ ...formData, irpf: { ...formData.irpf, exercicios: e.target.value } })}
-                      className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                    />
+                <div className="space-y-4 pt-2 border-t border-white/5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Exercício(s)</Label>
+                      <Input
+                        placeholder="2025 e 2026"
+                        value={formData.irpf.exercicios}
+                        onChange={e => setFormData({ ...formData, irpf: { ...formData.irpf, exercicios: e.target.value } })}
+                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Finalidade</Label>
+                      <Input
+                        placeholder="instrução de pedido de gratuidade..."
+                        value={formData.irpf.finalidade}
+                        onChange={e => setFormData({ ...formData, irpf: { ...formData.irpf, finalidade: e.target.value } })}
+                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Finalidade</Label>
-                    <Input
-                      placeholder="instrução de pedido de gratuidade..."
-                      value={formData.irpf.finalidade}
-                      onChange={e => setFormData({ ...formData, irpf: { ...formData.irpf, finalidade: e.target.value } })}
-                      className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                    />
+
+                  {/* Rodapé de Ações de Padrão */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRestaurarPadrao('irpf', 'Isenção de IRPF')}
+                      className="text-slate-400 hover:text-white h-8 gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleSalvarPadrao('irpf', 'Isenção de IRPF')}
+                      className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
+                    >
+                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                    </Button>
                   </div>
                 </div>
               )}
@@ -1121,6 +1204,27 @@ export default function GerarDocumentos() {
                       </div>
                     </div>
                   )}
+
+                  {/* Rodapé de Ações de Padrão */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRestaurarPadrao('residencia', 'Declaração de Residência')}
+                      className="text-slate-400 hover:text-white h-8 gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleSalvarPadrao('residencia', 'Declaração de Residência')}
+                      className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
+                    >
+                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                    </Button>
+                  </div>
                 </div>
               )}
             </section>
@@ -1192,6 +1296,27 @@ export default function GerarDocumentos() {
                         className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
                       />
                     </div>
+                  </div>
+
+                  {/* Rodapé de Ações de Padrão */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRestaurarPadrao('recibo', 'Recibo de Pagamento')}
+                      className="text-slate-400 hover:text-white h-8 gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleSalvarPadrao('recibo', 'Recibo de Pagamento')}
+                      className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
+                    >
+                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                    </Button>
                   </div>
                 </div>
               )}
