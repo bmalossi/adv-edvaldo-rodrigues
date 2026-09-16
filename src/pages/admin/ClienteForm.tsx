@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -124,6 +124,9 @@ export default function ClienteForm() {
       const payload = {
         ...formData,
         tem_representante: mostrarRepresentante,
+        // Campos tipo DATE: string vazia causa erro no PostgreSQL (22007)
+        data_nascimento: formData.data_nascimento?.trim() || null,
+        rep_data_nascimento: formData.rep_data_nascimento?.trim() || null,
       };
 
       if (isEditing && id) {
