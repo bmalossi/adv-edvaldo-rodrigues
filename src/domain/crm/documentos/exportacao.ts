@@ -54,10 +54,9 @@ export function estilosDocumentoCss(): string {
     }
     .doc-title {
       text-align: center;
-      font-size: 13.5pt;
-      text-decoration: underline;
+      font-size: 13pt;
       font-weight: bold;
-      margin: 3mm 0 7mm;
+      margin: 3mm 0 6mm;
       color: #0f172a;
     }
     .contract-title {

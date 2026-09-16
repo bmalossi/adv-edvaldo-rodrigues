@@ -69,7 +69,8 @@ import {
   buildHipossuficiencia,
   buildIrpf,
   buildRecibo,
-  buildResidencia
+  buildResidencia,
+  DADOS_ESCRITORIO_DOCUMENTO
 } from '@/domain/crm/documentos/templates'
 import { downloadWord, imprimirDocumento, estilosDocumentoCss } from '@/domain/crm/documentos/exportacao'
 import { TIPO_NOMES, dateShort } from '@/domain/crm/documentos/formatacao'
@@ -237,16 +238,10 @@ export default function GerarDocumentos() {
     )
   }, [clientes, buscaCliente])
 
-  // Objeto de dados do advogado para renderizar nos templates
+  // Objeto institucional do escritório para renderizar nos documentos (não varia com usuário logado)
   const advDoc: AdvogadoConfigDoc = useMemo(() => {
-    return {
-      nome: advogado?.nome || 'EDVALDO RODRIGUES FERREIRA',
-      oab: advogado?.oab ? (advogado.oab.toUpperCase().includes('OAB') ? advogado.oab : `OAB/SP ${advogado.oab}`) : 'OAB/SP 465.818',
-      telefone: advogado?.telefone_whatsapp || '(13) 99682-4364',
-      email: advogado?.email || 'edvaldorodrigues.advocacia@gmail.com',
-      endereco: 'Avenida Presidente Costa e Silva, nº 733, sala 21, 2º andar – Office Brasil, Boqueirão, Praia Grande/SP'
-    }
-  }, [advogado])
+    return DADOS_ESCRITORIO_DOCUMENTO
+  }, [])
 
   // Gerar HTML de um documento específico
   const gerarHtmlDoc = (tipo: TipoDocumento, c: Cliente, num: string): string => {

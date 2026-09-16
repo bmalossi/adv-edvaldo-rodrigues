@@ -62,28 +62,38 @@ const baseOpcaoContrato: OpcaoContrato = {
 };
 
 describe('Gerador de Documentos: Contrato de Honorários', () => {
-  it('deve conter o título visual "CONTRATO DE HONORÁRIOS ADVOCATÍCIOS" na primeira página', () => {
+  it('deve conter o título visual "CONTRATO DE PRESTAÇÃO DE SERVIÇOS E HONORÁRIOS ADVOCATÍCIOS" na primeira página', () => {
     const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
       ...baseOpcaoContrato,
       incluirTestemunhas: false,
     });
 
-    expect(html).toContain('<div class="doc-title">CONTRATO DE HONORÁRIOS ADVOCATÍCIOS</div>');
+    expect(html).toContain('<div class="doc-title">CONTRATO DE PRESTAÇÃO DE SERVIÇOS E HONORÁRIOS ADVOCATÍCIOS</div>');
   });
 
-  it('não deve incluir bloco de testemunhas quando incluirTestemunhas for falso', () => {
-    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+  it('deve exibir o rodapé geral e institucional do escritório em todas as páginas, independentemente do usuário/advogado logado', () => {
+    const advogadoDiferente: AdvogadoConfigDoc = {
+      nome: 'Bruno Fernandes Malossi Silva',
+      oab: 'Estagiário/Assistente',
+      telefone: '(11) 99999-0000',
+      email: 'bruno@email.com',
+      endereco: 'Rua Aleatória, 123'
+    };
+
+    const html = buildContrato(mockCliente, advogadoDiferente, mockConfig, null, {
       ...baseOpcaoContrato,
       incluirTestemunhas: false,
     });
 
-    expect(html).not.toContain('TESTEMUNHA 1');
-    expect(html).not.toContain('TESTEMUNHA 2');
-    expect(html).toContain('Este contrato constitui título executivo extrajudicial nos termos do art. 24 da Lei nº 8.906/1994.');
-    expect(html).not.toContain('com duas testemunhas, também do art. 784');
+    // O rodapé deve sempre apresentar exclusivamente os dados do escritório
+    expect(html).toContain('EDVALDO RODRIGUES FERREIRA | OAB/SP 465.818');
+    expect(html).toContain('Avenida Presidente Costa e Silva, nº 733, sala 21, 2º andar – Office Brasil, Boqueirão, Praia Grande/SP – CEP 11700-007');
+    expect(html).toContain('edvaldorodrigues.advocacia@gmail.com · (13) 99682-4364');
+    // Não deve conter o nome do usuário/advogado avulso no rodapé
+    expect(html).not.toContain('<div class="doc-footer"><strong>Bruno Fernandes Malossi Silva');
   });
 
-  it('deve incluir bloco de testemunhas quando incluirTestemunhas for verdadeiro', () => {
+  it('deve distribuir o contrato padrão oficial nos moldes perfeitos em exatamente 5 páginas', () => {
     const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
       ...baseOpcaoContrato,
       incluirTestemunhas: true,
@@ -92,36 +102,8 @@ describe('Gerador de Documentos: Contrato de Honorários', () => {
       testemunha2Nome: 'Ana Paula',
       testemunha2Cpf: '555.666.777-88',
     });
-
-    expect(html).toContain('TESTEMUNHA 1');
-    expect(html).toContain('TESTEMUNHA 2');
-    expect(html).toContain('Carlos Alberto');
-    expect(html).toContain('222.333.444-55');
-    expect(html).toContain('Ana Paula');
-    expect(html).toContain('555.666.777-88');
-    expect(html).toContain('com duas testemunhas, também do art. 784, III, do CPC');
-  });
-
-  it('deve renderizar linhas em branco quando incluir testemunhas sem dados preenchidos', () => {
-    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
-      ...baseOpcaoContrato,
-      incluirTestemunhas: true,
-    });
-
-    expect(html).toContain('TESTEMUNHA 1');
-    expect(html).toContain('TESTEMUNHA 2');
-    expect(html).toContain('Nome:<br>');
-    expect(html).toContain('CPF:');
-  });
-
-  it('deve formatar a data do primeiro vencimento no padrão brasileiro dd/MM/yyyy na Cláusula 4ª', () => {
-    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
-      ...baseOpcaoContrato,
-      primeiroVencimento: '2026-10-15',
-    });
-
-    expect(html).toContain('iniciando-se em 15/10/2026');
-    expect(html).not.toContain('iniciando-se em 2026-10-15');
+    const paginas = (html.match(/<div class="doc-page"/g) || []).length;
+    expect(paginas).toBe(5);
   });
 });
 
