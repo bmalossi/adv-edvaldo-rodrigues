@@ -262,7 +262,7 @@ export default function ClienteDetalhe() {
             </Button>
           </PermissionGuard>
 
-          <PermissionGuard modulo="clientes" acao="excluir">
+          <PermissionGuard modulo="clientes" acao="deletar">
             <Button
               variant="ghost"
               onClick={handleExcluirOuArquivar}

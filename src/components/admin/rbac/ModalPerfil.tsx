@@ -58,6 +58,8 @@ const TEMPLATES_PADRAO: Record<string, { nome: string; escopo: EscopoAcesso; per
     escopo: 'geral',
     perms: [
       { modulo: 'clientes', acao: 'visualizar' },
+      { modulo: 'clientes', acao: 'criar' },
+      { modulo: 'clientes', acao: 'editar' },
       { modulo: 'casos', acao: 'visualizar' },
       { modulo: 'agenda', acao: 'visualizar' },
       { modulo: 'agenda', acao: 'criar' },
