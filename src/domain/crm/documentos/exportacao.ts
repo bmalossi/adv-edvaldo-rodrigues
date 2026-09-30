@@ -58,6 +58,8 @@ export function estilosDocumentoCss(): string {
       font-weight: bold;
       margin: 3mm 0 6mm;
       color: #0f172a;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 2.5mm;
     }
     .contract-title {
       text-align: center;
@@ -136,7 +138,7 @@ export function estilosDocumentoCss(): string {
       position: absolute;
       left: 17mm;
       right: 17mm;
-      bottom: 6mm;
+      bottom: 5mm;
       border-top: 1.5px solid #b58a37;
       padding-top: 1.5mm;
       text-align: center;
@@ -146,6 +148,12 @@ export function estilosDocumentoCss(): string {
     }
     .doc-footer strong {
       color: #0f172a;
+    }
+    .doc-page-number {
+      font-size: 7pt;
+      color: #64748b;
+      margin-bottom: 1mm;
+      text-align: right;
     }
   `
 }

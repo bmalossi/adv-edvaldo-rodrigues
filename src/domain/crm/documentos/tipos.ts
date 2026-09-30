@@ -24,6 +24,13 @@ export interface ClausulaContrato {
   conteudo: string
 }
 
+export interface RodapeConfig {
+  linha1?: string
+  linha2?: string
+  linha3?: string
+  numerarPaginas?: boolean
+}
+
 export interface OpcaoContrato {
   objeto: string
   incluidos: string
@@ -46,6 +53,25 @@ export interface OpcaoContrato {
   testemunha2Nome?: string
   testemunha2Cpf?: string
   clausulas?: ClausulaContrato[]
+
+  // Atuação conjunta com outro advogado
+  atuacaoConjunta?: boolean
+  advogadoConjuntoTipo?: 'sistema' | 'avulso'
+  advogadoConjuntoId?: string
+  advogadoConjuntoNome?: string
+  advogadoConjuntoTratamento?: string
+  advogadoConjuntoOab?: string
+  advogadoConjuntoEndereco?: string
+
+  // Preâmbulo / Qualificação totalmente editável
+  preambuloPersonalizado?: string
+
+  // Cabeçalho, rodapé e numeração de páginas
+  cabecalhoPersonalizado?: string
+  rodapeLinha1?: string
+  rodapeLinha2?: string
+  rodapeLinha3?: string
+  numerarPaginas?: boolean
 }
 
 export interface OpcaoProcuracao {
@@ -58,6 +84,20 @@ export interface OpcaoProcuracao {
   poderesExtras?: string
   finalidadeProc?: string
   useSignature?: boolean
+
+  // Atuação conjunta com outro advogado
+  atuacaoConjunta?: boolean
+  advogadoConjuntoNome?: string
+  advogadoConjuntoTratamento?: string
+  advogadoConjuntoOab?: string
+  advogadoConjuntoEndereco?: string
+
+  // Cabeçalho, rodapé e numeração de páginas
+  cabecalhoPersonalizado?: string
+  rodapeLinha1?: string
+  rodapeLinha2?: string
+  rodapeLinha3?: string
+  numerarPaginas?: boolean
 }
 
 export interface OpcaoHipossuficiencia {
@@ -65,11 +105,21 @@ export interface OpcaoHipossuficiencia {
   dependentes?: string
   situacao?: string
   hipoExtra?: string
+  cabecalhoPersonalizado?: string
+  rodapeLinha1?: string
+  rodapeLinha2?: string
+  rodapeLinha3?: string
+  numerarPaginas?: boolean
 }
 
 export interface OpcaoIrpf {
   exercicios: string
   finalidade?: string
+  cabecalhoPersonalizado?: string
+  rodapeLinha1?: string
+  rodapeLinha2?: string
+  rodapeLinha3?: string
+  numerarPaginas?: boolean
 }
 
 export interface OpcaoRecibo {
@@ -80,6 +130,11 @@ export interface OpcaoRecibo {
   parcelaRecibo?: string
   obsRecibo?: string
   useSignature?: boolean
+  cabecalhoPersonalizado?: string
+  rodapeLinha1?: string
+  rodapeLinha2?: string
+  rodapeLinha3?: string
+  numerarPaginas?: boolean
 }
 
 export interface OpcaoResidencia {
@@ -88,6 +143,11 @@ export interface OpcaoResidencia {
   titularResidencia?: string
   cpfTitular?: string
   vinculoTitular?: string
+  cabecalhoPersonalizado?: string
+  rodapeLinha1?: string
+  rodapeLinha2?: string
+  rodapeLinha3?: string
+  numerarPaginas?: boolean
 }
 
 export interface OpcoesDocumentoForm {
@@ -95,6 +155,11 @@ export interface OpcoesDocumentoForm {
   cidade: string
   uf: string
   useSignature: boolean
+  cabecalhoPersonalizado?: string
+  rodapeLinha1?: string
+  rodapeLinha2?: string
+  rodapeLinha3?: string
+  numerarPaginas?: boolean
   contrato: OpcaoContrato
   procuracao: OpcaoProcuracao
   hipossuficiencia: OpcaoHipossuficiencia

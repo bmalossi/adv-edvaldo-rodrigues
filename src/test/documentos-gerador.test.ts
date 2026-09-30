@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { buildContrato } from '@/domain/crm/documentos/templates';
+import { buildContrato, buildProcuracao } from '@/domain/crm/documentos/templates';
 import {
   carregarPadroesDocumentosLocal,
   salvarPadraoDocumentoLocal,
   restaurarPadraoDocumentoFabrica,
   DEFAULTS_FORM_DOCUMENTO,
+  CLAUSULAS_PADRAO_CONTRATO,
 } from '@/domain/crm/documentos/config-local';
 import type { Cliente } from '@/domain/crm/cliente';
-import type { ConfigDocumentos, AdvogadoConfigDoc, OpcaoContrato } from '@/domain/crm/documentos/tipos';
+import type { ConfigDocumentos, AdvogadoConfigDoc, OpcaoContrato, OpcaoProcuracao } from '@/domain/crm/documentos/tipos';
 
 const mockCliente: Partial<Cliente> = {
   id: 'cli-test-1',
@@ -93,7 +94,7 @@ describe('Gerador de Documentos: Contrato de Honorários', () => {
     expect(html).not.toContain('<div class="doc-footer"><strong>Bruno Fernandes Malossi Silva');
   });
 
-  it('deve distribuir o contrato padrão oficial nos moldes perfeitos em exatamente 5 páginas', () => {
+  it('deve distribuir o contrato padrão oficial de forma compacta e sem grandes espaços vazios em exatamente 4 páginas', () => {
     const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
       ...baseOpcaoContrato,
       incluirTestemunhas: true,
@@ -103,7 +104,7 @@ describe('Gerador de Documentos: Contrato de Honorários', () => {
       testemunha2Cpf: '555.666.777-88',
     });
     const paginas = (html.match(/<div class="doc-page"/g) || []).length;
-    expect(paginas).toBe(5);
+    expect(paginas).toBe(4);
   });
 });
 
@@ -227,4 +228,98 @@ describe('Gerenciamento de Modelos Padrão do Escritório (Opção A)', () => {
     expect(padroes.contrato?.clausulas).toHaveLength(11);
     expect(padroes.contrato?.clausulas?.[10].titulo).toBe('CLÁUSULA 11ª – JUÍZO ARBITRAL');
   });
+
+  it('deve refletir no documento final as alterações feitas em cláusulas padrão existentes (sem ignorar as edições)', () => {
+    // Cláusulas padrão modificadas pelo usuário (mantendo 10 cláusulas)
+    const clausulasEditadas = CLAUSULAS_PADRAO_CONTRATO.map(c => {
+      if (c.id === 'clausula-1') {
+        return {
+          ...c,
+          titulo: 'CLÁUSULA 1ª – OBJETO ESPECÍFICO REVISADO',
+          conteudo: '1.1. Prestação exclusiva de consultoria em direito administrativo.\n\n1.2. Atos específicos definidos pelo cliente.',
+        };
+      }
+      return c;
+    });
+
+    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      clausulas: clausulasEditadas,
+    });
+
+    expect(html).toContain('CLÁUSULA 1ª – OBJETO ESPECÍFICO REVISADO');
+    expect(html).toContain('Prestação exclusiva de consultoria em direito administrativo');
+  });
 });
+
+describe('Atuação Conjunta com Outro Advogado e Preâmbulo Editável', () => {
+  it('deve incluir advogado em atuação conjunta no preâmbulo, outorgados da procuração e bloco de assinaturas', () => {
+    const htmlContrato = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      atuacaoConjunta: true,
+      advogadoConjuntoNome: 'VANIA VIEIRA BRAZIL NASCIMENTO',
+      advogadoConjuntoTratamento: 'advogada',
+      advogadoConjuntoOab: 'OAB/SP 387.405',
+      advogadoConjuntoEndereco: 'Avenida Presidente Costa e Silva, nº 733, sala 21 - Praia Grande/SP',
+    });
+
+    // Preâmbulo com Dr. Edvaldo e atuação conjunta de Dra. Vânia
+    expect(htmlContrato).toContain('Dr. EDVALDO RODRIGUES FERREIRA, OAB/SP 465.818');
+    expect(htmlContrato).toContain('com atuação conjunta de <strong>VANIA VIEIRA BRAZIL NASCIMENTO, advogada, OAB/SP 387.405</strong>');
+
+    // Assinaturas das partes com contratante, Dr. Edvaldo e Dra. Vânia
+    expect(htmlContrato).toContain('CONTRATANTE:');
+    expect(htmlContrato).toContain('EDVALDO RODRIGUES FERREIRA');
+    expect(htmlContrato).toContain('VANIA VIEIRA BRAZIL NASCIMENTO');
+    expect(htmlContrato).toContain('OAB/SP 387.405');
+
+    // Procuração também deve listar nos outorgados
+    const htmlProc = buildProcuracao(mockCliente, mockAdv, mockConfig, null, {
+      receber: true,
+      transigir: true,
+      hipossuf: true,
+      substabelecer: true,
+      inss: false,
+      receita: false,
+      atuacaoConjunta: true,
+      advogadoConjuntoNome: 'VANIA VIEIRA BRAZIL NASCIMENTO',
+      advogadoConjuntoTratamento: 'advogada',
+      advogadoConjuntoOab: 'OAB/SP 387.405',
+      advogadoConjuntoEndereco: 'Avenida Presidente Costa e Silva, nº 733, sala 21 - Praia Grande/SP',
+    });
+
+    expect(htmlProc).toContain('OUTORGADOS:');
+    expect(htmlProc).toContain('VANIA VIEIRA BRAZIL NASCIMENTO');
+    expect(htmlProc).toContain('OAB/SP 387.405');
+  });
+
+  it('deve utilizar o preâmbulo totalmente personalizado quando informado pelo usuário', () => {
+    const preambuloCustom = 'Pelo presente contrato particular, as partes acordam nos exatos termos desta minuta sob medida.';
+    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      preambuloPersonalizado: preambuloCustom,
+    });
+
+    expect(html).toContain(preambuloCustom);
+  });
+});
+
+describe('Personalização de Cabeçalho, Rodapé e Numeração de Páginas', () => {
+  it('deve renderizar cabeçalho customizado e rodapé personalizado', () => {
+    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      cabecalhoPersonalizado: 'ESCRITÓRIO ASSOCIADO DE ADVOCACIA BRASIL',
+      rodapeLinha1: 'BANCA DE ADVOGADOS ASSOCIADOS | OAB/SP 123.456',
+      rodapeLinha2: 'Rua das Flores, nº 100 - Santos/SP',
+      rodapeLinha3: 'contato@banca.adv.br · (13) 3333-4444',
+      numerarPaginas: true,
+    });
+
+    expect(html).toContain('ESCRITÓRIO ASSOCIADO DE ADVOCACIA BRASIL');
+    expect(html).toContain('BANCA DE ADVOGADOS ASSOCIADOS | OAB/SP 123.456');
+    expect(html).toContain('Rua das Flores, nº 100 - Santos/SP');
+    expect(html).toContain('contato@banca.adv.br · (13) 3333-4444');
+    expect(html).toContain('Página 1 de 4');
+  });
+});
+

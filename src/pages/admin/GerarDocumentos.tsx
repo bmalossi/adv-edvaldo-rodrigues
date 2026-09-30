@@ -25,7 +25,8 @@ import {
   Plus,
   Sparkles,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Users
 } from 'lucide-react'
 import { supabase, Cliente, Advogado } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -58,6 +59,7 @@ import {
   proximoNumeroDoc,
   DEFAULTS_CONFIG,
   DEFAULTS_FORM_DOCUMENTO,
+  DEFAULTS_RODAPE,
   CLAUSULAS_PADRAO_CONTRATO,
   carregarPadroesDocumentosLocal,
   salvarPadraoDocumentoLocal,
@@ -70,7 +72,8 @@ import {
   buildIrpf,
   buildRecibo,
   buildResidencia,
-  DADOS_ESCRITORIO_DOCUMENTO
+  DADOS_ESCRITORIO_DOCUMENTO,
+  obterTextoPreambuloPadrao
 } from '@/domain/crm/documentos/templates'
 import { downloadWord, imprimirDocumento, estilosDocumentoCss } from '@/domain/crm/documentos/exportacao'
 import { TIPO_NOMES, dateShort } from '@/domain/crm/documentos/formatacao'
@@ -156,8 +159,11 @@ export default function GerarDocumentos() {
     recibo: true
   })
 
-  // Sub-aba do contrato: 'parametros' ou 'clausulas'
-  const [abaContrato, setAbaContrato] = useState<'parametros' | 'clausulas'>('parametros')
+  // Sub-aba do contrato: 'parametros', 'preambulo', 'clausulas' ou 'rodape'
+  const [abaContrato, setAbaContrato] = useState<'parametros' | 'preambulo' | 'clausulas' | 'rodape'>('parametros')
+
+  // Lista de advogados/membros da equipe para atuação conjunta
+  const [equipePerfis, setEquipePerfis] = useState<{ id: string; nome: string; oab: string | null; email: string | null; telefone: string | null }[]>([])
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -180,7 +186,23 @@ export default function GerarDocumentos() {
 
     carregarClientes()
     carregarHistorico()
+    carregarPerfis()
   }, [])
+
+  const carregarPerfis = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('perfis')
+        .select('id, nome, oab, email, telefone')
+        .eq('ativo', true)
+        .order('nome')
+      if (!error && data) {
+        setEquipePerfis(data)
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar equipe de advogados', e)
+    }
+  }
 
   // Sincroniza assinatura exclusiva do perfil assim que autenticação carregar
   useEffect(() => {
@@ -245,20 +267,37 @@ export default function GerarDocumentos() {
 
   // Gerar HTML de um documento específico
   const gerarHtmlDoc = (tipo: TipoDocumento, c: Cliente, num: string): string => {
+    const generalDocOpts = {
+      cabecalhoPersonalizado: formData.contrato.cabecalhoPersonalizado || formData.cabecalhoPersonalizado,
+      rodapeLinha1: formData.contrato.rodapeLinha1 || formData.rodapeLinha1,
+      rodapeLinha2: formData.contrato.rodapeLinha2 || formData.rodapeLinha2,
+      rodapeLinha3: formData.contrato.rodapeLinha3 || formData.rodapeLinha3,
+      numerarPaginas: formData.contrato.numerarPaginas ?? formData.numerarPaginas,
+    }
+
     const opts = {
       date: formData.data,
       city: formData.cidade,
       uf: formData.uf,
       number: num,
       useSignature: formData.useSignature,
-      signatureImg: assinatura
+      signatureImg: assinatura,
+      ...generalDocOpts
     }
 
     switch (tipo) {
       case 'contrato':
         return buildContrato(c, advDoc, config, logo, { ...formData.contrato, ...opts })
       case 'procuracao':
-        return buildProcuracao(c, advDoc, config, logo, { ...formData.procuracao, ...opts })
+        return buildProcuracao(c, advDoc, config, logo, {
+          ...formData.procuracao,
+          ...opts,
+          atuacaoConjunta: formData.contrato.atuacaoConjunta,
+          advogadoConjuntoNome: formData.contrato.advogadoConjuntoNome,
+          advogadoConjuntoTratamento: formData.contrato.advogadoConjuntoTratamento,
+          advogadoConjuntoOab: formData.contrato.advogadoConjuntoOab,
+          advogadoConjuntoEndereco: formData.contrato.advogadoConjuntoEndereco,
+        })
       case 'hipossuficiencia':
         return buildHipossuficiencia(c, advDoc, config, logo, { ...formData.hipossuficiencia, ...opts })
       case 'irpf':
@@ -475,6 +514,73 @@ export default function GerarDocumentos() {
         )
       }
     }))
+  }
+
+  // Manipulação de atuação conjunta e preâmbulo
+  const handleSelecionarAdvogadoConjunto = (perfilId: string) => {
+    const p = equipePerfis.find(item => item.id === perfilId)
+    if (!p) return
+    const isFeminino = /vania|dra|maria|ana|fernanda|juliana|patricia|carla|alessandra/i.test(p.nome)
+    const tratamento = isFeminino ? 'advogada' : 'advogado'
+    let oabFormatada = p.oab || ''
+    if (oabFormatada && !oabFormatada.toUpperCase().startsWith('OAB')) {
+      oabFormatada = `OAB/SP ${oabFormatada}`
+    }
+    setFormData(prev => ({
+      ...prev,
+      contrato: {
+        ...prev.contrato,
+        advogadoConjuntoId: p.id,
+        advogadoConjuntoNome: p.nome.replace(/^Dr\.\s*|^Dra\.\s*/i, '').trim(),
+        advogadoConjuntoTratamento: tratamento,
+        advogadoConjuntoOab: oabFormatada || 'OAB/SP 387.405',
+        advogadoConjuntoEndereco: prev.contrato.advogadoConjuntoEndereco || 'Avenida Presidente Costa e Silva, nº 733, sala 21, 2º andar - Office Brasil, Boqueirão, Praia Grande/SP, CEP 11700-007'
+      }
+    }))
+    toast.success(`${p.nome} selecionado(a) para atuação conjunta.`)
+  }
+
+  const handlePreencherPreambuloComPadrao = () => {
+    const texto = obterTextoPreambuloPadrao(clienteSelecionado, advDoc, config, formData.contrato)
+    setFormData(prev => ({
+      ...prev,
+      contrato: {
+        ...prev.contrato,
+        preambuloPersonalizado: texto
+      }
+    }))
+    toast.success('Preâmbulo preenchido com dados atuais do cliente e advogados.')
+  }
+
+  const handleLimparPreambulo = () => {
+    setFormData(prev => ({
+      ...prev,
+      contrato: {
+        ...prev.contrato,
+        preambuloPersonalizado: ''
+      }
+    }))
+    toast.info('Preâmbulo resetado para o padrão dinâmico automático.')
+  }
+
+  const handleRestaurarRodape = () => {
+    setFormData(prev => ({
+      ...prev,
+      cabecalhoPersonalizado: '',
+      rodapeLinha1: DEFAULTS_RODAPE.linha1,
+      rodapeLinha2: DEFAULTS_RODAPE.linha2,
+      rodapeLinha3: DEFAULTS_RODAPE.linha3,
+      numerarPaginas: false,
+      contrato: {
+        ...prev.contrato,
+        cabecalhoPersonalizado: '',
+        rodapeLinha1: DEFAULTS_RODAPE.linha1,
+        rodapeLinha2: DEFAULTS_RODAPE.linha2,
+        rodapeLinha3: DEFAULTS_RODAPE.linha3,
+        numerarPaginas: false
+      }
+    }))
+    toast.info('Cabeçalho e rodapé restaurados para os padrões institucionais do escritório.')
   }
 
   return (
@@ -724,7 +830,7 @@ export default function GerarDocumentos() {
 
               {secaoAberta.contrato && (
                 <div className="space-y-4 pt-2 border-t border-white/5">
-                  {/* Seletor de visualização do Contrato: Parâmetros vs Cláusulas */}
+                  {/* Seletor de visualização do Contrato: Parâmetros, Preâmbulo, Cláusulas e Rodapé */}
                   <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-900/90 border border-white/10">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <button
@@ -737,7 +843,23 @@ export default function GerarDocumentos() {
                             : 'text-slate-400 hover:text-white'
                         )}
                       >
-                        Parâmetros Comerciais & Financeiros
+                        1. Parâmetros Comerciais
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaContrato('preambulo')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaContrato === 'preambulo'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <Users className="w-3.5 h-3.5 text-secondary" />
+                        2. Preâmbulo & Atuação Conjunta
+                        {formData.contrato.atuacaoConjunta && (
+                          <span className="w-2 h-2 rounded-full bg-secondary" title="Atuação conjunta ativa" />
+                        )}
                       </button>
                       <button
                         type="button"
@@ -750,10 +872,23 @@ export default function GerarDocumentos() {
                         )}
                       >
                         <FileText className="w-3.5 h-3.5 text-secondary" />
-                        Texto das Cláusulas do Modelo
+                        3. Cláusulas do Modelo
                         <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-secondary/20 text-secondary font-bold">
                           {formData.contrato.clausulas?.length || 10}
                         </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaContrato('rodape')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaContrato === 'rodape'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <Settings className="w-3.5 h-3.5 text-secondary" />
+                        4. Cabeçalho, Rodapé & Páginas
                       </button>
                     </div>
 
@@ -981,6 +1116,216 @@ export default function GerarDocumentos() {
                     </div>
                   )}
 
+                  {abaContrato === 'preambulo' && (
+                    <div className="space-y-6 pt-1">
+                      {/* Atuação conjunta com outro advogado */}
+                      <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <label className="flex items-center gap-2 cursor-pointer font-bold text-white text-sm">
+                              <Checkbox
+                                checked={formData.contrato.atuacaoConjunta || false}
+                                onCheckedChange={v => {
+                                  const ativo = !!v
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    contrato: {
+                                      ...prev.contrato,
+                                      atuacaoConjunta: ativo,
+                                      // Se ativar e não tiver advogado preenchido, sugere o primeiro do sistema
+                                      ...(ativo && !prev.contrato.advogadoConjuntoNome && equipePerfis.length > 0 ? {
+                                        advogadoConjuntoId: equipePerfis[0].id,
+                                        advogadoConjuntoNome: equipePerfis[0].nome.replace(/^Dr\.\s*|^Dra\.\s*/i, '').trim(),
+                                        advogadoConjuntoOab: equipePerfis[0].oab?.toUpperCase().startsWith('OAB') ? equipePerfis[0].oab : `OAB/SP ${equipePerfis[0].oab || '387.405'}`,
+                                        advogadoConjuntoTratamento: /vania|dra|maria|ana|juliana/i.test(equipePerfis[0].nome) ? 'advogada' : 'advogado',
+                                      } : {})
+                                    }
+                                  }))
+                                }}
+                              />
+                              Atuação Conjunta com Outro Advogado
+                            </label>
+                            <p className="text-xs text-slate-400 pl-6">
+                              Inclui o(a) advogado(a) parceiro(a) na qualificação do preâmbulo, outorgados da procuração e bloco de assinaturas.
+                            </p>
+                          </div>
+                          {formData.contrato.atuacaoConjunta && (
+                            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-secondary/20 text-secondary border border-secondary/30">
+                              Ativo nos documentos
+                            </span>
+                          )}
+                        </div>
+
+                        {formData.contrato.atuacaoConjunta && (
+                          <div className="pt-3 border-t border-white/10 space-y-4">
+                            {/* Seleção do Tipo: Do Sistema vs Avulso */}
+                            <div className="flex items-center gap-4 text-xs">
+                              <label className="flex items-center gap-1.5 cursor-pointer text-slate-200">
+                                <input
+                                  type="radio"
+                                  name="advTipo"
+                                  checked={formData.contrato.advogadoConjuntoTipo !== 'avulso'}
+                                  onChange={() => setFormData(prev => ({
+                                    ...prev,
+                                    contrato: { ...prev.contrato, advogadoConjuntoTipo: 'sistema' }
+                                  }))}
+                                  className="text-secondary"
+                                />
+                                Advogado da Equipe (Sistema)
+                              </label>
+                              <label className="flex items-center gap-1.5 cursor-pointer text-slate-200">
+                                <input
+                                  type="radio"
+                                  name="advTipo"
+                                  checked={formData.contrato.advogadoConjuntoTipo === 'avulso'}
+                                  onChange={() => setFormData(prev => ({
+                                    ...prev,
+                                    contrato: { ...prev.contrato, advogadoConjuntoTipo: 'avulso' }
+                                  }))}
+                                  className="text-secondary"
+                                />
+                                Advogado Avulso / Parceiro Externo
+                              </label>
+                            </div>
+
+                            {formData.contrato.advogadoConjuntoTipo !== 'avulso' && (
+                              <div>
+                                <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">
+                                  Selecionar Advogado(a) Cadastrado(a)
+                                </Label>
+                                <select
+                                  value={formData.contrato.advogadoConjuntoId || ''}
+                                  onChange={e => handleSelecionarAdvogadoConjunto(e.target.value)}
+                                  className="w-full h-10 bg-slate-950 border border-border/60 rounded-xl px-3 text-white text-xs focus:border-secondary"
+                                >
+                                  <option value="">Selecione um profissional da banca...</option>
+                                  {equipePerfis.map(p => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.nome} {p.oab ? `(${p.oab})` : ''}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+
+                            {/* Campos editáveis do advogado em conjunto */}
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+                              <div className="sm:col-span-6">
+                                <Label className="text-slate-300 text-[10px] font-bold uppercase tracking-widest pl-1 mb-1 block">
+                                  Nome Completo do(a) Advogado(a)
+                                </Label>
+                                <Input
+                                  value={formData.contrato.advogadoConjuntoNome || ''}
+                                  onChange={e => setFormData(prev => ({
+                                    ...prev,
+                                    contrato: { ...prev.contrato, advogadoConjuntoNome: e.target.value }
+                                  }))}
+                                  placeholder="ex: VANIA VIEIRA BRAZIL NASCIMENTO"
+                                  className="h-9 bg-slate-950 border-border/60 text-white rounded-xl text-xs"
+                                />
+                              </div>
+
+                              <div className="sm:col-span-3">
+                                <Label className="text-slate-300 text-[10px] font-bold uppercase tracking-widest pl-1 mb-1 block">
+                                  Tratamento
+                                </Label>
+                                <select
+                                  value={formData.contrato.advogadoConjuntoTratamento || 'advogada'}
+                                  onChange={e => setFormData(prev => ({
+                                    ...prev,
+                                    contrato: { ...prev.contrato, advogadoConjuntoTratamento: e.target.value }
+                                  }))}
+                                  className="w-full h-9 bg-slate-950 border border-border/60 rounded-xl px-2.5 text-white text-xs focus:border-secondary"
+                                >
+                                  <option value="advogada">advogada</option>
+                                  <option value="advogado">advogado</option>
+                                  <option value="advogado(a)">advogado(a)</option>
+                                </select>
+                              </div>
+
+                              <div className="sm:col-span-3">
+                                <Label className="text-slate-300 text-[10px] font-bold uppercase tracking-widest pl-1 mb-1 block">
+                                  Número OAB
+                                </Label>
+                                <Input
+                                  value={formData.contrato.advogadoConjuntoOab || ''}
+                                  onChange={e => setFormData(prev => ({
+                                    ...prev,
+                                    contrato: { ...prev.contrato, advogadoConjuntoOab: e.target.value }
+                                  }))}
+                                  placeholder="ex: OAB/SP 387.405"
+                                  className="h-9 bg-slate-950 border-border/60 text-white rounded-xl text-xs"
+                                />
+                              </div>
+
+                              <div className="sm:col-span-12">
+                                <Label className="text-slate-300 text-[10px] font-bold uppercase tracking-widest pl-1 mb-1 block">
+                                  Endereço Profissional
+                                </Label>
+                                <Input
+                                  value={formData.contrato.advogadoConjuntoEndereco || ''}
+                                  onChange={e => setFormData(prev => ({
+                                    ...prev,
+                                    contrato: { ...prev.contrato, advogadoConjuntoEndereco: e.target.value }
+                                  }))}
+                                  placeholder="Endereço do escritório..."
+                                  className="h-9 bg-slate-950 border-border/60 text-white rounded-xl text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Textual Completo do Preâmbulo */}
+                      <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <h4 className="font-bold text-white text-xs uppercase tracking-widest">
+                              Texto do Preâmbulo / Qualificação das Partes
+                            </h4>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              Personalize livremente o texto inicial. Deixe em branco para usar a qualificação automática padronizada.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handlePreencherPreambuloComPadrao}
+                              className="h-7 text-xs border-secondary/30 text-secondary hover:bg-secondary/10 gap-1 rounded-lg"
+                            >
+                              <Sparkles className="w-3 h-3" /> Preencher c/ Dados Atuais
+                            </Button>
+                            {formData.contrato.preambuloPersonalizado && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleLimparPreambulo}
+                                className="h-7 text-xs text-slate-400 hover:text-white"
+                              >
+                                Limpar
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        <textarea
+                          rows={6}
+                          value={formData.contrato.preambuloPersonalizado || ''}
+                          onChange={e => setFormData(prev => ({
+                            ...prev,
+                            contrato: { ...prev.contrato, preambuloPersonalizado: e.target.value }
+                          }))}
+                          placeholder={obterTextoPreambuloPadrao(clienteSelecionado, advDoc, config, formData.contrato)}
+                          className="w-full bg-slate-950/80 border border-border/60 rounded-xl p-3 text-white text-xs leading-relaxed focus:border-secondary font-mono"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   {abaContrato === 'clausulas' && (
                     <div className="space-y-4 pt-1">
                       {/* Banner de Ajuda e Tags */}
@@ -1012,7 +1357,10 @@ export default function GerarDocumentos() {
                             '{nome_cliente}',
                             '{cpf_cliente}',
                             '{nome_advogado}',
-                            '{oab_advogado}'
+                            '{oab_advogado}',
+                            '{advogado_conjunto_nome}',
+                            '{advogado_conjunto_oab}',
+                            '{advogado_conjunto_tratamento}'
                           ].map(tag => (
                             <code
                               key={tag}
@@ -1102,6 +1450,133 @@ export default function GerarDocumentos() {
                         <Plus className="w-4 h-4 text-secondary" />
                         Adicionar Nova Cláusula ao Contrato
                       </Button>
+                    </div>
+                  )}
+
+                  {abaContrato === 'rodape' && (
+                    <div className="space-y-6 pt-1">
+                      {/* Cabeçalho */}
+                      <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3">
+                        <h4 className="font-bold text-white text-xs uppercase tracking-widest">
+                          Personalização do Cabeçalho
+                        </h4>
+                        <p className="text-[11px] text-slate-400">
+                          Se preenchido, substitui o logotipo da folha pelo texto personalizado informado.
+                        </p>
+                        <Input
+                          value={formData.contrato.cabecalhoPersonalizado || formData.cabecalhoPersonalizado || ''}
+                          onChange={e => {
+                            const val = e.target.value
+                            setFormData(prev => ({
+                              ...prev,
+                              cabecalhoPersonalizado: val,
+                              contrato: { ...prev.contrato, cabecalhoPersonalizado: val }
+                            }))
+                          }}
+                          placeholder="Ex: ADVOCACIA & CONSULTORIA JURÍDICA (ou deixe vazio para usar a logotipo)"
+                          className="h-9 bg-slate-950 border-border/60 text-white rounded-xl text-xs"
+                        />
+                      </div>
+
+                      {/* Rodapé Institucional do Escritório */}
+                      <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-bold text-white text-xs uppercase tracking-widest">
+                              Rodapé Institucional do Escritório
+                            </h4>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              O rodapé é geral do escritório e não exibe o usuário logado na conta.
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRestaurarRodape}
+                            className="h-7 text-xs text-slate-400 hover:text-white gap-1"
+                          >
+                            <RotateCcw className="w-3 h-3" /> Restaurar Padrão
+                          </Button>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <Label className="text-slate-300 text-[10px] font-bold uppercase tracking-widest pl-1 mb-1 block">
+                              Linha 1: Nome do Titular e Inscrição OAB
+                            </Label>
+                            <Input
+                              value={formData.contrato.rodapeLinha1 ?? formData.rodapeLinha1 ?? ''}
+                              onChange={e => {
+                                const val = e.target.value
+                                setFormData(prev => ({
+                                  ...prev,
+                                  rodapeLinha1: val,
+                                  contrato: { ...prev.contrato, rodapeLinha1: val }
+                                }))
+                              }}
+                              placeholder="EDVALDO RODRIGUES FERREIRA | OAB/SP 465.818"
+                              className="h-9 bg-slate-950 border-border/60 text-white rounded-xl text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-slate-300 text-[10px] font-bold uppercase tracking-widest pl-1 mb-1 block">
+                              Linha 2: Endereço do Escritório
+                            </Label>
+                            <Input
+                              value={formData.contrato.rodapeLinha2 ?? formData.rodapeLinha2 ?? ''}
+                              onChange={e => {
+                                const val = e.target.value
+                                setFormData(prev => ({
+                                  ...prev,
+                                  rodapeLinha2: val,
+                                  contrato: { ...prev.contrato, rodapeLinha2: val }
+                                }))
+                              }}
+                              placeholder="Avenida Presidente Costa e Silva, nº 733..."
+                              className="h-9 bg-slate-950 border-border/60 text-white rounded-xl text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-slate-300 text-[10px] font-bold uppercase tracking-widest pl-1 mb-1 block">
+                              Linha 3: Contatos Oficiais (E-mail e Telefone)
+                            </Label>
+                            <Input
+                              value={formData.contrato.rodapeLinha3 ?? formData.rodapeLinha3 ?? ''}
+                              onChange={e => {
+                                const val = e.target.value
+                                setFormData(prev => ({
+                                  ...prev,
+                                  rodapeLinha3: val,
+                                  contrato: { ...prev.contrato, rodapeLinha3: val }
+                                }))
+                              }}
+                              placeholder="edvaldorodrigues.advocacia@gmail.com · (13) 99682-4364"
+                              className="h-9 bg-slate-950 border-border/60 text-white rounded-xl text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Numeração de Páginas */}
+                        <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-200 font-medium">
+                            <Checkbox
+                              checked={formData.contrato.numerarPaginas ?? formData.numerarPaginas ?? false}
+                              onCheckedChange={v => {
+                                const b = !!v
+                                setFormData(prev => ({
+                                  ...prev,
+                                  numerarPaginas: b,
+                                  contrato: { ...prev.contrato, numerarPaginas: b }
+                                }))
+                              }}
+                            />
+                            Incluir numeração de páginas nos documentos (ex: Página 1 de 4)
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   )}
 

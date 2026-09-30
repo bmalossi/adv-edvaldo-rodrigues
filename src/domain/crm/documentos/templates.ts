@@ -21,21 +21,54 @@ export const DADOS_ESCRITORIO_DOCUMENTO: AdvogadoConfigDoc = {
   telefone: '(13) 99682-4364'
 }
 
-function buildHeader(logo?: string | null): string {
+export interface RodapeDocOptions {
+  linha1?: string
+  linha2?: string
+  linha3?: string
+  numerarPaginas?: boolean
+}
+
+function buildHeader(logo?: string | null, customHeader?: string): string {
+  if (customHeader && customHeader.trim()) {
+    return `<div class="letterhead"><div style="padding-bottom:2.5mm;border-bottom:1.5px solid #b58a37;font-size:12pt;font-weight:bold;color:#0f172a;letter-spacing:1px;text-align:center;">${esc(customHeader)}</div></div>`
+  }
   if (!logo) {
     return `<div class="letterhead"><div style="padding-bottom:3mm;border-bottom:1px solid #e2e8f0;font-size:13pt;font-weight:bold;color:#1e293b;letter-spacing:1px;text-align:center;">ADVOCACIA & CONSULTORIA JURÍDICA</div></div>`
   }
   return `<div class="letterhead"><img src="${logo}" alt="Logotipo"></div>`
 }
 
-function buildFooter(_adv?: AdvogadoConfigDoc): string {
+function buildFooter(
+  _adv?: AdvogadoConfigDoc,
+  opts?: RodapeDocOptions,
+  pageIndex?: number,
+  totalPages?: number
+): string {
   // O rodapé é geral do escritório e deve sempre apresentar exclusivamente os dados institucionais do escritório
   const d = DADOS_ESCRITORIO_DOCUMENTO
-  return `<div class="doc-footer"><strong>${esc(d.nome)} | ${esc(d.oab)}</strong><br>${esc(d.endereco || '')}<br>${esc(d.email)} · ${esc(d.telefone)}</div>`
+  const l1 = opts?.linha1 !== undefined && opts.linha1 !== '' ? opts.linha1 : `${d.nome} | ${d.oab}`
+  const l2 = opts?.linha2 !== undefined && opts.linha2 !== '' ? opts.linha2 : (d.endereco || '')
+  const l3 = opts?.linha3 !== undefined && opts.linha3 !== '' ? opts.linha3 : `${d.email} · ${d.telefone}`
+
+  const paginacaoHtml = (opts?.numerarPaginas && pageIndex && totalPages)
+    ? `<div class="doc-page-number">Página ${pageIndex} de ${totalPages}</div>`
+    : ''
+
+  return `<div class="doc-footer">${paginacaoHtml}${l1 ? `<strong>${esc(l1)}</strong><br>` : ''}${l2 ? `${esc(l2)}<br>` : ''}${l3 ? `${esc(l3)}` : ''}</div>`
 }
 
-function buildPage(content: string, title: string = '', meta: string = '', adv: AdvogadoConfigDoc, logo?: string | null): string {
-  return `<div class="doc-page">${buildHeader(logo)}${meta ? `<div class="doc-meta">${esc(meta)}</div>` : ''}${title ? `<div class="doc-title">${esc(title)}</div>` : ''}<div class="doc-body">${content}</div>${buildFooter(adv)}</div>`
+function buildPage(
+  content: string,
+  title: string = '',
+  meta: string = '',
+  adv: AdvogadoConfigDoc,
+  logo?: string | null,
+  rodapeOpts?: RodapeDocOptions,
+  cabecalhoPersonalizado?: string,
+  pageIndex?: number,
+  totalPages?: number
+): string {
+  return `<div class="doc-page">${buildHeader(logo, cabecalhoPersonalizado)}${meta ? `<div class="doc-meta">${esc(meta)}</div>` : ''}${title ? `<div class="doc-title">${esc(title)}</div>` : ''}<div class="doc-body">${content}</div>${buildFooter(adv, rodapeOpts, pageIndex, totalPages)}</div>`
 }
 
 export function buildProcuracao(
@@ -63,11 +96,22 @@ export function buildProcuracao(
   const finalidade = o.finalidadeProc ? `<p><strong>FINALIDADE ESPECÍFICA:</strong> ${esc(o.finalidadeProc)}.</p>` : ''
   const enderecoAdv = adv.endereco || 'com escritório em ' + cfg.foro
 
+  const temConjunto = Boolean(o.atuacaoConjunta && o.advogadoConjuntoNome)
+  const outorgadosConjunto = temConjunto
+    ? `, e <strong>${esc(o.advogadoConjuntoNome!)}</strong>, ${esc(o.advogadoConjuntoTratamento || 'advogado(a)')}, inscrito(a) na ${esc(o.advogadoConjuntoOab || '')}, com escritório profissional em ${esc(o.advogadoConjuntoEndereco || enderecoAdv)}`
+    : ''
+
+  const rotuloOutorgado = temConjunto ? 'OUTORGADOS:' : 'OUTORGADO:'
+  const textoProcuradores = temConjunto
+    ? 'seus bastantes procuradores os advogados acima qualificados, conferindo-lhes poderes para o foro em geral'
+    : 'seu bastante procurador o advogado acima qualificado, conferindo-lhe poderes para o foro em geral'
+  const textoAutorizacao = temConjunto ? 'Ficam os OUTORGADOS autorizados' : 'Fica o OUTORGADO autorizado'
+
   const body = `<p><strong>OUTORGANTE:</strong> ${esc(clienteQualificacao(c))}.</p>
-  <p><strong>OUTORGADO:</strong> ${esc(adv.nome)}, advogado inscrito na ${esc(adv.oab)}, com escritório em ${esc(enderecoAdv)}, e-mail ${esc(adv.email)}, integrante da ${esc(cfg.empresa)}, registro OAB nº ${esc(cfg.socOab)}, CNPJ nº ${esc(cfg.cnpj)}.</p>
-  <p>Pelo presente instrumento particular, o OUTORGANTE nomeia e constitui seu bastante procurador o advogado acima qualificado, conferindo-lhe poderes para o foro em geral, com a cláusula <strong>AD JUDICIA ET EXTRA</strong>, para representá-lo judicial, administrativa e extrajudicialmente, ativa ou passivamente, perante qualquer Juízo, Tribunal, órgão público ou entidade privada, em qualquer instância, podendo propor ações, apresentar defesas, recursos, requerimentos, notificações e demais medidas cabíveis, produzir provas, requerer documentos e certidões, acompanhar processos, procedimentos, inquéritos, perícias e audiências, praticando todos os atos necessários à defesa de seus interesses.</p>
+  <p><strong>${rotuloOutorgado}</strong> ${esc(adv.nome)}, advogado inscrito na ${esc(adv.oab)}, com escritório em ${esc(enderecoAdv)}, e-mail ${esc(adv.email)}, integrante da ${esc(cfg.empresa)}, registro OAB nº ${esc(cfg.socOab)}, CNPJ nº ${esc(cfg.cnpj)}${outorgadosConjunto}.</p>
+  <p>Pelo presente instrumento particular, o OUTORGANTE nomeia e constitui ${textoProcuradores}, com a cláusula <strong>AD JUDICIA ET EXTRA</strong>, para representá-lo judicial, administrativa e extrajudicialmente, ativa ou passivamente, perante qualquer Juízo, Tribunal, órgão público ou entidade privada, em qualquer instância, podendo propor ações, apresentar defesas, recursos, requerimentos, notificações e demais medidas cabíveis, produzir provas, requerer documentos e certidões, acompanhar processos, procedimentos, inquéritos, perícias e audiências, praticando todos os atos necessários à defesa de seus interesses.</p>
   <p>Confere, ainda, nos termos do artigo 105 do Código de Processo Civil, poderes especiais para <strong>${esc(special)}</strong>.</p>
-  <p>Fica o OUTORGADO autorizado a requerer reserva, destaque e levantamento de honorários contratuais e sucumbenciais; nomear preposto, quando legalmente cabível; praticar atos físicos ou eletrônicos; e ${o.substabelecer === false ? 'não substabelecer sem autorização expressa' : 'substabelecer, no todo ou em parte, com ou sem reserva de poderes'}.</p>${finalidade}
+  <p>${textoAutorizacao} a requerer reserva, destaque e levantamento de honorários contratuais e sucumbenciais; nomear preposto, quando legalmente cabível; praticar atos físicos ou eletrônicos; e ${o.substabelecer === false ? 'não substabelecer sem autorização expressa' : 'substabelecer, no todo ou em parte, com ou sem reserva de poderes'}.</p>${finalidade}
   <p style="margin-top:5mm;">${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
   <div class="signature-block" style="margin-top:12mm;">
     <div class="signature-line"></div>
@@ -75,7 +119,22 @@ export function buildProcuracao(
     CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}
   </div>`
 
-  return `<div class="document">${buildPage(body, 'PROCURAÇÃO AD JUDICIA ET EXTRA', num, adv, logo)}</div>`
+  return `<div class="document">${buildPage(
+    body,
+    'PROCURAÇÃO AD JUDICIA ET EXTRA',
+    num,
+    adv,
+    logo,
+    {
+      linha1: o.rodapeLinha1,
+      linha2: o.rodapeLinha2,
+      linha3: o.rodapeLinha3,
+      numerarPaginas: o.numerarPaginas
+    },
+    o.cabecalhoPersonalizado,
+    1,
+    1
+  )}</div>`
 }
 
 export function buildHipossuficiencia(
@@ -108,7 +167,22 @@ export function buildHipossuficiencia(
     ${esc(c.nome_razao_social || '')}
   </div>`
 
-  return `<div class="document">${buildPage(body, 'DECLARAÇÃO DE HIPOSSUFICIÊNCIA', num, adv, logo)}</div>`
+  return `<div class="document">${buildPage(
+    body,
+    'DECLARAÇÃO DE HIPOSSUFICIÊNCIA',
+    num,
+    adv,
+    logo,
+    {
+      linha1: o.rodapeLinha1,
+      linha2: o.rodapeLinha2,
+      linha3: o.rodapeLinha3,
+      numerarPaginas: o.numerarPaginas
+    },
+    o.cabecalhoPersonalizado,
+    1,
+    1
+  )}</div>`
 }
 
 export function buildIrpf(
@@ -135,7 +209,22 @@ export function buildIrpf(
   </div>
   <p style="font-size:8pt;color:#64748b;margin-top:14mm;line-height:1.4;"><strong>Observação:</strong> a Receita Federal não emite declaração anual de isento. A ausência de obrigatoriedade pode ser declarada pelo próprio interessado, sob sua responsabilidade, conforme a legislação aplicável.</p>`
 
-  return `<div class="document">${buildPage(body, 'DECLARAÇÃO DE ISENÇÃO DO IMPOSTO DE RENDA PESSOA FÍSICA (IRPF)', num, adv, logo)}</div>`
+  return `<div class="document">${buildPage(
+    body,
+    'DECLARAÇÃO DE ISENÇÃO DO IMPOSTO DE RENDA PESSOA FÍSICA (IRPF)',
+    num,
+    adv,
+    logo,
+    {
+      linha1: o.rodapeLinha1,
+      linha2: o.rodapeLinha2,
+      linha3: o.rodapeLinha3,
+      numerarPaginas: o.numerarPaginas
+    },
+    o.cabecalhoPersonalizado,
+    1,
+    1
+  )}</div>`
 }
 
 export function buildRecibo(
@@ -170,7 +259,22 @@ export function buildRecibo(
     ${esc(adv.oab)}
   </div>`
 
-  return `<div class="document">${buildPage(body, 'RECIBO DE PAGAMENTO', num, adv, logo)}</div>`
+  return `<div class="document">${buildPage(
+    body,
+    'RECIBO DE PAGAMENTO',
+    num,
+    adv,
+    logo,
+    {
+      linha1: o.rodapeLinha1,
+      linha2: o.rodapeLinha2,
+      linha3: o.rodapeLinha3,
+      numerarPaginas: o.numerarPaginas
+    },
+    o.cabecalhoPersonalizado,
+    1,
+    1
+  )}</div>`
 }
 
 export function buildResidencia(
@@ -202,7 +306,22 @@ export function buildResidencia(
     CPF/CNPJ nº ${esc(cpf || '')}
   </div>`
 
-  return `<div class="document">${buildPage(body, 'DECLARAÇÃO DE RESIDÊNCIA', num, adv, logo)}</div>`
+  return `<div class="document">${buildPage(
+    body,
+    'DECLARAÇÃO DE RESIDÊNCIA',
+    num,
+    adv,
+    logo,
+    {
+      linha1: o.rodapeLinha1,
+      linha2: o.rodapeLinha2,
+      linha3: o.rodapeLinha3,
+      numerarPaginas: o.numerarPaginas
+    },
+    o.cabecalhoPersonalizado,
+    1,
+    1
+  )}</div>`
 }
 
 function interpolarTexto(texto: string, tags: Record<string, string>): string {
@@ -252,9 +371,45 @@ function estimateHtmlHeightMm(html: string): number {
   return textHeight + paragraphMargins + titleHeights + clauseMargins
 }
 
+export function gerarPreambuloContrato(
+  c: Partial<Cliente>,
+  adv: AdvogadoConfigDoc,
+  cfg: ConfigDocumentos,
+  o: Partial<OpcaoContrato>
+): string {
+  if (o.preambuloPersonalizado && o.preambuloPersonalizado.trim()) {
+    const lines = o.preambuloPersonalizado.split(/\n+/).map(l => l.trim()).filter(Boolean)
+    return lines.map(line => `<p>${esc(line)}</p>`).join('')
+  }
+
+  const parteConjuntaHtml = (o.atuacaoConjunta && o.advogadoConjuntoNome)
+    ? `, com atuação conjunta de <strong>${esc(o.advogadoConjuntoNome)}, ${esc(o.advogadoConjuntoTratamento || 'advogada')}, ${esc(o.advogadoConjuntoOab || '')}</strong>, com escritório profissional na ${esc(o.advogadoConjuntoEndereco || adv.endereco || cfg.foro)}`
+    : ''
+
+  return `<p>Pelo presente instrumento, <strong>${esc(cfg.empresa)}</strong>, registrada na OAB/SP nº ${esc(cfg.socOab)}, CNPJ nº ${esc(cfg.cnpj)}, com sede na ${esc(adv.endereco || cfg.foro)}, neste ato representada por <strong>Dr. ${esc(adv.nome)}, ${esc(adv.oab)}</strong>${parteConjuntaHtml}, doravante <strong>CONTRATADA</strong>, e <strong>${esc(clienteQualificacao(c))}</strong>, doravante <strong>CONTRATANTE</strong>, ajustam o seguinte:</p>`
+}
+
+export function obterTextoPreambuloPadrao(
+  c: Partial<Cliente> | null,
+  adv: AdvogadoConfigDoc,
+  cfg: ConfigDocumentos,
+  o: Partial<OpcaoContrato>
+): string {
+  const parteConjunta = (o.atuacaoConjunta && o.advogadoConjuntoNome)
+    ? `, com atuação conjunta de ${o.advogadoConjuntoNome}, ${o.advogadoConjuntoTratamento || 'advogada'}, ${o.advogadoConjuntoOab || ''}, com escritório profissional na ${o.advogadoConjuntoEndereco || adv.endereco || cfg.foro}`
+    : ''
+
+  const qualifCliente = c ? clienteQualificacao(c) : '[DADOS DO CONTRATANTE QUALIFICADO]'
+
+  return `Pelo presente instrumento, ${cfg.empresa}, registrada na OAB/SP nº ${cfg.socOab}, CNPJ nº ${cfg.cnpj}, com sede na ${adv.endereco || cfg.foro}, neste ato representada por Dr. ${adv.nome}, ${adv.oab}${parteConjunta}, doravante CONTRATADA, e ${qualifCliente}, doravante CONTRATANTE, ajustam o seguinte:`
+}
+
 function estimateSignaturesHeightMm(signaturesHtml: string): number {
   const hasWitnesses = signaturesHtml.includes('TESTEMUNHA')
-  return hasWitnesses ? 95 : 55
+  const countBoxes = (signaturesHtml.match(/class=["']sigbox["']/gi) || []).length
+  if (hasWitnesses) return 90
+  if (countBoxes > 2) return 65
+  return 50
 }
 
 function distributeContractPages(
@@ -263,10 +418,10 @@ function distributeContractPages(
   signaturesHtml: string
 ): string[] {
   // Limite seguro em mm para que o conteúdo preencha as folhas sem estourar no rodapé
-  // Página 1: Altura total A4 (297mm) - padding (30mm) - cabeçalho (29mm) - título/meta (22mm) = ~216mm
+  // Página 1: Altura total A4 (297mm) - padding (32mm) - cabeçalho (30mm) - título/meta (20mm) = ~215mm
   const PAGE_1_MAX_MM = 210
-  // Páginas 2+: Não têm o título do contrato, apenas cabeçalho reduzido e rodapé = ~233mm
-  const PAGE_N_MAX_MM = 225
+  // Páginas 2+: Não têm o título do contrato = ~235mm
+  const PAGE_N_MAX_MM = 230
 
   const sigHeightMm = estimateSignaturesHeightMm(signaturesHtml)
 
@@ -316,7 +471,17 @@ function distributeContractPages(
   if (currentHeightMm + sigHeightMm <= lastPageMaxMm) {
     pages[lastPageIndex] += signaturesHtml
   } else {
-    pages.push(signaturesHtml)
+    // Se a última página tem múltiplas cláusulas e assinaturas transbordam,
+    // puxa a última cláusula junto com as assinaturas para evitar uma página de assinaturas isoladas
+    const lastPageClauses = pages[lastPageIndex]
+    const clauseMatches = lastPageClauses.match(/<div class="clause">[\s\S]*?<\/div>(?=(<div class="clause">|$))/g) || []
+    if (clauseMatches.length >= 2) {
+      const lastClause = clauseMatches[clauseMatches.length - 1]
+      pages[lastPageIndex] = lastPageClauses.slice(0, lastPageClauses.lastIndexOf(lastClause))
+      pages.push(lastClause + signaturesHtml)
+    } else {
+      pages.push(signaturesHtml)
+    }
   }
 
   return pages
@@ -346,11 +511,6 @@ export function buildContrato(
   const dia = o.diaVencimento || '10'
   const primeiro = o.primeiroVencimento ? formatarDataBr(o.primeiroVencimento) : 'no mês subsequente'
 
-  const fix = Number(o.honorariosFixos) || 0
-  const entrada = Number(o.entrada) || 0
-  const parcelasNum = Number(o.parcelas) || 1
-  const valorParcelaCalc = parcelasNum > 0 ? (fix - entrada) / parcelasNum : 0
-
   const percentualExito = o.percentualExito || o.honorariosExito || '30'
   const percentualExitoFormatted = percentualExito.includes('%') ? percentualExito : `${percentualExito}%`
   const multa = o.multa || '2'
@@ -364,7 +524,7 @@ export function buildContrato(
     : 'Este contrato constitui título executivo extrajudicial nos termos do art. 24 da Lei nº 8.906/1994. Assinaturas físicas ou eletrônicas que comprovem autoria e integridade produzem os mesmos efeitos.'
 
   const blocoTestemunhas = o.incluirTestemunhas
-    ? `<div class="party-signatures" style="margin-top:20mm;">
+    ? `<div class="party-signatures" style="margin-top:16mm;">
     <div class="sigbox">
       <div class="sig-space"></div>
       <div class="line"></div>
@@ -382,85 +542,56 @@ export function buildContrato(
   </div>`
     : ''
 
-  const assinaturasHtml = `<p>${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
-  <div class="party-signatures" style="margin-top:16mm;">
+  const sigContratante = `
     <div class="sigbox">
       <div class="sig-space"></div>
       <div class="line"></div>
       <strong>CONTRATANTE:</strong><br>${esc(c.nome_razao_social || '')}<br>CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}
-    </div>
+    </div>`
+
+  const sigAdvTitular = `
     <div class="sigbox">
       <div class="sig-space">
         ${(o.useSignature && o.signatureImg) ? `<img class="signature-img" src="${o.signatureImg}" alt="Assinatura">` : ''}
       </div>
       <div class="line"></div>
       <strong>${esc(adv.nome)}</strong><br>Advogado<br>${esc(adv.oab)}
-    </div>
-  </div>
-  ${blocoTestemunhas}`
+    </div>`
 
-  const preambuloHtml = `<p>Pelo presente instrumento, <strong>${esc(cfg.empresa)}</strong>, registrada na OAB/SP nº ${esc(cfg.socOab)}, CNPJ nº ${esc(cfg.cnpj)}, com sede em ${esc(adv.endereco || cfg.foro)}, neste ato representada por Dr. <strong>${esc(adv.nome)}</strong>, ${esc(adv.oab)}, doravante <strong>CONTRATADA</strong>, e <strong>${esc(clienteQualificacao(c))}</strong>, doravante <strong>CONTRATANTE</strong>, ajustam o seguinte:</p>`
+  const sigAdvConjunto = (o.atuacaoConjunta && o.advogadoConjuntoNome)
+    ? `
+    <div class="sigbox" style="margin-top:8mm;">
+      <div class="sig-space"></div>
+      <div class="line"></div>
+      <strong>${esc(o.advogadoConjuntoNome)}</strong><br>${esc(o.advogadoConjuntoTratamento || 'Advogado(a)')}<br>${esc(o.advogadoConjuntoOab || '')}
+    </div>`
+    : ''
 
-  const isCustomClausulas = Boolean(
-    o.clausulas &&
-    o.clausulas.length > 0 &&
-    (o.clausulas.length !== 10 || o.clausulas.some(c => c.id.startsWith('c-') || c.id === 'c1' || c.id === 'c11'))
-  )
-
-  if (!isCustomClausulas) {
-    const pg1 = `${preambuloHtml}
-  <div class="clause"><div class="clause-title">CLÁUSULA 1ª – OBJETO, ESCOPO E LIMITES</div>
-  <p><strong>1.1.</strong> A CONTRATADA prestará serviços de ${esc(objTxt)}${esc(atuacaoTxt)}, análise, preparação, ajuizamento e acompanhamento da ação judicial, em primeiro grau, até a sentença, praticando os atos técnicos necessários conforme a procuração e a estratégia profissional.</p>
-  <p><strong>1.2.</strong> Incluem-se: ${esc(o.incluidos || 'reuniões indispensáveis; análise e organização documental; petição inicial; manifestações ordinárias; réplica; audiência; acompanhamento de perícia judicial; memoriais e acompanhamento até a sentença; recursos e contrarrazões;.')}.</p>
-  <p><strong>1.3.</strong> Não se incluem, salvo ajuste escrito e honorários adicionais: ${esc(o.excluidos || 'liquidação, cumprimento ou execução de sentença; ações autônomas ou conexas; reconvenção; incidentes complexos; atuação criminal, administrativa ou extrajudicial distinta; tribunais, STJ ou STF; diligências fora da Comarca; peritos, assistentes, correspondentes e outros profissionais.')}.</p>
-  <p><strong>1.4.</strong> A advocacia constitui obrigação de meio, sem promessa de resultado. A CONTRATADA poderá atuar por seu titular, integrantes, associados, correspondentes ou substabelecidos, preservados o sigilo, a supervisão e a responsabilidade profissional.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 2ª – DEVERES DAS PARTES</div>
-  <p><strong>2.1.</strong> A CONTRATADA atuará com independência técnica, zelo e observância da legislação e da ética profissional; informará fatos processuais relevantes; manterá sigilo; e prestará contas de valores que receber, descontando os honorários e despesas autorizados.</p>
-  <p><strong>2.2.</strong> A CONTRATANTE obriga-se a: a) fornecer fatos e documentos completos, verdadeiros e tempestivos; b) cumprir solicitações e prazos; c) comparecer aos atos para os quais for convocada; d) manter contatos e endereço atualizados; e) não omitir fatos, apresentar documento falso, orientar conduta ilegal ou exigir atuação contrária à técnica ou à ética; f) informar em 24 horas qualquer proposta, acordo, pagamento, depósito, recebimento ou contato da parte adversa; e g) pagar pontualmente honorários e despesas.</p></div>`
-
-    const pg2 = `<div class="clause"><div class="clause-title">CLÁUSULA 2ª – DEVERES DAS PARTES (continuação)</div>
-  <p><strong>2.3.</strong> A demora, omissão, recusa, ausência ou informação inexata da CONTRATANTE que comprometa prazo, prova ou estratégia excluirá a responsabilidade da CONTRATADA pelos prejuízos diretamente decorrentes dessa conduta.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 3ª – DESPESAS, CUSTAS E TERCEIROS</div>
-  <p><strong>3.1.</strong> Custas, taxas, emolumentos, certidões, cópias, autenticações, deslocamentos, viagens, diligências, depósitos recursais, perícias, assistentes técnicos, cálculos, laudos, correspondentes e demais gastos necessários são de responsabilidade exclusiva da CONTRATANTE e não se confundem com os honorários.</p>
-  <p><strong>3.2.</strong> A CONTRATADA poderá exigir adiantamento. A falta de pagamento autoriza a não prática do ato dependente da despesa, após comunicação, ressalvadas as medidas urgentes sob responsabilidade profissional. A gratuidade judicial não abrange honorários contratuais, êxito ou despesas extraprocessuais.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 4ª – HONORÁRIOS FIXOS</div>
-  <p><strong>4.1.</strong> A CONTRATANTE pagará <strong>${esc(fixFormatted)} (${esc(ext)})</strong>: ${esc(entFormatted)} na assinatura e ${esc(parcelas)} parcela(s) mensal(is) de ${esc(valParcFormatted)}, vencível(is) todo dia ${esc(dia)}, iniciando-se em ${esc(primeiro)}. A quitação depende da efetiva compensação.</p>
-  <p><strong>4.2.</strong> Para apuração em encerramento antecipado, os honorários fixos correspondem às etapas: 20% pela análise, reunião, documentos e estratégia; 30% pela elaboração e protocolo da inicial e medidas iniciais; 30% pelo contraditório, réplica, prova e instrução; e 20% pela fase final, memoriais e sentença. Etapa iniciada será remunerada proporcionalmente ao trabalho realizado.</p>
-  <p><strong>4.3.</strong> O parcelamento é mera facilidade financeira, não condiciona o início do serviço e não altera a exigibilidade da remuneração pelas etapas efetivamente iniciadas ou concluídas. Valores pagos remuneram trabalho realizado e somente serão restituídos se excederem o montante proporcionalmente devido.</p></div>`
-
-    const pg3 = `<div class="clause"><div class="clause-title">CLÁUSULA 5ª – HONORÁRIOS DE ÊXITO E SUCUMBÊNCIA</div>
-  <p><strong>5.1.</strong> Além dos honorários fixos, serão devidos honorários de êxito de <strong>${esc(percentualExitoFormatted)}</strong> sobre o benefício econômico bruto obtido, judicial ou extrajudicialmente, por sentença, acordo, pagamento direto, restituição, indenização, compensação, abatimento, remissão, entrega de bem ou vantagem mensurável relacionada aos fatos contratados.</p>
-  <p><strong>5.2.</strong> A base compreende principal, juros, correção e acréscimos, antes de tributos, custas ou despesas. Em pagamento parcelado, o êxito vencerá sobre cada parcela recebida. Em bem ou vantagem não pecuniária, valerá o valor do acordo, decisão, avaliação ou mercado, vencendo em até 5 dias úteis da aquisição.</p>
-  <p><strong>5.3.</strong> A CONTRATANTE autoriza destaque, reserva, retenção, levantamento e desconto dos honorários e despesas de valores recebidos nos autos ou pela CONTRATADA, com prestação de contas e repasse do saldo. Pagamento ou acordo direto deverá ser informado em 24 horas, e o êxito pago em 2 dias úteis.</p>
-  <p><strong>5.4.</strong> Honorários sucumbenciais pertencem exclusivamente aos advogados e não compensam nem reduzem os honorários fixos ou de êxito. Acordo, desistência por satisfação, reconhecimento ou solução que gere benefício econômico mantém a incidência do êxito.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 6ª – MORA, INADIMPLEMENTO E COBRANÇA</div>
-  <p><strong>6.1.</strong> O não pagamento no vencimento constitui mora automática e sujeita o valor vencido a multa de <strong>${esc(multaFormatted)}</strong>, juros de 1% ao mês pro rata die e atualização pelo IPCA, ou índice que o substitua, até o pagamento.</p>
-  <p><strong>6.2.</strong> Atraso superior a 15 dias autoriza notificação por WhatsApp, e-mail, carta ou meio idôneo, com prazo final de 5 dias. Persistindo a mora, a CONTRATADA poderá resolver o contrato por justa causa e renunciar ao mandato, cumprindo o prazo legal de transição.</p>
-  <p><strong>6.3.</strong> Na resolução por inadimplemento tornam-se imediatamente exigíveis: parcelas vencidas; despesas antecipadas; remuneração das etapas iniciadas ou concluídas; êxito já implementado; e demais créditos comprovados. Os valores poderão ser cobrados, protestados e executados, com despesas de cobrança e honorários sucumbenciais fixados judicialmente.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 7ª – RESOLUÇÃO ANTECIPADA POR CAUSA DA CONTRATANTE</div>
-  <p><strong>7.1.</strong> Constituem justa causa, além do inadimplemento: documento ou informação falsa; omissão essencial; recusa reiterada em entregar documentos ou cumprir orientação necessária; falta de custas; exigência de ato ilegal, antiético ou tecnicamente inadequado; ofensa, ameaça, assédio ou grave quebra de confiança; acordo, contato ou recebimento ocultado; ausência injustificada em ato; contratação paralela incompatível; ou qualquer conduta que inviabilize ou comprometa a defesa.</p>
-  <p><strong>7.2.</strong> Verificada a justa causa, a CONTRATADA comunicará o encerramento por escrito e adotará a renúncia ou substituição prevista em lei, mantendo apenas as providências indispensáveis durante o prazo legal. Permanecerão devidos os honorários vencidos, os proporcionais ao trabalho executado, as despesas, o êxito implementado e a sucumbência.</p></div>`
-
-    const pg4 = `<div class="clause"><div class="clause-title">CLÁUSULA 8ª – REVOGAÇÃO, RENÚNCIA E ENCERRAMENTO</div>
-  <p><strong>8.1.</strong> A CONTRATANTE poderá revogar o mandato e a CONTRATADA poderá renunciar, mediante comunicação formal. Revogação, substituição, desistência, perda do objeto ou encerramento por decisão da CONTRATANTE não afastam os honorários vencidos, despesas e remuneração proporcional aos atos úteis e etapas realizadas, inclusive êxito posterior decorrente da atuação, quando juridicamente cabível.</p>
-  <p><strong>8.2.</strong> Havendo culpa exclusiva comprovada da CONTRATADA que impossibilite o serviço, serão devidos apenas os honorários proporcionais aos atos úteis realizados, sem prejuízo das responsabilidades legais cabíveis.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 9ª – COMUNICAÇÕES, DOCUMENTOS, DADOS E SIGILO</div>
-  <p><strong>9.1.</strong> São válidas as comunicações enviadas aos últimos telefones, WhatsApp e e-mails informados, inclusive avisos de atos, solicitações, cobrança, resolução e ciência de renúncia, quando comprovável o envio ou recebimento. Mensagens fora do horário comercial serão respondidas em prazo razoável, salvo urgência contratada.</p>
-  <p><strong>9.2.</strong> A CONTRATANTE manterá cópia dos documentos originais. Encerrado o contrato, documentos físicos deverão ser retirados em 90 dias; depois poderão ser digitalizados, arquivados ou descartados de modo seguro, respeitados os deveres legais de guarda.</p>
-  <p><strong>9.3.</strong> A CONTRATANTE autoriza o tratamento de dados e documentos para execução do contrato, exercício de direitos, prevenção à fraude, faturamento, cobrança, arquivo e comunicação com autoridades, tribunais, cartórios, peritos e auxiliares. A CONTRATADA manterá sigilo e medidas razoáveis de segurança.</p></div>
-  <div class="clause"><div class="clause-title">CLÁUSULA 10ª – TÍTULO EXECUTIVO, ASSINATURA E FORO</div>
-  <p><strong>10.1.</strong> ${textoExecutivo}</p>
-  <p><strong>10.2.</strong> Tolerância não implica renúncia, novação ou alteração. A invalidade de uma disposição não prejudica as demais. O contrato obriga as partes e sucessores nos limites legais e patrimoniais.</p>
-  <p><strong>10.3.</strong> Fica eleito o foro da <strong>${esc(foro)}</strong>, ressalvada competência legal inderrogável.</p>
-  ${o.clausulaExtra ? `<p><strong>10.4. Cláusula adicional:</strong> ${esc(o.clausulaExtra)}</p>` : ''}
-  <p style="margin-top:3mm;"><strong>Por estarem de acordo, as partes declaram ter lido, compreendido e aceitado integralmente este contrato.</strong></p></div>`
-
-    const pg5 = `${assinaturasHtml}`
-
-    return `<div class="document">${buildPage(pg1, 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS E HONORÁRIOS ADVOCATÍCIOS', num, adv, logo)}${buildPage(pg2, '', num, adv, logo)}${buildPage(pg3, '', num, adv, logo)}${buildPage(pg4, '', num, adv, logo)}${buildPage(pg5, '', num, adv, logo)}</div>`
+  let blocoAssinaturasPartes = ''
+  if (o.atuacaoConjunta && o.advogadoConjuntoNome) {
+    blocoAssinaturasPartes = `
+    <div class="party-signatures" style="margin-top:14mm; flex-wrap:wrap; justify-content:space-between;">
+      <div style="width:48%;">${sigContratante}</div>
+      <div style="width:48%;">${sigAdvTitular}</div>
+      <div style="width:48%; margin-left:auto;">${sigAdvConjunto}</div>
+    </div>`
+  } else {
+    blocoAssinaturasPartes = `
+    <div class="party-signatures" style="margin-top:16mm;">
+      ${sigContratante}
+      ${sigAdvTitular}
+    </div>`
   }
 
-  const clausulasParaUsar = o.clausulas || CLAUSULAS_PADRAO_CONTRATO
+  const assinaturasHtml = `<p>${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
+  ${blocoAssinaturasPartes}
+  ${blocoTestemunhas}`
+
+  const preambuloHtml = gerarPreambuloContrato(c, adv, cfg, o)
+
+  const clausulasParaUsar = (o.clausulas && o.clausulas.length > 0)
+    ? o.clausulas
+    : CLAUSULAS_PADRAO_CONTRATO
 
   const tags: Record<string, string> = {
     objeto: `${objTxt}${atuacaoTxt}`,
@@ -482,6 +613,10 @@ export function buildContrato(
     nome_advogado: adv.nome || '',
     oab_advogado: adv.oab || '',
     empresa_advogado: cfg.empresa || '',
+    advogado_conjunto_nome: o.advogadoConjuntoNome || '',
+    advogado_conjunto_oab: o.advogadoConjuntoOab || '',
+    advogado_conjunto_tratamento: o.advogadoConjuntoTratamento || 'advogado(a)',
+    advogado_conjunto_endereco: o.advogadoConjuntoEndereco || '',
     cidade: city,
     uf: uf,
     data: dateLong(date)
@@ -498,7 +633,22 @@ export function buildContrato(
   const pages = distributeContractPages(preambuloHtml, clausesHtml, assinaturasHtml)
   const renderedPages = pages.map((pContent, idx) => {
     const pTitle = idx === 0 ? 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS E HONORÁRIOS ADVOCATÍCIOS' : ''
-    return buildPage(pContent, pTitle, num, adv, logo)
+    return buildPage(
+      pContent,
+      pTitle,
+      num,
+      adv,
+      logo,
+      {
+        linha1: o.rodapeLinha1,
+        linha2: o.rodapeLinha2,
+        linha3: o.rodapeLinha3,
+        numerarPaginas: o.numerarPaginas
+      },
+      o.cabecalhoPersonalizado,
+      idx + 1,
+      pages.length
+    )
   })
 
   return `<div class="document">${renderedPages.join('')}</div>`

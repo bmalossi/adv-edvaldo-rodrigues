@@ -1,4 +1,4 @@
-import { ConfigDocumentos, OpcoesDocumentoForm, ClausulaContrato } from './tipos'
+import { ConfigDocumentos, OpcoesDocumentoForm, ClausulaContrato, RodapeConfig } from './tipos'
 
 const STORAGE_KEYS = {
   logo: 'erf_doc_logo_v1',
@@ -16,6 +16,13 @@ export const DEFAULTS_CONFIG: ConfigDocumentos = {
   foro: 'Comarca de Praia Grande/SP',
   lawyerCpf: '925.540.401-68',
   pix: '(13) 99682-4364'
+}
+
+export const DEFAULTS_RODAPE: RodapeConfig = {
+  linha1: 'EDVALDO RODRIGUES FERREIRA | OAB/SP 465.818',
+  linha2: 'Avenida Presidente Costa e Silva, nº 733, sala 21, 2º andar – Office Brasil, Boqueirão, Praia Grande/SP – CEP 11700-007',
+  linha3: 'edvaldorodrigues.advocacia@gmail.com · (13) 99682-4364',
+  numerarPaginas: false
 }
 
 export function carregarConfigDocumentosLocal(): ConfigDocumentos {
@@ -179,6 +186,11 @@ export const DEFAULTS_FORM_DOCUMENTO: OpcoesDocumentoForm = {
   cidade: 'Praia Grande',
   uf: 'SP',
   useSignature: false,
+  cabecalhoPersonalizado: '',
+  rodapeLinha1: DEFAULTS_RODAPE.linha1,
+  rodapeLinha2: DEFAULTS_RODAPE.linha2,
+  rodapeLinha3: DEFAULTS_RODAPE.linha3,
+  numerarPaginas: false,
   contrato: {
     objeto: 'análise, preparação, ajuizamento e acompanhamento da ação judicial, em primeiro grau, até a sentença',
     incluidos: 'reuniões indispensáveis; análise e organização documental; petição inicial; manifestações ordinárias; réplica; audiência; acompanhamento de perícia judicial; memoriais e acompanhamento até a sentença',
@@ -200,7 +212,20 @@ export const DEFAULTS_FORM_DOCUMENTO: OpcoesDocumentoForm = {
     testemunha1Cpf: '',
     testemunha2Nome: '',
     testemunha2Cpf: '',
-    clausulas: CLAUSULAS_PADRAO_CONTRATO
+    clausulas: CLAUSULAS_PADRAO_CONTRATO,
+    preambuloPersonalizado: '',
+    atuacaoConjunta: false,
+    advogadoConjuntoTipo: 'sistema',
+    advogadoConjuntoId: '',
+    advogadoConjuntoNome: '',
+    advogadoConjuntoTratamento: 'advogada',
+    advogadoConjuntoOab: '',
+    advogadoConjuntoEndereco: 'Avenida Presidente Costa e Silva, nº 733, sala 21, 2º andar – Office Brasil, Boqueirão, Praia Grande/SP – CEP 11700-007',
+    cabecalhoPersonalizado: '',
+    rodapeLinha1: DEFAULTS_RODAPE.linha1,
+    rodapeLinha2: DEFAULTS_RODAPE.linha2,
+    rodapeLinha3: DEFAULTS_RODAPE.linha3,
+    numerarPaginas: false
   },
   procuracao: {
     receber: true,
