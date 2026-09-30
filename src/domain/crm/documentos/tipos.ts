@@ -72,6 +72,9 @@ export interface OpcaoContrato {
   rodapeLinha2?: string
   rodapeLinha3?: string
   numerarPaginas?: boolean
+
+  // Opções visuais de layout
+  centralizarTitulos?: boolean
 }
 
 export interface OpcaoProcuracao {
@@ -160,6 +163,7 @@ export interface OpcoesDocumentoForm {
   rodapeLinha2?: string
   rodapeLinha3?: string
   numerarPaginas?: boolean
+  centralizarTitulos?: boolean
   contrato: OpcaoContrato
   procuracao: OpcaoProcuracao
   hipossuficiencia: OpcaoHipossuficiencia

@@ -225,7 +225,8 @@ export const DEFAULTS_FORM_DOCUMENTO: OpcoesDocumentoForm = {
     rodapeLinha1: DEFAULTS_RODAPE.linha1,
     rodapeLinha2: DEFAULTS_RODAPE.linha2,
     rodapeLinha3: DEFAULTS_RODAPE.linha3,
-    numerarPaginas: false
+    numerarPaginas: false,
+    centralizarTitulos: false
   },
   procuracao: {
     receber: true,

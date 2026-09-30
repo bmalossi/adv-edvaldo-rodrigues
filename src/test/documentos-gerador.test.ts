@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { buildContrato, buildProcuracao } from '@/domain/crm/documentos/templates';
+import { estilosDocumentoCss } from '@/domain/crm/documentos/exportacao';
 import {
   carregarPadroesDocumentosLocal,
   salvarPadraoDocumentoLocal,
@@ -321,5 +322,35 @@ describe('Personalização de Cabeçalho, Rodapé e Numeração de Páginas', ()
     expect(html).toContain('contato@banca.adv.br · (13) 3333-4444');
     expect(html).toContain('Página 1 de 4');
   });
+
+  it('deve centralizar os títulos das cláusulas quando a opção centralizarTitulos estiver ativa', () => {
+    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      centralizarTitulos: true,
+    });
+
+    expect(html).toContain('class="clause-title centered"');
+    expect(html).toContain('style="text-align:center;"');
+  });
+
+  it('deve gerar campo de assinaturas espaçoso e sem achatamento de largura', () => {
+    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      atuacaoConjunta: true,
+      advogadoConjuntoNome: 'VANIA VIEIRA BRAZIL NASCIMENTO',
+      advogadoConjuntoTratamento: 'advogada',
+      advogadoConjuntoOab: 'OAB/SP 387.405',
+    });
+
+    // Deve conter containers flex de 48% e colunas sem duplo aninhamento restritivo
+    expect(html).toContain('class="party-signatures"');
+    expect(html).toContain('width:48%');
+    expect(html).toContain('class="sigbox"');
+    expect(html).toContain('class="line"');
+    expect(html).toContain('EDVALDO RODRIGUES FERREIRA');
+    expect(html).toContain('VANIA VIEIRA BRAZIL NASCIMENTO');
+    expect(estilosDocumentoCss()).toContain('width: 75mm');
+  });
 });
+
 

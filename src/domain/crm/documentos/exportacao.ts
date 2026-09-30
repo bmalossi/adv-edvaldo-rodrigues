@@ -88,6 +88,10 @@ export function estilosDocumentoCss(): string {
       font-size: 10.5pt;
       margin-bottom: 2mm;
       color: #0f172a;
+      text-align: left;
+    }
+    .clause-title.centered {
+      text-align: center;
     }
     .clause p {
       margin-bottom: 2.2mm;
@@ -97,9 +101,9 @@ export function estilosDocumentoCss(): string {
       margin-top: 14mm;
     }
     .signature-line {
-      width: 90mm;
+      width: 85mm;
       border-top: 1px solid #111;
-      margin: 0 auto 2.5mm;
+      margin: 0 auto 3mm;
     }
     .signature-img {
       max-width: 60mm;
@@ -112,15 +116,19 @@ export function estilosDocumentoCss(): string {
     .party-signatures {
       display: flex;
       justify-content: space-between;
+      align-items: flex-start;
       width: 100%;
-      margin-top: 16mm;
+      margin-top: 12mm;
     }
     .sigbox {
-      width: 46%;
+      width: 48%;
+      box-sizing: border-box;
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
+      font-size: 9.5pt;
+      line-height: 1.45;
     }
     .sig-space {
       width: 100%;
@@ -131,8 +139,9 @@ export function estilosDocumentoCss(): string {
     }
     .sigbox .line {
       border-top: 1px solid #111;
-      margin: 0 auto 2.5mm;
-      width: 100%;
+      margin: 0 auto 3mm;
+      width: 75mm;
+      max-width: 95%;
     }
     .doc-footer {
       position: absolute;
@@ -220,15 +229,19 @@ export function estilosWord(): string {
       font-weight: bold;
       font-size: 10.5pt;
       margin-bottom: 2mm;
+      text-align: left;
+    }
+    .clause-title.centered {
+      text-align: center;
     }
     .signature-block {
       text-align: center;
-      margin-top: 16mm;
+      margin-top: 14mm;
     }
     .signature-line {
-      width: 90mm;
+      width: 85mm;
       border-top: 1px solid #111;
-      margin: 0 auto 2.5mm;
+      margin: 0 auto 3mm;
     }
     .signature-img {
       max-width: 60mm;
@@ -239,14 +252,16 @@ export function estilosWord(): string {
     .party-signatures {
       display: table;
       width: 100%;
-      margin-top: 16mm;
+      margin-top: 12mm;
     }
     .sigbox {
       display: table-cell;
       width: 48%;
-      padding-right: 8mm;
+      padding-right: 6mm;
       vertical-align: top;
       text-align: center;
+      font-size: 9.5pt;
+      line-height: 1.45;
     }
     .sig-space {
       width: 100%;
@@ -255,7 +270,9 @@ export function estilosWord(): string {
     }
     .sigbox .line {
       border-top: 1px solid #111;
-      margin: 0 auto 2.5mm;
+      margin: 0 auto 3mm;
+      width: 75mm;
+      max-width: 95%;
     }
     .doc-footer {
       margin-top: 14mm;

@@ -331,7 +331,7 @@ function interpolarTexto(texto: string, tags: Record<string, string>): string {
   })
 }
 
-function renderClauseHtml(clause: ClausulaContrato, tags: Record<string, string>): string {
+function renderClauseHtml(clause: ClausulaContrato, tags: Record<string, string>, centralizarTitulos?: boolean): string {
   const interpolatedTitle = interpolarTexto(clause.titulo, tags)
   const interpolatedContent = interpolarTexto(clause.conteudo, tags)
 
@@ -350,25 +350,46 @@ function renderClauseHtml(clause: ClausulaContrato, tags: Record<string, string>
     })
     .join('')
 
-  return `<div class="clause"><div class="clause-title">${esc(interpolatedTitle)}</div>${paragraphsHtml}</div>`
+  const centeredClass = centralizarTitulos ? ' centered' : ''
+  const centeredStyle = centralizarTitulos ? ' style="text-align:center;"' : ''
+  return `<div class="clause"><div class="clause-title${centeredClass}"${centeredStyle}>${esc(interpolatedTitle)}</div>${paragraphsHtml}</div>`
+}
+
+function estimateTextHeightMm(text: string): number {
+  const plainText = text.replace(/<[^>]+>/g, '').trim()
+  if (!plainText) return 0
+  // Em coluna de 176mm, Century Gothic 10.2pt comporta aprox. 95-100 caracteres por linha
+  const lines = Math.max(1, Math.ceil(plainText.length / 96))
+  return lines * 5.0
+}
+
+function estimateParagraphHeightMm(pHtml: string): number {
+  return estimateTextHeightMm(pHtml) + 2.5
+}
+
+function estimateTitleHeightMm(titleHtml: string): number {
+  return estimateTextHeightMm(titleHtml) + 5.5
 }
 
 function estimateHtmlHeightMm(html: string): number {
   const plainText = html.replace(/<[^>]+>/g, '').trim()
   if (!plainText) return 0
 
-  const pCount = (html.match(/<p\b/gi) || []).length
-  const titleCount = (html.match(/class=["']clause-title["']/gi) || []).length
-  const clauseCount = (html.match(/class=["']clause["']/gi) || []).length
+  const pMatches = html.match(/<p\b[\s\S]*?<\/p>/gi) || []
+  const titleMatches = html.match(/<div class=["']clause-title[^"']*["'][\s\S]*?<\/div>/gi) || []
 
-  // Cada linha em coluna de 176mm comporta aprox. 85-90 caracteres
-  const lines = Math.ceil(plainText.length / 88)
-  const textHeight = lines * 4.9
-  const paragraphMargins = pCount * 3.0
-  const titleHeights = titleCount * 6.5
-  const clauseMargins = clauseCount * 3.5
+  if (pMatches.length === 0 && titleMatches.length === 0) {
+    return estimateTextHeightMm(plainText) + 3.0
+  }
 
-  return textHeight + paragraphMargins + titleHeights + clauseMargins
+  let total = 0
+  for (const p of pMatches) {
+    total += estimateParagraphHeightMm(p)
+  }
+  for (const t of titleMatches) {
+    total += estimateTitleHeightMm(t)
+  }
+  return total
 }
 
 export function gerarPreambuloContrato(
@@ -407,84 +428,229 @@ export function obterTextoPreambuloPadrao(
 function estimateSignaturesHeightMm(signaturesHtml: string): number {
   const hasWitnesses = signaturesHtml.includes('TESTEMUNHA')
   const countBoxes = (signaturesHtml.match(/class=["']sigbox["']/gi) || []).length
-  if (hasWitnesses) return 90
-  if (countBoxes > 2) return 65
-  return 50
+  let height = 8
+  if (countBoxes > 2) {
+    height += 76
+  } else {
+    height += 36
+  }
+  if (hasWitnesses) {
+    height += 44
+  }
+  return height
+}
+
+interface RawClauseUnit {
+  clauseIndex: number
+  titleHtml?: string
+  paragraphHtml: string
+  heightMm: number
+}
+
+function prepareContractClauseUnits(
+  clauses: ClausulaContrato[],
+  tags: Record<string, string>,
+  centralizarTitulos?: boolean,
+  clausulaExtra?: string
+): RawClauseUnit[] {
+  const units: RawClauseUnit[] = []
+
+  clauses.forEach((clause, clauseIndex) => {
+    const interpolatedTitle = interpolarTexto(clause.titulo, tags)
+    const interpolatedContent = interpolarTexto(clause.conteudo, tags)
+
+    const lines = interpolatedContent
+      .split(/\n+/)
+      .map(l => l.trim())
+      .filter(Boolean)
+
+    const centeredClass = centralizarTitulos ? ' centered' : ''
+    const centeredStyle = centralizarTitulos ? ' style="text-align:center;"' : ''
+    const titleHtml = `<div class="clause-title${centeredClass}"${centeredStyle}>${esc(interpolatedTitle)}</div>`
+
+    if (lines.length === 0) {
+      units.push({
+        clauseIndex,
+        titleHtml,
+        paragraphHtml: '',
+        heightMm: estimateTitleHeightMm(titleHtml)
+      })
+      return
+    }
+
+    lines.forEach((line, pIdx) => {
+      const matchPrefix = line.match(/^(\d+\.\d+\.?\s*)(.*)$/)
+      const paragraphHtml = matchPrefix
+        ? `<p><strong>${esc(matchPrefix[1])}</strong>${esc(matchPrefix[2])}</p>`
+        : `<p>${esc(line)}</p>`
+
+      if (pIdx === 0) {
+        // Amarra o título ao primeiro parágrafo para nunca deixar título órfão no rodapé da folha
+        units.push({
+          clauseIndex,
+          titleHtml,
+          paragraphHtml,
+          heightMm: estimateTitleHeightMm(titleHtml) + estimateParagraphHeightMm(paragraphHtml)
+        })
+      } else {
+        units.push({
+          clauseIndex,
+          paragraphHtml,
+          heightMm: estimateParagraphHeightMm(paragraphHtml)
+        })
+      }
+    })
+  })
+
+  if (clausulaExtra && clausulaExtra.trim()) {
+    const extraIndex = clauses.length
+    const centeredClass = centralizarTitulos ? ' centered' : ''
+    const centeredStyle = centralizarTitulos ? ' style="text-align:center;"' : ''
+    const titleHtml = `<div class="clause-title${centeredClass}"${centeredStyle}>CLÁUSULA ADICIONAL</div>`
+    const pLines = clausulaExtra.split(/\n+/).map(l => l.trim()).filter(Boolean)
+
+    pLines.forEach((line, pIdx) => {
+      const paragraphHtml = `<p>${esc(line)}</p>`
+      if (pIdx === 0) {
+        units.push({
+          clauseIndex: extraIndex,
+          titleHtml,
+          paragraphHtml,
+          heightMm: estimateTitleHeightMm(titleHtml) + estimateParagraphHeightMm(paragraphHtml)
+        })
+      } else {
+        units.push({
+          clauseIndex: extraIndex,
+          paragraphHtml,
+          heightMm: estimateParagraphHeightMm(paragraphHtml)
+        })
+      }
+    })
+  }
+
+  return units
+}
+
+function renderPageUnitsHtml(units: RawClauseUnit[]): string {
+  if (units.length === 0) return ''
+
+  let html = ''
+  let currentClauseIndex = -1
+  let inClause = false
+
+  for (const u of units) {
+    if (u.clauseIndex !== currentClauseIndex) {
+      if (inClause) {
+        html += '</div>'
+      }
+      html += '<div class="clause">'
+      inClause = true
+      currentClauseIndex = u.clauseIndex
+    }
+
+    if (u.titleHtml) {
+      html += u.titleHtml
+    }
+    if (u.paragraphHtml) {
+      html += u.paragraphHtml
+    }
+  }
+
+  if (inClause) {
+    html += '</div>'
+  }
+
+  return html
 }
 
 function distributeContractPages(
   preambuloHtml: string,
-  clausesHtml: string[],
+  units: RawClauseUnit[],
   signaturesHtml: string
 ): string[] {
-  // Limite seguro em mm para que o conteúdo preencha as folhas sem estourar no rodapé
-  // Página 1: Altura total A4 (297mm) - padding (32mm) - cabeçalho (30mm) - título/meta (20mm) = ~215mm
-  const PAGE_1_MAX_MM = 210
-  // Páginas 2+: Não têm o título do contrato = ~235mm
-  const PAGE_N_MAX_MM = 230
+  // Limites calibrados para preenchimento confortável da folha A4 (297mm)
+  // Página 1: Desconta padding (30mm), letterhead (24mm), título institucional (18mm) = ~215mm
+  const PAGE_1_MAX_MM = 215
+  // Páginas 2+: Não contêm o título principal do contrato = ~232mm
+  const PAGE_N_MAX_MM = 232
 
   const sigHeightMm = estimateSignaturesHeightMm(signaturesHtml)
+  const preambuloHeightMm = estimateHtmlHeightMm(preambuloHtml)
 
-  const pages: string[] = []
-  let currentPageContent = preambuloHtml
-  let currentHeightMm = estimateHtmlHeightMm(preambuloHtml)
+  const pagesHtml: string[] = []
+  const pageUnitsList: RawClauseUnit[][] = []
 
-  let index = 0
+  let currentUnits: RawClauseUnit[] = []
+  let currentHeightMm = preambuloHeightMm
+  let currentMaxMm = PAGE_1_MAX_MM
 
-  // 1. Preenche Página 1
-  while (index < clausesHtml.length) {
-    const clause = clausesHtml[index]
-    const clauseHeight = estimateHtmlHeightMm(clause)
+  let uIdx = 0
+  while (uIdx < units.length) {
+    const unit = units[uIdx]
 
-    if (currentHeightMm + clauseHeight > PAGE_1_MAX_MM && currentPageContent !== preambuloHtml) {
-      break
+    if (currentUnits.length > 0 && currentHeightMm + unit.heightMm > currentMaxMm) {
+      pageUnitsList.push(currentUnits)
+      currentUnits = []
+      currentHeightMm = 0
+      currentMaxMm = PAGE_N_MAX_MM
     }
-    currentPageContent += clause
-    currentHeightMm += clauseHeight
-    index++
-  }
-  pages.push(currentPageContent)
 
-  // 2. Preenche Páginas intermediárias
-  while (index < clausesHtml.length) {
-    currentPageContent = ''
-    currentHeightMm = 0
-
-    while (index < clausesHtml.length) {
-      const clause = clausesHtml[index]
-      const clauseHeight = estimateHtmlHeightMm(clause)
-
-      if (currentHeightMm + clauseHeight > PAGE_N_MAX_MM && currentPageContent !== '') {
-        break
-      }
-      currentPageContent += clause
-      currentHeightMm += clauseHeight
-      index++
-    }
-    pages.push(currentPageContent)
+    currentUnits.push(unit)
+    currentHeightMm += unit.heightMm
+    uIdx++
   }
 
-  // 3. Encaixe das assinaturas
-  const lastPageIndex = pages.length - 1
+  if (currentUnits.length > 0) {
+    pageUnitsList.push(currentUnits)
+  }
+
+  if (pageUnitsList.length === 0) {
+    pagesHtml.push(preambuloHtml + signaturesHtml)
+    return pagesHtml
+  }
+
+  const lastPageIndex = pageUnitsList.length - 1
+  const lastPageUnits = pageUnitsList[lastPageIndex]
   const lastPageMaxMm = lastPageIndex === 0 ? PAGE_1_MAX_MM : PAGE_N_MAX_MM
 
-  if (currentHeightMm + sigHeightMm <= lastPageMaxMm) {
-    pages[lastPageIndex] += signaturesHtml
-  } else {
-    // Se a última página tem múltiplas cláusulas e assinaturas transbordam,
-    // puxa a última cláusula junto com as assinaturas para evitar uma página de assinaturas isoladas
-    const lastPageClauses = pages[lastPageIndex]
-    const clauseMatches = lastPageClauses.match(/<div class="clause">[\s\S]*?<\/div>(?=(<div class="clause">|$))/g) || []
-    if (clauseMatches.length >= 2) {
-      const lastClause = clauseMatches[clauseMatches.length - 1]
-      pages[lastPageIndex] = lastPageClauses.slice(0, lastPageClauses.lastIndexOf(lastClause))
-      pages.push(lastClause + signaturesHtml)
-    } else {
-      pages.push(signaturesHtml)
-    }
+  let lastPageHeightMm = lastPageIndex === 0 ? preambuloHeightMm : 0
+  for (const u of lastPageUnits) {
+    lastPageHeightMm += u.heightMm
   }
 
-  return pages
+  if (lastPageHeightMm + sigHeightMm <= lastPageMaxMm) {
+    for (let i = 0; i < pageUnitsList.length; i++) {
+      const pHtml = renderPageUnitsHtml(pageUnitsList[i])
+      if (i === 0) {
+        pagesHtml.push(preambuloHtml + pHtml + (i === lastPageIndex ? signaturesHtml : ''))
+      } else {
+        pagesHtml.push(pHtml + (i === lastPageIndex ? signaturesHtml : ''))
+      }
+    }
+  } else {
+    let carriedUnits: RawClauseUnit[] = []
+    if (lastPageUnits.length > 2) {
+      carriedUnits = lastPageUnits.slice(-2)
+      pageUnitsList[lastPageIndex] = lastPageUnits.slice(0, -2)
+    } else if (lastPageUnits.length === 2) {
+      carriedUnits = lastPageUnits.slice(-1)
+      pageUnitsList[lastPageIndex] = lastPageUnits.slice(0, -1)
+    }
+
+    for (let i = 0; i < pageUnitsList.length; i++) {
+      const pHtml = renderPageUnitsHtml(pageUnitsList[i])
+      if (i === 0) {
+        pagesHtml.push(preambuloHtml + pHtml)
+      } else {
+        pagesHtml.push(pHtml)
+      }
+    }
+
+    const newPageHtml = renderPageUnitsHtml(carriedUnits) + signaturesHtml
+    pagesHtml.push(newPageHtml)
+  }
+
+  return pagesHtml
 }
 
 export function buildContrato(
@@ -524,15 +690,15 @@ export function buildContrato(
     : 'Este contrato constitui título executivo extrajudicial nos termos do art. 24 da Lei nº 8.906/1994. Assinaturas físicas ou eletrônicas que comprovem autoria e integridade produzem os mesmos efeitos.'
 
   const blocoTestemunhas = o.incluirTestemunhas
-    ? `<div class="party-signatures" style="margin-top:16mm;">
-    <div class="sigbox">
+    ? `<div class="party-signatures" style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-top:12mm;">
+    <div class="sigbox" style="width:48%;">
       <div class="sig-space"></div>
       <div class="line"></div>
       <strong>TESTEMUNHA 1</strong><br>
       ${o.testemunha1Nome ? `Nome: ${esc(o.testemunha1Nome)}<br>` : 'Nome:<br>'}
       ${o.testemunha1Cpf ? `CPF: ${esc(o.testemunha1Cpf)}` : 'CPF:'}
     </div>
-    <div class="sigbox">
+    <div class="sigbox" style="width:48%;">
       <div class="sig-space"></div>
       <div class="line"></div>
       <strong>TESTEMUNHA 2</strong><br>
@@ -543,14 +709,14 @@ export function buildContrato(
     : ''
 
   const sigContratante = `
-    <div class="sigbox">
+    <div class="sigbox" style="width:100%;">
       <div class="sig-space"></div>
       <div class="line"></div>
       <strong>CONTRATANTE:</strong><br>${esc(c.nome_razao_social || '')}<br>CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}
     </div>`
 
   const sigAdvTitular = `
-    <div class="sigbox">
+    <div class="sigbox" style="width:100%;">
       <div class="sig-space">
         ${(o.useSignature && o.signatureImg) ? `<img class="signature-img" src="${o.signatureImg}" alt="Assinatura">` : ''}
       </div>
@@ -560,7 +726,7 @@ export function buildContrato(
 
   const sigAdvConjunto = (o.atuacaoConjunta && o.advogadoConjuntoNome)
     ? `
-    <div class="sigbox" style="margin-top:8mm;">
+    <div class="sigbox" style="width:100%;">
       <div class="sig-space"></div>
       <div class="line"></div>
       <strong>${esc(o.advogadoConjuntoNome)}</strong><br>${esc(o.advogadoConjuntoTratamento || 'Advogado(a)')}<br>${esc(o.advogadoConjuntoOab || '')}
@@ -570,16 +736,18 @@ export function buildContrato(
   let blocoAssinaturasPartes = ''
   if (o.atuacaoConjunta && o.advogadoConjuntoNome) {
     blocoAssinaturasPartes = `
-    <div class="party-signatures" style="margin-top:14mm; flex-wrap:wrap; justify-content:space-between;">
+    <div class="party-signatures" style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-top:12mm;">
       <div style="width:48%;">${sigContratante}</div>
-      <div style="width:48%;">${sigAdvTitular}</div>
-      <div style="width:48%; margin-left:auto;">${sigAdvConjunto}</div>
+      <div style="width:48%; display:flex; flex-direction:column; gap:10mm;">
+        ${sigAdvTitular}
+        ${sigAdvConjunto}
+      </div>
     </div>`
   } else {
     blocoAssinaturasPartes = `
-    <div class="party-signatures" style="margin-top:16mm;">
-      ${sigContratante}
-      ${sigAdvTitular}
+    <div class="party-signatures" style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-top:12mm;">
+      <div style="width:48%;">${sigContratante}</div>
+      <div style="width:48%;">${sigAdvTitular}</div>
     </div>`
   }
 
@@ -622,15 +790,14 @@ export function buildContrato(
     data: dateLong(date)
   }
 
-  const clausesHtml = clausulasParaUsar.map(clause => renderClauseHtml(clause, tags))
+  const rawUnits = prepareContractClauseUnits(
+    clausulasParaUsar,
+    tags,
+    o.centralizarTitulos,
+    o.clausulaExtra
+  )
 
-  if (o.clausulaExtra) {
-    clausesHtml.push(
-      `<div class="clause"><div class="clause-title">CLÁUSULA ADICIONAL</div><p>${esc(o.clausulaExtra)}</p></div>`
-    )
-  }
-
-  const pages = distributeContractPages(preambuloHtml, clausesHtml, assinaturasHtml)
+  const pages = distributeContractPages(preambuloHtml, rawUnits, assinaturasHtml)
   const renderedPages = pages.map((pContent, idx) => {
     const pTitle = idx === 0 ? 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS E HONORÁRIOS ADVOCATÍCIOS' : ''
     return buildPage(

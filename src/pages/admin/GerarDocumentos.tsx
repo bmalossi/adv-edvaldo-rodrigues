@@ -1373,6 +1373,28 @@ export default function GerarDocumentos() {
                         </div>
                       </div>
 
+                      {/* Opção de Centralizar Títulos das Cláusulas */}
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/80 border border-white/10">
+                        <label className="flex items-center gap-2.5 cursor-pointer select-none text-xs text-white font-medium">
+                          <Checkbox
+                            checked={formData.contrato.centralizarTitulos || false}
+                            onCheckedChange={v => {
+                              const b = !!v
+                              setFormData(prev => ({
+                                ...prev,
+                                contrato: { ...prev.contrato, centralizarTitulos: b }
+                              }))
+                            }}
+                          />
+                          <span>Centralizar títulos das cláusulas no documento</span>
+                        </label>
+                        {formData.contrato.centralizarTitulos && (
+                          <span className="text-[11px] font-bold text-secondary bg-secondary/10 px-2 py-0.5 rounded-full border border-secondary/20">
+                            Centralizado
+                          </span>
+                        )}
+                      </div>
+
                       {/* Lista de Cláusulas */}
                       <div className="space-y-3">
                         {(formData.contrato.clausulas || []).map((clausula, idx) => (
@@ -1559,8 +1581,8 @@ export default function GerarDocumentos() {
                           </div>
                         </div>
 
-                        {/* Numeração de Páginas */}
-                        <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                        {/* Numeração de Páginas e Alinhamento de Títulos */}
+                        <div className="pt-3 border-t border-white/10 space-y-2.5">
                           <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-200 font-medium">
                             <Checkbox
                               checked={formData.contrato.numerarPaginas ?? formData.numerarPaginas ?? false}
@@ -1574,6 +1596,20 @@ export default function GerarDocumentos() {
                               }}
                             />
                             Incluir numeração de páginas nos documentos (ex: Página 1 de 4)
+                          </label>
+
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-200 font-medium">
+                            <Checkbox
+                              checked={formData.contrato.centralizarTitulos ?? false}
+                              onCheckedChange={v => {
+                                const b = !!v
+                                setFormData(prev => ({
+                                  ...prev,
+                                  contrato: { ...prev.contrato, centralizarTitulos: b }
+                                }))
+                              }}
+                            />
+                            Centralizar títulos das cláusulas do contrato
                           </label>
                         </div>
                       </div>
