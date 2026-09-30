@@ -351,6 +351,29 @@ describe('Personalização de Cabeçalho, Rodapé e Numeração de Páginas', ()
     expect(html).toContain('VANIA VIEIRA BRAZIL NASCIMENTO');
     expect(estilosDocumentoCss()).toContain('width: 75mm');
   });
+
+  it('deve transferir todas as assinaturas para a página seguinte quando houver risco de colisão com o rodapé', () => {
+    // Simula a adição de cláusulas extras/extensas e advogada conjunta que fariam as assinaturas ultrapassarem o rodapé
+    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      atuacaoConjunta: true,
+      advogadoConjuntoNome: 'VANIA VIEIRA BRAZIL NASCIMENTO',
+      advogadoConjuntoTratamento: 'advogada',
+      advogadoConjuntoOab: 'OAB/SP 387.405',
+      clausulaExtra: 'Parágrafo suplementar extenso para validação de margens e transbordamento controlado de assinaturas sem tocar o rodapé institucional da folha.',
+    });
+
+    const paginas = html.split('<div class="doc-page">').slice(1);
+    // A última página deve conter o bloco completo de assinaturas
+    const ultimaPagina = paginas[paginas.length - 1];
+    expect(ultimaPagina).toContain('class="party-signatures"');
+    expect(ultimaPagina).toContain('VANIA VIEIRA BRAZIL NASCIMENTO');
+    expect(ultimaPagina).toContain('EDVALDO RODRIGUES FERREIRA');
+    // Nenhuma página anterior deve ter assinatura isolada ou fragmentada
+    for (let i = 0; i < paginas.length - 1; i++) {
+      expect(paginas[i]).not.toContain('class="party-signatures"');
+    }
+  });
 });
 
 

@@ -20,7 +20,7 @@ export function estilosDocumentoCss(): string {
       min-height: 297mm;
       max-height: 297mm;
       box-sizing: border-box;
-      padding: 12mm 17mm 18mm 17mm;
+      padding: 12mm 17mm 26mm 17mm;
       margin: 0 auto 12mm auto;
       position: relative;
       background: #fff;
@@ -73,6 +73,8 @@ export function estilosDocumentoCss(): string {
       line-height: 1.44;
       text-align: justify;
       color: #111;
+      margin-bottom: 24mm;
+      box-sizing: border-box;
     }
     .doc-body p {
       margin: 0 0 3.2mm;
@@ -154,6 +156,8 @@ export function estilosDocumentoCss(): string {
       font-size: 7.2pt;
       color: #4b5563;
       line-height: 1.35;
+      background: #fff;
+      z-index: 20;
     }
     .doc-footer strong {
       color: #0f172a;

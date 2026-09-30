@@ -427,17 +427,23 @@ export function obterTextoPreambuloPadrao(
 
 function estimateSignaturesHeightMm(signaturesHtml: string): number {
   const hasWitnesses = signaturesHtml.includes('TESTEMUNHA')
-  const countBoxes = (signaturesHtml.match(/class=["']sigbox["']/gi) || []).length
-  let height = 8
-  if (countBoxes > 2) {
-    height += 76
+  const hasCoCounsel = signaturesHtml.includes('gap:10mm') || signaturesHtml.includes('gap: 10mm')
+
+  const dateHeight = 7
+  const bufferMm = 12
+
+  let signaturesHeight = 0
+  if (hasCoCounsel) {
+    // 2 advogados empilhados: margin-top (12mm) + titular (33mm) + gap (10mm) + conjunto (33mm) = 88mm
+    signaturesHeight = 88
   } else {
-    height += 36
+    // Assinaturas em linha única: margin-top (12mm) + box (33mm) = 45mm
+    signaturesHeight = 45
   }
-  if (hasWitnesses) {
-    height += 44
-  }
-  return height
+
+  const witnessesHeight = hasWitnesses ? 44 : 0
+
+  return dateHeight + signaturesHeight + witnessesHeight + bufferMm
 }
 
 interface RawClauseUnit {
@@ -568,11 +574,11 @@ function distributeContractPages(
   units: RawClauseUnit[],
   signaturesHtml: string
 ): string[] {
-  // Limites calibrados para preenchimento confortável da folha A4 (297mm)
-  // Página 1: Desconta padding (30mm), letterhead (24mm), título institucional (18mm) = ~215mm
-  const PAGE_1_MAX_MM = 215
-  // Páginas 2+: Não contêm o título principal do contrato = ~232mm
-  const PAGE_N_MAX_MM = 232
+  // Limites calibrados para preenchimento confortável e margem intransponível antes do rodapé institucional
+  // Página 1: A4 (297mm) - top (12mm) - letterhead (24mm) - title (18mm) - footer & safety (33mm) = 210mm
+  const PAGE_1_MAX_MM = 210
+  // Páginas 2+: A4 (297mm) - top (12mm) - letterhead (24mm) - footer & safety (35mm) = 226mm
+  const PAGE_N_MAX_MM = 226
 
   const sigHeightMm = estimateSignaturesHeightMm(signaturesHtml)
   const preambuloHeightMm = estimateHtmlHeightMm(preambuloHtml)
