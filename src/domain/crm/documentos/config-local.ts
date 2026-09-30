@@ -237,17 +237,35 @@ export const DEFAULTS_FORM_DOCUMENTO: OpcoesDocumentoForm = {
     receita: false,
     poderesExtras: '',
     finalidadeProc: '',
-    useSignature: false
+    useSignature: false,
+    textoPersonalizado: '',
+    cabecalhoPersonalizado: '',
+    rodapeLinha1: DEFAULTS_RODAPE.linha1,
+    rodapeLinha2: DEFAULTS_RODAPE.linha2,
+    rodapeLinha3: DEFAULTS_RODAPE.linha3,
+    numerarPaginas: false
   },
   hipossuficiencia: {
     rendaMensal: '',
     dependentes: '',
     situacao: '',
-    hipoExtra: ''
+    hipoExtra: '',
+    textoPersonalizado: '',
+    cabecalhoPersonalizado: '',
+    rodapeLinha1: DEFAULTS_RODAPE.linha1,
+    rodapeLinha2: DEFAULTS_RODAPE.linha2,
+    rodapeLinha3: DEFAULTS_RODAPE.linha3,
+    numerarPaginas: false
   },
   irpf: {
     exercicios: `${new Date().getFullYear() - 1} e ${new Date().getFullYear()}`,
-    finalidade: 'instrução de pedido de gratuidade da justiça'
+    finalidade: 'instrução de pedido de gratuidade da justiça',
+    textoPersonalizado: '',
+    cabecalhoPersonalizado: '',
+    rodapeLinha1: DEFAULTS_RODAPE.linha1,
+    rodapeLinha2: DEFAULTS_RODAPE.linha2,
+    rodapeLinha3: DEFAULTS_RODAPE.linha3,
+    numerarPaginas: false
   },
   recibo: {
     valorRecibo: '1.000,00',
@@ -256,14 +274,26 @@ export const DEFAULTS_FORM_DOCUMENTO: OpcoesDocumentoForm = {
     referenciaRecibo: 'prestação de serviços advocatícios',
     parcelaRecibo: '1ª parcela',
     obsRecibo: '',
-    useSignature: false
+    useSignature: false,
+    textoPersonalizado: '',
+    cabecalhoPersonalizado: '',
+    rodapeLinha1: DEFAULTS_RODAPE.linha1,
+    rodapeLinha2: DEFAULTS_RODAPE.linha2,
+    rodapeLinha3: DEFAULTS_RODAPE.linha3,
+    numerarPaginas: false
   },
   residencia: {
     destinoResidencia: 'empresa ou órgão solicitante',
     tipoResidencia: 'proprio',
     titularResidencia: '',
     cpfTitular: '',
-    vinculoTitular: ''
+    vinculoTitular: '',
+    textoPersonalizado: '',
+    cabecalhoPersonalizado: '',
+    rodapeLinha1: DEFAULTS_RODAPE.linha1,
+    rodapeLinha2: DEFAULTS_RODAPE.linha2,
+    rodapeLinha3: DEFAULTS_RODAPE.linha3,
+    numerarPaginas: false
   }
 }
 

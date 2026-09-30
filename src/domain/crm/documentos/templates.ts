@@ -71,6 +71,145 @@ function buildPage(
   return `<div class="doc-page">${buildHeader(logo, cabecalhoPersonalizado)}${meta ? `<div class="doc-meta">${esc(meta)}</div>` : ''}${title ? `<div class="doc-title">${esc(title)}</div>` : ''}<div class="doc-body">${content}</div>${buildFooter(adv, rodapeOpts, pageIndex, totalPages)}</div>`
 }
 
+export function formatParagrafosPersonalizados(text: string): string {
+  const lines = text
+    .split(/\n+/)
+    .map(l => l.trim())
+    .filter(Boolean)
+
+  return lines
+    .map(line => {
+      if (/^<p[\s>]/.test(line)) {
+        return line
+      }
+      const formatted = esc(line)
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^([A-ZÇÃÕÉÊÍÓÚÂÈÌÒÙ\s]{3,25}:)\s*/, '<strong>$1</strong> ')
+      return `<p>${formatted}</p>`
+    })
+    .join('')
+}
+
+export function obterTextoPadraoProcuracao(
+  c: Partial<Cliente> | null,
+  adv: AdvogadoConfigDoc,
+  cfg: ConfigDocumentos,
+  o: Partial<OpcaoProcuracao>
+): string {
+  let special = 'receber citação, confessar, reconhecer a procedência do pedido'
+  if (o.transigir !== false) special += ', transigir, conciliar, desistir e renunciar ao direito sobre o qual se funda a ação'
+  if (o.receber !== false) special += ', receber, dar quitação, requerer, receber e levantar valores e depósitos judiciais ou extrajudiciais, inclusive por alvará, MLE, RPV, precatório, depósito recursal ou transferência bancária'
+  special += ', firmar compromisso'
+  if (o.hipossuf !== false) special += ', assinar declaração de hipossuficiência econômica e requerer gratuidade da justiça'
+  special += ', requerer medidas urgentes, penhoras, bloqueios, pesquisas patrimoniais e expedição de ofícios'
+  if (o.inss) special += ', representar perante o Instituto Nacional do Seguro Social – INSS, requerer benefícios, revisões, recursos e ter acesso a processos administrativos'
+  if (o.receita) special += ', representar perante a Receita Federal do Brasil, requerer cópias, certidões, apresentar declarações, defesas e recursos'
+  if (o.poderesExtras) special += ', ' + o.poderesExtras.replace(/\.$/, '')
+
+  const enderecoAdv = adv.endereco || 'com escritório em ' + cfg.foro
+  const temConjunto = Boolean(o.atuacaoConjunta && o.advogadoConjuntoNome)
+  const outorgadosConjunto = temConjunto
+    ? `, e ${o.advogadoConjuntoNome}, ${o.advogadoConjuntoTratamento || 'advogado(a)'}, inscrito(a) na ${o.advogadoConjuntoOab || ''}, com escritório profissional em ${o.advogadoConjuntoEndereco || enderecoAdv}`
+    : ''
+
+  const rotuloOutorgado = temConjunto ? 'OUTORGADOS:' : 'OUTORGADO:'
+  const textoProcuradores = temConjunto
+    ? 'seus bastantes procuradores os advogados acima qualificados, conferindo-lhes poderes para o foro em geral'
+    : 'seu bastante procurador o advogado acima qualificado, conferindo-lhe poderes para o foro em geral'
+  const textoAutorizacao = temConjunto ? 'Ficam os OUTORGADOS autorizados' : 'Fica o OUTORGADO autorizado'
+
+  const finalidade = o.finalidadeProc ? `\n\nFINALIDADE ESPECÍFICA: ${o.finalidadeProc}.` : ''
+  const qualif = c ? clienteQualificacao(c) : '[DADOS DO OUTORGANTE QUALIFICADO]'
+
+  return `OUTORGANTE: ${qualif}.
+
+${rotuloOutorgado} ${adv.nome}, advogado inscrito na ${adv.oab}, com escritório em ${enderecoAdv}, e-mail ${adv.email}, integrante da ${cfg.empresa}, registro OAB nº ${cfg.socOab}, CNPJ nº ${cfg.cnpj}${outorgadosConjunto}.
+
+Pelo presente instrumento particular, o OUTORGANTE nomeia e constitui ${textoProcuradores}, com a cláusula AD JUDICIA ET EXTRA, para representá-lo judicial, administrativa e extrajudicialmente, ativa ou passivamente, perante qualquer Juízo, Tribunal, órgão público ou entidade privada, em qualquer instância, podendo propor ações, apresentar defesas, recursos, requerimentos, notificações e demais medidas cabíveis, produzir provas, requerer documentos e certidões, acompanhar processos, procedimentos, inquéritos, perícias e audiências, praticando todos os atos necessários à defesa de seus interesses.
+
+Confere, ainda, nos termos do artigo 105 do Código de Processo Civil, poderes especiais para ${special}.
+
+${textoAutorizacao} a requerer reserva, destaque e levantamento de honorários contratuais e sucumbenciais; nomear preposto, quando legalmente cabível; praticar atos físicos ou eletrônicos; e ${o.substabelecer === false ? 'não substabelecer sem autorização expressa' : 'substabelecer, no todo ou em parte, com ou sem reserva de poderes'}.${finalidade}`
+}
+
+export function obterTextoPadraoHipossuficiencia(
+  c: Partial<Cliente> | null,
+  o: Partial<OpcaoHipossuficiencia>
+): string {
+  let extra = ''
+  if (o.situacao) extra += ` Declara, ainda, que atualmente se encontra na condição de ${o.situacao}.`
+  if (o.rendaMensal) extra += ` Sua renda mensal aproximada é de ${o.rendaMensal}.`
+  if (o.dependentes) extra += ` Possui ${o.dependentes} dependente(s).`
+  if (o.hipoExtra) extra += ` ${o.hipoExtra}`
+
+  const qualif = c ? [c.nacionalidade, c.estado_civil, c.profissao].filter(Boolean).join(', ') : 'brasileiro(a), profissão...'
+  const rgPart = c?.rg_ie ? `portador(a) do RG nº ${c.rg_ie}, ` : ''
+  const nome = c ? String(c.nome_razao_social || '').toUpperCase() : '[NOME DO DECLARANTE]'
+  const docNum = c?.cpf_cnpj || '[CPF/CNPJ]'
+  const end = c ? clienteEndereco(c) : '[ENDEREÇO]'
+  const emailPart = c?.email ? `e-mail: ${c.email} e ` : ''
+  const telPart = c?.telefone_whatsapp ? `telefone: ${c.telefone_whatsapp}` : ''
+  const contatos = [emailPart, telPart].filter(Boolean).join('')
+
+  return `${nome}, ${qualif}, ${rgPart}inscrito(a) no CPF/CNPJ nº ${docNum}, residente e domiciliado(a) em ${end}${contatos ? `, ${contatos}` : ''}, DECLARA, para os devidos fins de direito e sob as penas da lei, que é pobre na expressão jurídica da palavra, não podendo suportar o pagamento das custas e despesas processuais sem prejuízo de seu sustento e de sua família.${extra}
+
+Por ser a expressão da verdade, firma a presente.`
+}
+
+export function obterTextoPadraoIrpf(
+  c: Partial<Cliente> | null,
+  o: Partial<OpcaoIrpf>
+): string {
+  const rgPart = c?.rg_ie ? `RG nº ${c.rg_ie}, ` : ''
+  const finalidadePart = o.finalidade ? `\n\nFinalidade: ${o.finalidade}.` : ''
+  const nome = c ? String(c.nome_razao_social || '').toUpperCase() : '[NOME DO DECLARANTE]'
+  const docNum = c?.cpf_cnpj || '[CPF/CNPJ]'
+  const end = c ? clienteEndereco(c) : '[ENDEREÇO]'
+  const telPart = c?.telefone_whatsapp ? `, telefone ${c.telefone_whatsapp}` : ''
+
+  return `Eu, ${nome}, ${rgPart}CPF/CNPJ nº ${docNum}, residente em ${end}${telPart}, DECLARO ser isento(a) da apresentação da Declaração do Imposto de Renda Pessoa Física – DIRPF no(s) exercício(s) ${o.exercicios || '________________'}, por não incorrer em nenhuma das hipóteses de obrigatoriedade estabelecidas pela Receita Federal do Brasil.
+
+Esta declaração é firmada sob as penas da lei, nos termos da Lei nº 7.115/1983, declarando serem verdadeiras todas as informações prestadas.${finalidadePart}`
+}
+
+export function obterTextoPadraoRecibo(
+  c: Partial<Cliente> | null,
+  adv: AdvogadoConfigDoc,
+  cfg: ConfigDocumentos,
+  o: Partial<OpcaoRecibo>
+): string {
+  const parcela = o.parcelaRecibo ? ` (${o.parcelaRecibo})` : ''
+  const obs = o.obsRecibo ? ` ${o.obsRecibo}` : ''
+  const nome = c ? String(c.nome_razao_social || '').toUpperCase() : '[NOME DO CLIENTE]'
+  const docNum = c?.cpf_cnpj || '[CPF/CNPJ]'
+  const val = o.valorRecibo ? money(o.valorRecibo) : 'R$ 0,00'
+
+  return `${nome}, inscrito(a) no CPF/CNPJ nº ${docNum}, declara, para os devidos fins, que efetuou o pagamento no valor de ${val} (${o.valorExtenso || 'valor por extenso não informado'}) para ${adv.nome}, advogado, inscrito no CPF nº ${cfg.lawyerCpf} e ${adv.oab}, integrante da ${cfg.empresa}.
+
+O valor refere-se a ${o.referenciaRecibo || 'prestação de serviços advocatícios'}${parcela}. O pagamento foi realizado por ${o.formaPagamento || 'PIX'} nesta data.${obs}
+
+Por ser a expressão da verdade, firma-se o presente recibo.`
+}
+
+export function obterTextoPadraoResidencia(
+  c: Partial<Cliente> | null,
+  o: Partial<OpcaoResidencia>
+): string {
+  const third = o.tipoResidencia === 'terceiro' && o.titularResidencia
+  const declarant = third ? o.titularResidencia : (c?.nome_razao_social || '[NOME DO DECLARANTE]')
+  const cpf = third ? (o.cpfTitular || '[CPF DO TITULAR]') : (c?.cpf_cnpj || '[CPF DO DECLARANTE]')
+  const end = c ? clienteEndereco(c) : '[ENDEREÇO DO IMÓVEL]'
+  const resident = third
+    ? `DECLARO que ${c?.nome_razao_social || '[NOME DO CLIENTE]'}, inscrito(a) no CPF/CNPJ nº ${c?.cpf_cnpj || '[CPF/CNPJ]'}, reside e é domiciliado(a) no endereço ${end}${o.vinculoTitular ? `, sendo meu/minha ${o.vinculoTitular}` : ''}`
+    : `DECLARO que sou residente e domiciliado(a) no endereço ${end}`
+
+  return `Eu, ${String(declarant || '').toUpperCase()}, inscrito(a) no CPF/CNPJ nº ${cpf || ''}, ${resident}, para fins de comprovação de residência junto a ${o.destinoResidencia || 'empresa ou órgão solicitante'}.
+
+Declaro, sob as penas da lei e nos termos dos artigos 1º, 2º e 3º da Lei nº 7.115/1983, que as informações são verdadeiras, estando ciente das responsabilidades civis, administrativas e criminais decorrentes de declaração falsa, inclusive do disposto no artigo 299 do Código Penal.
+
+Por ser a expressão da verdade, firmo a presente para que produza seus efeitos legais.`
+}
+
 export function buildProcuracao(
   c: Partial<Cliente>,
   adv: AdvogadoConfigDoc,
@@ -107,11 +246,15 @@ export function buildProcuracao(
     : 'seu bastante procurador o advogado acima qualificado, conferindo-lhe poderes para o foro em geral'
   const textoAutorizacao = temConjunto ? 'Ficam os OUTORGADOS autorizados' : 'Fica o OUTORGADO autorizado'
 
-  const body = `<p><strong>OUTORGANTE:</strong> ${esc(clienteQualificacao(c))}.</p>
+  const bodyText = (o.textoPersonalizado && o.textoPersonalizado.trim())
+    ? formatParagrafosPersonalizados(o.textoPersonalizado)
+    : `<p><strong>OUTORGANTE:</strong> ${esc(clienteQualificacao(c))}.</p>
   <p><strong>${rotuloOutorgado}</strong> ${esc(adv.nome)}, advogado inscrito na ${esc(adv.oab)}, com escritório em ${esc(enderecoAdv)}, e-mail ${esc(adv.email)}, integrante da ${esc(cfg.empresa)}, registro OAB nº ${esc(cfg.socOab)}, CNPJ nº ${esc(cfg.cnpj)}${outorgadosConjunto}.</p>
   <p>Pelo presente instrumento particular, o OUTORGANTE nomeia e constitui ${textoProcuradores}, com a cláusula <strong>AD JUDICIA ET EXTRA</strong>, para representá-lo judicial, administrativa e extrajudicialmente, ativa ou passivamente, perante qualquer Juízo, Tribunal, órgão público ou entidade privada, em qualquer instância, podendo propor ações, apresentar defesas, recursos, requerimentos, notificações e demais medidas cabíveis, produzir provas, requerer documentos e certidões, acompanhar processos, procedimentos, inquéritos, perícias e audiências, praticando todos os atos necessários à defesa de seus interesses.</p>
   <p>Confere, ainda, nos termos do artigo 105 do Código de Processo Civil, poderes especiais para <strong>${esc(special)}</strong>.</p>
-  <p>${textoAutorizacao} a requerer reserva, destaque e levantamento de honorários contratuais e sucumbenciais; nomear preposto, quando legalmente cabível; praticar atos físicos ou eletrônicos; e ${o.substabelecer === false ? 'não substabelecer sem autorização expressa' : 'substabelecer, no todo ou em parte, com ou sem reserva de poderes'}.</p>${finalidade}
+  <p>${textoAutorizacao} a requerer reserva, destaque e levantamento de honorários contratuais e sucumbenciais; nomear preposto, quando legalmente cabível; praticar atos físicos ou eletrônicos; e ${o.substabelecer === false ? 'não substabelecer sem autorização expressa' : 'substabelecer, no todo ou em parte, com ou sem reserva de poderes'}.</p>${finalidade}`
+
+  const body = `${bodyText}
   <p style="margin-top:5mm;">${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
   <div class="signature-block" style="margin-top:12mm;">
     <div class="signature-line"></div>
@@ -158,8 +301,12 @@ export function buildHipossuficiencia(
   const qualif = [c.nacionalidade, c.estado_civil, c.profissao].filter(Boolean).join(', ')
   const rgPart = c.rg_ie ? `portador(a) do RG nº ${esc(c.rg_ie)}, ` : ''
 
-  const body = `<p><strong>${esc(String(c.nome_razao_social || '').toUpperCase())}</strong>, ${esc(qualif)}, ${rgPart}inscrito(a) no CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}, residente e domiciliado(a) em ${esc(clienteEndereco(c))}, ${c.email ? `e-mail: ${esc(c.email)} e ` : ''}telefone: ${esc(c.telefone_whatsapp || '')}, <strong>DECLARA</strong>, para os devidos fins de direito e sob as penas da lei, que é pobre na expressão jurídica da palavra, não podendo suportar o pagamento das custas e despesas processuais sem prejuízo de seu sustento e de sua família.${extra}</p>
-  <p>Por ser a expressão da verdade, firma a presente.</p>
+  const bodyText = (o.textoPersonalizado && o.textoPersonalizado.trim())
+    ? formatParagrafosPersonalizados(o.textoPersonalizado)
+    : `<p><strong>${esc(String(c.nome_razao_social || '').toUpperCase())}</strong>, ${esc(qualif)}, ${rgPart}inscrito(a) no CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}, residente e domiciliado(a) em ${esc(clienteEndereco(c))}, ${c.email ? `e-mail: ${esc(c.email)} e ` : ''}telefone: ${esc(c.telefone_whatsapp || '')}, <strong>DECLARA</strong>, para os devidos fins de direito e sob as penas da lei, que é pobre na expressão jurídica da palavra, não podendo suportar o pagamento das custas e despesas processuais sem prejuízo de seu sustento e de sua família.${extra}</p>
+  <p>Por ser a expressão da verdade, firma a presente.</p>`
+
+  const body = `${bodyText}
   <p style="margin-top:6mm;">${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
   <div class="signature-block" style="margin-top:16mm;">
     <div class="signature-line"></div>
@@ -198,9 +345,13 @@ export function buildIrpf(
   const num = o.number || ''
   const rgPart = c.rg_ie ? `RG nº ${esc(c.rg_ie)}, ` : ''
 
-  const body = `<p>Eu, <strong>${esc(String(c.nome_razao_social || '').toUpperCase())}</strong>, ${rgPart}CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}, residente em ${esc(clienteEndereco(c))}, telefone ${esc(c.telefone_whatsapp || '')}, <strong>DECLARO</strong> ser isento(a) da apresentação da Declaração do Imposto de Renda Pessoa Física – DIRPF no(s) exercício(s) <strong>${esc(o.exercicios || '________________')}</strong>, por não incorrer em nenhuma das hipóteses de obrigatoriedade estabelecidas pela Receita Federal do Brasil.</p>
+  const bodyText = (o.textoPersonalizado && o.textoPersonalizado.trim())
+    ? formatParagrafosPersonalizados(o.textoPersonalizado)
+    : `<p>Eu, <strong>${esc(String(c.nome_razao_social || '').toUpperCase())}</strong>, ${rgPart}CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}, residente em ${esc(clienteEndereco(c))}, telefone ${esc(c.telefone_whatsapp || '')}, <strong>DECLARO</strong> ser isento(a) da apresentação da Declaração do Imposto de Renda Pessoa Física – DIRPF no(s) exercício(s) <strong>${esc(o.exercicios || '________________')}</strong>, por não incorrer em nenhuma das hipóteses de obrigatoriedade estabelecidas pela Receita Federal do Brasil.</p>
   <p>Esta declaração é firmada sob as penas da lei, nos termos da Lei nº 7.115/1983, declarando serem verdadeiras todas as informações prestadas.</p>
-  ${o.finalidade ? `<p>Finalidade: ${esc(o.finalidade)}.</p>` : ''}
+  ${o.finalidade ? `<p>Finalidade: ${esc(o.finalidade)}.</p>` : ''}`
+
+  const body = `${bodyText}
   <p style="margin-top:6mm;">${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
   <div class="signature-block" style="margin-top:16mm;">
     <div class="signature-line"></div>
@@ -239,15 +390,15 @@ export function buildRecibo(
   const uf = o.uf || 'SP'
   const num = o.number || ''
 
-  const signature = (o.useSignature && o.signatureImg)
-    ? `<img class="signature-img" src="${o.signatureImg}" alt="Assinatura">`
-    : '<div class="signature-line"></div>'
-
   const parcela = o.parcelaRecibo ? ` (${esc(o.parcelaRecibo)})` : ''
 
-  const body = `<p><strong>${esc(String(c.nome_razao_social || '').toUpperCase())}</strong>, inscrito(a) no CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}, declara, para os devidos fins, que efetuou o pagamento no valor de <strong>${money(o.valorRecibo)} (${esc(o.valorExtenso || 'valor por extenso não informado')})</strong> para <strong>${esc(adv.nome)}</strong>, advogado, inscrito no CPF nº ${esc(cfg.lawyerCpf)} e ${esc(adv.oab)}, integrante da ${esc(cfg.empresa)}.</p>
+  const bodyText = (o.textoPersonalizado && o.textoPersonalizado.trim())
+    ? formatParagrafosPersonalizados(o.textoPersonalizado)
+    : `<p><strong>${esc(String(c.nome_razao_social || '').toUpperCase())}</strong>, inscrito(a) no CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}, declara, para os devidos fins, que efetuou o pagamento no valor de <strong>${money(o.valorRecibo)} (${esc(o.valorExtenso || 'valor por extenso não informado')})</strong> para <strong>${esc(adv.nome)}</strong>, advogado, inscrito no CPF nº ${esc(cfg.lawyerCpf)} e ${esc(adv.oab)}, integrante da ${esc(cfg.empresa)}.</p>
   <p>O valor refere-se a <strong>${esc(o.referenciaRecibo || 'prestação de serviços advocatícios')}${parcela}</strong>. O pagamento foi realizado por ${esc(o.formaPagamento || 'PIX')} nesta data.${o.obsRecibo ? ' ' + esc(o.obsRecibo) : ''}</p>
-  <p>Por ser a expressão da verdade, firma-se o presente recibo.</p>
+  <p>Por ser a expressão da verdade, firma-se o presente recibo.</p>`
+
+  const body = `${bodyText}
   <p style="margin-top:6mm;">${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
   <div class="signature-block" style="margin-top:14mm;">
     <div class="sig-space" style="height:18mm; display:flex; align-items:flex-end; justify-content:center;">
@@ -296,9 +447,13 @@ export function buildResidencia(
     ? `DECLARO que ${esc(c.nome_razao_social || '')}, inscrito(a) no CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}, reside e é domiciliado(a) no endereço ${esc(clienteEndereco(c))}${o.vinculoTitular ? `, sendo meu/minha ${esc(o.vinculoTitular)}` : ''}`
     : `DECLARO que sou residente e domiciliado(a) no endereço ${esc(clienteEndereco(c))}`
 
-  const body = `<p>Eu, <strong>${esc(String(declarant || '').toUpperCase())}</strong>, inscrito(a) no CPF/CNPJ nº ${esc(cpf || '')}, ${resident}, para fins de comprovação de residência junto a ${esc(o.destinoResidencia || 'empresa ou órgão solicitante')}.</p>
+  const bodyText = (o.textoPersonalizado && o.textoPersonalizado.trim())
+    ? formatParagrafosPersonalizados(o.textoPersonalizado)
+    : `<p>Eu, <strong>${esc(String(declarant || '').toUpperCase())}</strong>, inscrito(a) no CPF/CNPJ nº ${esc(cpf || '')}, ${resident}, para fins de comprovação de residência junto a ${esc(o.destinoResidencia || 'empresa ou órgão solicitante')}.</p>
   <p>Declaro, sob as penas da lei e nos termos dos artigos 1º, 2º e 3º da Lei nº 7.115/1983, que as informações são verdadeiras, estando ciente das responsabilidades civis, administrativas e criminais decorrentes de declaração falsa, inclusive do disposto no artigo 299 do Código Penal.</p>
-  <p>Por ser a expressão da verdade, firmo a presente para que produza seus efeitos legais.</p>
+  <p>Por ser a expressão da verdade, firmo a presente para que produza seus efeitos legais.</p>`
+
+  const body = `${bodyText}
   <p style="margin-top:6mm;">${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
   <div class="signature-block" style="margin-top:16mm;">
     <div class="signature-line"></div>

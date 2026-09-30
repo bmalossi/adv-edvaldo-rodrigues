@@ -95,6 +95,9 @@ export interface OpcaoProcuracao {
   advogadoConjuntoOab?: string
   advogadoConjuntoEndereco?: string
 
+  // Minuta personalizada / texto livre
+  textoPersonalizado?: string
+
   // Cabeçalho, rodapé e numeração de páginas
   cabecalhoPersonalizado?: string
   rodapeLinha1?: string
@@ -108,6 +111,10 @@ export interface OpcaoHipossuficiencia {
   dependentes?: string
   situacao?: string
   hipoExtra?: string
+
+  // Minuta personalizada / texto livre
+  textoPersonalizado?: string
+
   cabecalhoPersonalizado?: string
   rodapeLinha1?: string
   rodapeLinha2?: string
@@ -118,6 +125,10 @@ export interface OpcaoHipossuficiencia {
 export interface OpcaoIrpf {
   exercicios: string
   finalidade?: string
+
+  // Minuta personalizada / texto livre
+  textoPersonalizado?: string
+
   cabecalhoPersonalizado?: string
   rodapeLinha1?: string
   rodapeLinha2?: string
@@ -133,6 +144,10 @@ export interface OpcaoRecibo {
   parcelaRecibo?: string
   obsRecibo?: string
   useSignature?: boolean
+
+  // Minuta personalizada / texto livre
+  textoPersonalizado?: string
+
   cabecalhoPersonalizado?: string
   rodapeLinha1?: string
   rodapeLinha2?: string
@@ -146,6 +161,10 @@ export interface OpcaoResidencia {
   titularResidencia?: string
   cpfTitular?: string
   vinculoTitular?: string
+
+  // Minuta personalizada / texto livre
+  textoPersonalizado?: string
+
   cabecalhoPersonalizado?: string
   rodapeLinha1?: string
   rodapeLinha2?: string

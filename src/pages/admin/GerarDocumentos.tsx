@@ -73,10 +73,211 @@ import {
   buildRecibo,
   buildResidencia,
   DADOS_ESCRITORIO_DOCUMENTO,
-  obterTextoPreambuloPadrao
+  obterTextoPreambuloPadrao,
+  obterTextoPadraoProcuracao,
+  obterTextoPadraoHipossuficiencia,
+  obterTextoPadraoIrpf,
+  obterTextoPadraoRecibo,
+  obterTextoPadraoResidencia
 } from '@/domain/crm/documentos/templates'
 import { downloadWord, imprimirDocumento, estilosDocumentoCss } from '@/domain/crm/documentos/exportacao'
 import { TIPO_NOMES, dateShort } from '@/domain/crm/documentos/formatacao'
+
+interface AbaCabecalhoRodapeProps {
+  cabecalho: string
+  onChangeCabecalho: (val: string) => void
+  linha1: string
+  onChangeLinha1: (val: string) => void
+  linha2: string
+  onChangeLinha2: (val: string) => void
+  linha3: string
+  onChangeLinha3: (val: string) => void
+  numerarPaginas: boolean
+  onChangeNumerarPaginas: (val: boolean) => void
+  onRestaurar: () => void
+}
+
+function AbaCabecalhoRodape({
+  cabecalho,
+  onChangeCabecalho,
+  linha1,
+  onChangeLinha1,
+  linha2,
+  onChangeLinha2,
+  linha3,
+  onChangeLinha3,
+  numerarPaginas,
+  onChangeNumerarPaginas,
+  onRestaurar
+}: AbaCabecalhoRodapeProps) {
+  return (
+    <div className="space-y-4 pt-1">
+      {/* Cabeçalho */}
+      <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3">
+        <div>
+          <h4 className="font-bold text-white text-xs uppercase tracking-widest">
+            Cabeçalho Personalizado do Documento
+          </h4>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Deixe em branco para usar o cabeçalho padrão com o logotipo do escritório no topo.
+          </p>
+        </div>
+        <Input
+          value={cabecalho}
+          onChange={e => onChangeCabecalho(e.target.value)}
+          placeholder="Ex: EDVALDO RODRIGUES FERREIRA ADVOCACIA ESPECIALIZADA"
+          className="h-9 bg-slate-950 border-border/60 text-white rounded-xl text-xs"
+        />
+      </div>
+
+      {/* Rodapé Institucional */}
+      <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-bold text-white text-xs uppercase tracking-widest">
+              Rodapé Institucional do Escritório
+            </h4>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              O rodapé é geral do escritório e não exibe o usuário logado na conta.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onRestaurar}
+            className="h-7 text-xs text-slate-400 hover:text-white gap-1"
+          >
+            <RotateCcw className="w-3 h-3" /> Restaurar Padrão
+          </Button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <Label className="text-slate-300 text-[10px] font-bold uppercase tracking-widest pl-1 mb-1 block">
+              Linha 1: Nome do Titular e Inscrição OAB
+            </Label>
+            <Input
+              value={linha1}
+              onChange={e => onChangeLinha1(e.target.value)}
+              placeholder="EDVALDO RODRIGUES FERREIRA | OAB/SP 465.818"
+              className="h-9 bg-slate-950 border-border/60 text-white rounded-xl text-xs"
+            />
+          </div>
+
+          <div>
+            <Label className="text-slate-300 text-[10px] font-bold uppercase tracking-widest pl-1 mb-1 block">
+              Linha 2: Endereço do Escritório
+            </Label>
+            <Input
+              value={linha2}
+              onChange={e => onChangeLinha2(e.target.value)}
+              placeholder="Avenida Presidente Costa e Silva, nº 733, sala 21, 2º andar – Office Brasil, Boqueirão, Praia Grande/SP – CEP 11700-007"
+              className="h-9 bg-slate-950 border-border/60 text-white rounded-xl text-xs"
+            />
+          </div>
+
+          <div>
+            <Label className="text-slate-300 text-[10px] font-bold uppercase tracking-widest pl-1 mb-1 block">
+              Linha 3: Contatos Oficiais (E-mail e Telefone)
+            </Label>
+            <Input
+              value={linha3}
+              onChange={e => onChangeLinha3(e.target.value)}
+              placeholder="edvaldorodrigues.advocacia@gmail.com · (13) 99682-4364"
+              className="h-9 bg-slate-950 border-border/60 text-white rounded-xl text-xs"
+            />
+          </div>
+        </div>
+
+        {/* Numeração de Páginas */}
+        <div className="pt-3 border-t border-white/10 space-y-2.5">
+          <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-200 font-medium">
+            <Checkbox
+              checked={numerarPaginas}
+              onCheckedChange={v => onChangeNumerarPaginas(!!v)}
+            />
+            Incluir numeração de páginas no documento (ex: Página 1 de 1)
+          </label>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface AbaTextoMinutaProps {
+  titulo: string
+  descricao: string
+  texto: string
+  onChangeTexto: (val: string) => void
+  onPreencherPadrao: () => void
+  onLimpar: () => void
+  placeholder?: string
+}
+
+function AbaTextoMinuta({
+  titulo,
+  descricao,
+  texto,
+  onChangeTexto,
+  onPreencherPadrao,
+  onLimpar,
+  placeholder
+}: AbaTextoMinutaProps) {
+  return (
+    <div className="space-y-4 pt-1">
+      <div className="p-3.5 rounded-xl bg-slate-900/60 border border-secondary/20 text-xs text-slate-300 space-y-2">
+        <div className="flex items-center gap-2 text-secondary font-bold">
+          <Sparkles className="w-4 h-4" />
+          <span>{titulo}</span>
+        </div>
+        <p className="text-[11px] text-slate-400">
+          {descricao}
+        </p>
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onPreencherPadrao}
+            className="border-secondary/30 text-secondary hover:bg-secondary/10 h-7 text-xs gap-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> Preencher com texto padrão atual
+          </Button>
+          {texto && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onLimpar}
+              className="text-slate-400 hover:text-white h-7 text-xs gap-1.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Limpar / Usar texto automático
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+          <span className="font-medium">Redação do Documento (Parágrafos da Minuta)</span>
+          {texto ? (
+            <span className="text-[11px] text-secondary font-semibold">Minuta personalizada ativa</span>
+          ) : (
+            <span className="text-[11px] text-slate-500">Usando modelo automático dinâmico</span>
+          )}
+        </div>
+        <textarea
+          value={texto}
+          onChange={e => onChangeTexto(e.target.value)}
+          rows={11}
+          placeholder={placeholder || 'Deixe vazio para gerar o texto automaticamente a partir dos parâmetros, ou clique em "Preencher com texto padrão atual" para editar frases e cláusulas livremente...'}
+          className="w-full bg-slate-950 border border-border/60 text-white rounded-xl p-3.5 text-xs font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-secondary/50 placeholder:text-slate-600"
+        />
+      </div>
+    </div>
+  )
+}
 
 export default function GerarDocumentos() {
   const [searchParams] = useSearchParams()
@@ -161,6 +362,11 @@ export default function GerarDocumentos() {
 
   // Sub-aba do contrato: 'parametros', 'preambulo', 'clausulas' ou 'rodape'
   const [abaContrato, setAbaContrato] = useState<'parametros' | 'preambulo' | 'clausulas' | 'rodape'>('parametros')
+  const [abaProcuracao, setAbaProcuracao] = useState<'parametros' | 'texto' | 'rodape'>('parametros')
+  const [abaHipossuficiencia, setAbaHipossuficiencia] = useState<'parametros' | 'texto' | 'rodape'>('parametros')
+  const [abaIrpf, setAbaIrpf] = useState<'parametros' | 'texto' | 'rodape'>('parametros')
+  const [abaResidencia, setAbaResidencia] = useState<'parametros' | 'texto' | 'rodape'>('parametros')
+  const [abaRecibo, setAbaRecibo] = useState<'parametros' | 'texto' | 'rodape'>('parametros')
 
   // Lista de advogados/membros da equipe para atuação conjunta
   const [equipePerfis, setEquipePerfis] = useState<{ id: string; nome: string; oab: string | null; email: string | null; telefone: string | null }[]>([])
@@ -287,25 +493,76 @@ export default function GerarDocumentos() {
 
     switch (tipo) {
       case 'contrato':
-        return buildContrato(c, advDoc, config, logo, { ...formData.contrato, ...opts })
+        return buildContrato(c, advDoc, config, logo, {
+          ...generalDocOpts,
+          ...formData.contrato,
+          ...opts,
+          cabecalhoPersonalizado: formData.contrato.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
+          rodapeLinha1: formData.contrato.rodapeLinha1 || generalDocOpts.rodapeLinha1,
+          rodapeLinha2: formData.contrato.rodapeLinha2 || generalDocOpts.rodapeLinha2,
+          rodapeLinha3: formData.contrato.rodapeLinha3 || generalDocOpts.rodapeLinha3,
+          numerarPaginas: formData.contrato.numerarPaginas ?? generalDocOpts.numerarPaginas,
+        })
       case 'procuracao':
         return buildProcuracao(c, advDoc, config, logo, {
+          ...generalDocOpts,
           ...formData.procuracao,
           ...opts,
-          atuacaoConjunta: formData.contrato.atuacaoConjunta,
-          advogadoConjuntoNome: formData.contrato.advogadoConjuntoNome,
-          advogadoConjuntoTratamento: formData.contrato.advogadoConjuntoTratamento,
-          advogadoConjuntoOab: formData.contrato.advogadoConjuntoOab,
-          advogadoConjuntoEndereco: formData.contrato.advogadoConjuntoEndereco,
+          cabecalhoPersonalizado: formData.procuracao.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
+          rodapeLinha1: formData.procuracao.rodapeLinha1 || generalDocOpts.rodapeLinha1,
+          rodapeLinha2: formData.procuracao.rodapeLinha2 || generalDocOpts.rodapeLinha2,
+          rodapeLinha3: formData.procuracao.rodapeLinha3 || generalDocOpts.rodapeLinha3,
+          numerarPaginas: formData.procuracao.numerarPaginas ?? generalDocOpts.numerarPaginas,
+          atuacaoConjunta: formData.procuracao.atuacaoConjunta ?? formData.contrato.atuacaoConjunta,
+          advogadoConjuntoNome: formData.procuracao.advogadoConjuntoNome ?? formData.contrato.advogadoConjuntoNome,
+          advogadoConjuntoTratamento: formData.procuracao.advogadoConjuntoTratamento ?? formData.contrato.advogadoConjuntoTratamento,
+          advogadoConjuntoOab: formData.procuracao.advogadoConjuntoOab ?? formData.contrato.advogadoConjuntoOab,
+          advogadoConjuntoEndereco: formData.procuracao.advogadoConjuntoEndereco ?? formData.contrato.advogadoConjuntoEndereco,
         })
       case 'hipossuficiencia':
-        return buildHipossuficiencia(c, advDoc, config, logo, { ...formData.hipossuficiencia, ...opts })
+        return buildHipossuficiencia(c, advDoc, config, logo, {
+          ...generalDocOpts,
+          ...formData.hipossuficiencia,
+          ...opts,
+          cabecalhoPersonalizado: formData.hipossuficiencia.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
+          rodapeLinha1: formData.hipossuficiencia.rodapeLinha1 || generalDocOpts.rodapeLinha1,
+          rodapeLinha2: formData.hipossuficiencia.rodapeLinha2 || generalDocOpts.rodapeLinha2,
+          rodapeLinha3: formData.hipossuficiencia.rodapeLinha3 || generalDocOpts.rodapeLinha3,
+          numerarPaginas: formData.hipossuficiencia.numerarPaginas ?? generalDocOpts.numerarPaginas,
+        })
       case 'irpf':
-        return buildIrpf(c, advDoc, config, logo, { ...formData.irpf, ...opts })
+        return buildIrpf(c, advDoc, config, logo, {
+          ...generalDocOpts,
+          ...formData.irpf,
+          ...opts,
+          cabecalhoPersonalizado: formData.irpf.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
+          rodapeLinha1: formData.irpf.rodapeLinha1 || generalDocOpts.rodapeLinha1,
+          rodapeLinha2: formData.irpf.rodapeLinha2 || generalDocOpts.rodapeLinha2,
+          rodapeLinha3: formData.irpf.rodapeLinha3 || generalDocOpts.rodapeLinha3,
+          numerarPaginas: formData.irpf.numerarPaginas ?? generalDocOpts.numerarPaginas,
+        })
       case 'recibo':
-        return buildRecibo(c, advDoc, config, logo, { ...formData.recibo, ...opts })
+        return buildRecibo(c, advDoc, config, logo, {
+          ...generalDocOpts,
+          ...formData.recibo,
+          ...opts,
+          cabecalhoPersonalizado: formData.recibo.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
+          rodapeLinha1: formData.recibo.rodapeLinha1 || generalDocOpts.rodapeLinha1,
+          rodapeLinha2: formData.recibo.rodapeLinha2 || generalDocOpts.rodapeLinha2,
+          rodapeLinha3: formData.recibo.rodapeLinha3 || generalDocOpts.rodapeLinha3,
+          numerarPaginas: formData.recibo.numerarPaginas ?? generalDocOpts.numerarPaginas,
+        })
       case 'residencia':
-        return buildResidencia(c, advDoc, config, logo, { ...formData.residencia, ...opts })
+        return buildResidencia(c, advDoc, config, logo, {
+          ...generalDocOpts,
+          ...formData.residencia,
+          ...opts,
+          cabecalhoPersonalizado: formData.residencia.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
+          rodapeLinha1: formData.residencia.rodapeLinha1 || generalDocOpts.rodapeLinha1,
+          rodapeLinha2: formData.residencia.rodapeLinha2 || generalDocOpts.rodapeLinha2,
+          rodapeLinha3: formData.residencia.rodapeLinha3 || generalDocOpts.rodapeLinha3,
+          numerarPaginas: formData.residencia.numerarPaginas ?? generalDocOpts.numerarPaginas,
+        })
       default:
         return ''
     }
@@ -581,6 +838,173 @@ export default function GerarDocumentos() {
       }
     }))
     toast.info('Cabeçalho e rodapé restaurados para os padrões institucionais do escritório.')
+  }
+
+  const handlePreencherProcuracaoComPadrao = () => {
+    const texto = obterTextoPadraoProcuracao(clienteSelecionado, advDoc, config, {
+      ...formData.procuracao,
+      atuacaoConjunta: formData.procuracao.atuacaoConjunta ?? formData.contrato.atuacaoConjunta,
+      advogadoConjuntoNome: formData.procuracao.advogadoConjuntoNome ?? formData.contrato.advogadoConjuntoNome,
+      advogadoConjuntoTratamento: formData.procuracao.advogadoConjuntoTratamento ?? formData.contrato.advogadoConjuntoTratamento,
+      advogadoConjuntoOab: formData.procuracao.advogadoConjuntoOab ?? formData.contrato.advogadoConjuntoOab,
+      advogadoConjuntoEndereco: formData.procuracao.advogadoConjuntoEndereco ?? formData.contrato.advogadoConjuntoEndereco,
+    })
+    setFormData(prev => ({
+      ...prev,
+      procuracao: { ...prev.procuracao, textoPersonalizado: texto }
+    }))
+    toast.success('Texto da Procuração preenchido com a minuta padrão atual.')
+  }
+
+  const handleLimparProcuracao = () => {
+    setFormData(prev => ({
+      ...prev,
+      procuracao: { ...prev.procuracao, textoPersonalizado: '' }
+    }))
+    toast.info('Texto da Procuração resetado para geração automática.')
+  }
+
+  const handleRestaurarRodapeProcuracao = () => {
+    setFormData(prev => ({
+      ...prev,
+      procuracao: {
+        ...prev.procuracao,
+        cabecalhoPersonalizado: '',
+        rodapeLinha1: DEFAULTS_RODAPE.linha1,
+        rodapeLinha2: DEFAULTS_RODAPE.linha2,
+        rodapeLinha3: DEFAULTS_RODAPE.linha3,
+        numerarPaginas: false
+      }
+    }))
+    toast.info('Cabeçalho e rodapé da Procuração restaurados.')
+  }
+
+  const handlePreencherHipossuficienciaComPadrao = () => {
+    const texto = obterTextoPadraoHipossuficiencia(clienteSelecionado, formData.hipossuficiencia)
+    setFormData(prev => ({
+      ...prev,
+      hipossuficiencia: { ...prev.hipossuficiencia, textoPersonalizado: texto }
+    }))
+    toast.success('Texto da Hipossuficiência preenchido com os dados atuais.')
+  }
+
+  const handleLimparHipossuficiencia = () => {
+    setFormData(prev => ({
+      ...prev,
+      hipossuficiencia: { ...prev.hipossuficiencia, textoPersonalizado: '' }
+    }))
+    toast.info('Texto da Hipossuficiência resetado para geração automática.')
+  }
+
+  const handleRestaurarRodapeHipossuficiencia = () => {
+    setFormData(prev => ({
+      ...prev,
+      hipossuficiencia: {
+        ...prev.hipossuficiencia,
+        cabecalhoPersonalizado: '',
+        rodapeLinha1: DEFAULTS_RODAPE.linha1,
+        rodapeLinha2: DEFAULTS_RODAPE.linha2,
+        rodapeLinha3: DEFAULTS_RODAPE.linha3,
+        numerarPaginas: false
+      }
+    }))
+    toast.info('Cabeçalho e rodapé da Declaração de Hipossuficiência restaurados.')
+  }
+
+  const handlePreencherIrpfComPadrao = () => {
+    const texto = obterTextoPadraoIrpf(clienteSelecionado, formData.irpf)
+    setFormData(prev => ({
+      ...prev,
+      irpf: { ...prev.irpf, textoPersonalizado: texto }
+    }))
+    toast.success('Texto da Declaração de IRPF preenchido com os dados atuais.')
+  }
+
+  const handleLimparIrpf = () => {
+    setFormData(prev => ({
+      ...prev,
+      irpf: { ...prev.irpf, textoPersonalizado: '' }
+    }))
+    toast.info('Texto da Declaração de IRPF resetado para geração automática.')
+  }
+
+  const handleRestaurarRodapeIrpf = () => {
+    setFormData(prev => ({
+      ...prev,
+      irpf: {
+        ...prev.irpf,
+        cabecalhoPersonalizado: '',
+        rodapeLinha1: DEFAULTS_RODAPE.linha1,
+        rodapeLinha2: DEFAULTS_RODAPE.linha2,
+        rodapeLinha3: DEFAULTS_RODAPE.linha3,
+        numerarPaginas: false
+      }
+    }))
+    toast.info('Cabeçalho e rodapé da Declaração de IRPF restaurados.')
+  }
+
+  const handlePreencherReciboComPadrao = () => {
+    const texto = obterTextoPadraoRecibo(clienteSelecionado, advDoc, config, formData.recibo)
+    setFormData(prev => ({
+      ...prev,
+      recibo: { ...prev.recibo, textoPersonalizado: texto }
+    }))
+    toast.success('Texto do Recibo preenchido com os dados atuais.')
+  }
+
+  const handleLimparRecibo = () => {
+    setFormData(prev => ({
+      ...prev,
+      recibo: { ...prev.recibo, textoPersonalizado: '' }
+    }))
+    toast.info('Texto do Recibo resetado para geração automática.')
+  }
+
+  const handleRestaurarRodapeRecibo = () => {
+    setFormData(prev => ({
+      ...prev,
+      recibo: {
+        ...prev.recibo,
+        cabecalhoPersonalizado: '',
+        rodapeLinha1: DEFAULTS_RODAPE.linha1,
+        rodapeLinha2: DEFAULTS_RODAPE.linha2,
+        rodapeLinha3: DEFAULTS_RODAPE.linha3,
+        numerarPaginas: false
+      }
+    }))
+    toast.info('Cabeçalho e rodapé do Recibo restaurados.')
+  }
+
+  const handlePreencherResidenciaComPadrao = () => {
+    const texto = obterTextoPadraoResidencia(clienteSelecionado, formData.residencia)
+    setFormData(prev => ({
+      ...prev,
+      residencia: { ...prev.residencia, textoPersonalizado: texto }
+    }))
+    toast.success('Texto da Declaração de Residência preenchido com os dados atuais.')
+  }
+
+  const handleLimparResidencia = () => {
+    setFormData(prev => ({
+      ...prev,
+      residencia: { ...prev.residencia, textoPersonalizado: '' }
+    }))
+    toast.info('Texto da Declaração de Residência resetado para geração automática.')
+  }
+
+  const handleRestaurarRodapeResidencia = () => {
+    setFormData(prev => ({
+      ...prev,
+      residencia: {
+        ...prev.residencia,
+        cabecalhoPersonalizado: '',
+        rodapeLinha1: DEFAULTS_RODAPE.linha1,
+        rodapeLinha2: DEFAULTS_RODAPE.linha2,
+        rodapeLinha3: DEFAULTS_RODAPE.linha3,
+        numerarPaginas: false
+      }
+    }))
+    toast.info('Cabeçalho e rodapé da Declaração de Residência restaurados.')
   }
 
   return (
@@ -1649,78 +2073,175 @@ export default function GerarDocumentos() {
               >
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-secondary" />
-                  <h3 className="font-bold text-white text-sm">Poderes da Procuração</h3>
+                  <h3 className="font-bold text-white text-sm">Poderes e Minuta da Procuração Ad Judicia</h3>
                 </div>
                 {secaoAberta.procuracao ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </div>
 
               {secaoAberta.procuracao && (
                 <div className="space-y-4 pt-2 border-t border-white/5">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                      <Checkbox
-                        checked={formData.procuracao.receber}
-                        onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, receber: !!v } })}
-                      />
-                      Receber e levantar valores
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                      <Checkbox
-                        checked={formData.procuracao.transigir}
-                        onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, transigir: !!v } })}
-                      />
-                      Transigir e conciliar
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                      <Checkbox
-                        checked={formData.procuracao.hipossuf}
-                        onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, hipossuf: !!v } })}
-                      />
-                      Assinar hipossuficiência
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                      <Checkbox
-                        checked={formData.procuracao.substabelecer}
-                        onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, substabelecer: !!v } })}
-                      />
-                      Substabelecer poderes
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                      <Checkbox
-                        checked={formData.procuracao.inss}
-                        onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, inss: !!v } })}
-                      />
-                      Atuação perante o INSS
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                      <Checkbox
-                        checked={formData.procuracao.receita}
-                        onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, receita: !!v } })}
-                      />
-                      Atuação perante Receita Federal
-                    </label>
+                  {/* Seletor de visualização da Procuração: Parâmetros, Minuta e Rodapé */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-900/90 border border-white/10">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setAbaProcuracao('parametros')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                          abaProcuracao === 'parametros'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        1. Poderes & Parâmetros
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaProcuracao('texto')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaProcuracao === 'texto'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-secondary" />
+                        2. Texto da Minuta
+                        {formData.procuracao.textoPersonalizado && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-secondary" title="Texto personalizado ativo" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaProcuracao('rodape')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaProcuracao === 'rodape'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <Settings className="w-3.5 h-3.5 text-secondary" />
+                        3. Cabeçalho & Rodapé
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Poderes Especiais Adicionais</Label>
-                      <Input
-                        placeholder="Ex: representar perante cartórios, Detran..."
-                        value={formData.procuracao.poderesExtras}
-                        onChange={e => setFormData({ ...formData, procuracao: { ...formData.procuracao, poderesExtras: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
+                  {abaProcuracao === 'parametros' && (
+                    <div className="space-y-4 pt-1">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                          <Checkbox
+                            checked={formData.procuracao.receber}
+                            onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, receber: !!v } })}
+                          />
+                          Receber e levantar valores
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                          <Checkbox
+                            checked={formData.procuracao.transigir}
+                            onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, transigir: !!v } })}
+                          />
+                          Transigir e conciliar
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                          <Checkbox
+                            checked={formData.procuracao.hipossuf}
+                            onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, hipossuf: !!v } })}
+                          />
+                          Assinar hipossuficiência
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                          <Checkbox
+                            checked={formData.procuracao.substabelecer}
+                            onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, substabelecer: !!v } })}
+                          />
+                          Substabelecer poderes
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                          <Checkbox
+                            checked={formData.procuracao.inss}
+                            onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, inss: !!v } })}
+                          />
+                          Atuação perante o INSS
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                          <Checkbox
+                            checked={formData.procuracao.receita}
+                            onCheckedChange={v => setFormData({ ...formData, procuracao: { ...formData.procuracao, receita: !!v } })}
+                          />
+                          Atuação perante Receita Federal
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Poderes Especiais Adicionais</Label>
+                          <Input
+                            placeholder="Ex: representar perante cartórios, Detran..."
+                            value={formData.procuracao.poderesExtras}
+                            onChange={e => setFormData({ ...formData, procuracao: { ...formData.procuracao, poderesExtras: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Finalidade Específica (opcional)</Label>
+                          <Input
+                            placeholder="Ex: Ação de cobrança em face de Fulano"
+                            value={formData.procuracao.finalidadeProc}
+                            onChange={e => setFormData({ ...formData, procuracao: { ...formData.procuracao, finalidadeProc: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Finalidade Específica (opcional)</Label>
-                      <Input
-                        placeholder="Ex: Ação de cobrança em face de Fulano"
-                        value={formData.procuracao.finalidadeProc}
-                        onChange={e => setFormData({ ...formData, procuracao: { ...formData.procuracao, finalidadeProc: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                  </div>
+                  )}
+
+                  {abaProcuracao === 'texto' && (
+                    <AbaTextoMinuta
+                      titulo="Editor de Texto da Minuta da Procuração"
+                      descricao="Personalize o texto completo da Procuração Ad Judicia. Se preenchido, este texto sob medida substituirá a minuta automática gerada pelos poderes acima."
+                      texto={formData.procuracao.textoPersonalizado || ''}
+                      onChangeTexto={val => setFormData(prev => ({
+                        ...prev,
+                        procuracao: { ...prev.procuracao, textoPersonalizado: val }
+                      }))}
+                      onPreencherPadrao={handlePreencherProcuracaoComPadrao}
+                      onLimpar={handleLimparProcuracao}
+                      placeholder="Deixe em branco para usar a minuta dinâmica oficial, ou clique em 'Preencher com texto padrão atual' para editar cláusulas ou expressões..."
+                    />
+                  )}
+
+                  {abaProcuracao === 'rodape' && (
+                    <AbaCabecalhoRodape
+                      cabecalho={formData.procuracao.cabecalhoPersonalizado ?? ''}
+                      onChangeCabecalho={val => setFormData(prev => ({
+                        ...prev,
+                        procuracao: { ...prev.procuracao, cabecalhoPersonalizado: val }
+                      }))}
+                      linha1={formData.procuracao.rodapeLinha1 ?? formData.rodapeLinha1 ?? ''}
+                      onChangeLinha1={val => setFormData(prev => ({
+                        ...prev,
+                        procuracao: { ...prev.procuracao, rodapeLinha1: val }
+                      }))}
+                      linha2={formData.procuracao.rodapeLinha2 ?? formData.rodapeLinha2 ?? ''}
+                      onChangeLinha2={val => setFormData(prev => ({
+                        ...prev,
+                        procuracao: { ...prev.procuracao, rodapeLinha2: val }
+                      }))}
+                      linha3={formData.procuracao.rodapeLinha3 ?? formData.rodapeLinha3 ?? ''}
+                      onChangeLinha3={val => setFormData(prev => ({
+                        ...prev,
+                        procuracao: { ...prev.procuracao, rodapeLinha3: val }
+                      }))}
+                      numerarPaginas={formData.procuracao.numerarPaginas ?? formData.numerarPaginas ?? false}
+                      onChangeNumerarPaginas={val => setFormData(prev => ({
+                        ...prev,
+                        procuracao: { ...prev.procuracao, numerarPaginas: val }
+                      }))}
+                      onRestaurar={handleRestaurarRodapeProcuracao}
+                    />
+                  )}
 
                   {/* Rodapé de Ações de Padrão */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">
@@ -1755,53 +2276,150 @@ export default function GerarDocumentos() {
               >
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-secondary" />
-                  <h3 className="font-bold text-white text-sm">Dados da Declaração de Hipossuficiência</h3>
+                  <h3 className="font-bold text-white text-sm">Dados e Minuta da Declaração de Hipossuficiência</h3>
                 </div>
                 {secaoAberta.hipossuficiencia ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </div>
 
               {secaoAberta.hipossuficiencia && (
                 <div className="space-y-4 pt-2 border-t border-white/5">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Renda Mensal Aproximada</Label>
-                      <Input
-                        placeholder="Ex: R$ 1.800,00"
-                        value={formData.hipossuficiencia.rendaMensal}
-                        onChange={e => setFormData({ ...formData, hipossuficiencia: { ...formData.hipossuficiencia, rendaMensal: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Nº de Dependentes</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Ex: 2"
-                        value={formData.hipossuficiencia.dependentes}
-                        onChange={e => setFormData({ ...formData, hipossuficiencia: { ...formData.hipossuficiencia, dependentes: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Condição de Trabalho</Label>
-                      <Input
-                        placeholder="desempregado(a), autônomo(a)..."
-                        value={formData.hipossuficiencia.situacao}
-                        onChange={e => setFormData({ ...formData, hipossuficiencia: { ...formData.hipossuficiencia, situacao: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
+                  {/* Seletor de visualização da Hipossuficiência */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-900/90 border border-white/10">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setAbaHipossuficiencia('parametros')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                          abaHipossuficiencia === 'parametros'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        1. Dados & Parâmetros
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaHipossuficiencia('texto')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaHipossuficiencia === 'texto'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-secondary" />
+                        2. Texto da Declaração
+                        {formData.hipossuficiencia.textoPersonalizado && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-secondary" title="Texto personalizado ativo" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaHipossuficiencia('rodape')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaHipossuficiencia === 'rodape'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <Settings className="w-3.5 h-3.5 text-secondary" />
+                        3. Cabeçalho & Rodapé
+                      </button>
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Informações Complementares</Label>
-                    <Input
-                      placeholder="Ex: Custos com medicamentos de uso contínuo..."
-                      value={formData.hipossuficiencia.hipoExtra}
-                      onChange={e => setFormData({ ...formData, hipossuficiencia: { ...formData.hipossuficiencia, hipoExtra: e.target.value } })}
-                      className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+
+                  {abaHipossuficiencia === 'parametros' && (
+                    <div className="space-y-4 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Renda Mensal Aproximada</Label>
+                          <Input
+                            placeholder="Ex: R$ 1.800,00"
+                            value={formData.hipossuficiencia.rendaMensal}
+                            onChange={e => setFormData({ ...formData, hipossuficiencia: { ...formData.hipossuficiencia, rendaMensal: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Nº de Dependentes</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            placeholder="Ex: 2"
+                            value={formData.hipossuficiencia.dependentes}
+                            onChange={e => setFormData({ ...formData, hipossuficiencia: { ...formData.hipossuficiencia, dependentes: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Condição de Trabalho</Label>
+                          <Input
+                            placeholder="desempregado(a), autônomo(a)..."
+                            value={formData.hipossuficiencia.situacao}
+                            onChange={e => setFormData({ ...formData, hipossuficiencia: { ...formData.hipossuficiencia, situacao: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Informações Complementares</Label>
+                        <Input
+                          placeholder="Ex: Custos com medicamentos de uso contínuo..."
+                          value={formData.hipossuficiencia.hipoExtra}
+                          onChange={e => setFormData({ ...formData, hipossuficiencia: { ...formData.hipossuficiencia, hipoExtra: e.target.value } })}
+                          className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {abaHipossuficiencia === 'texto' && (
+                    <AbaTextoMinuta
+                      titulo="Editor de Texto da Declaração de Hipossuficiência"
+                      descricao="Personalize a redação da declaração de hipossuficiência econômica. Se preenchido, este texto sob medida substituirá o padrão dinâmico."
+                      texto={formData.hipossuficiencia.textoPersonalizado || ''}
+                      onChangeTexto={val => setFormData(prev => ({
+                        ...prev,
+                        hipossuficiencia: { ...prev.hipossuficiencia, textoPersonalizado: val }
+                      }))}
+                      onPreencherPadrao={handlePreencherHipossuficienciaComPadrao}
+                      onLimpar={handleLimparHipossuficiencia}
+                      placeholder="Deixe em branco para usar a declaração automática, ou clique em 'Preencher com texto padrão atual' para editar frases..."
                     />
-                  </div>
+                  )}
+
+                  {abaHipossuficiencia === 'rodape' && (
+                    <AbaCabecalhoRodape
+                      cabecalho={formData.hipossuficiencia.cabecalhoPersonalizado ?? ''}
+                      onChangeCabecalho={val => setFormData(prev => ({
+                        ...prev,
+                        hipossuficiencia: { ...prev.hipossuficiencia, cabecalhoPersonalizado: val }
+                      }))}
+                      linha1={formData.hipossuficiencia.rodapeLinha1 ?? formData.rodapeLinha1 ?? ''}
+                      onChangeLinha1={val => setFormData(prev => ({
+                        ...prev,
+                        hipossuficiencia: { ...prev.hipossuficiencia, rodapeLinha1: val }
+                      }))}
+                      linha2={formData.hipossuficiencia.rodapeLinha2 ?? formData.rodapeLinha2 ?? ''}
+                      onChangeLinha2={val => setFormData(prev => ({
+                        ...prev,
+                        hipossuficiencia: { ...prev.hipossuficiencia, rodapeLinha2: val }
+                      }))}
+                      linha3={formData.hipossuficiencia.rodapeLinha3 ?? formData.rodapeLinha3 ?? ''}
+                      onChangeLinha3={val => setFormData(prev => ({
+                        ...prev,
+                        hipossuficiencia: { ...prev.hipossuficiencia, rodapeLinha3: val }
+                      }))}
+                      numerarPaginas={formData.hipossuficiencia.numerarPaginas ?? formData.numerarPaginas ?? false}
+                      onChangeNumerarPaginas={val => setFormData(prev => ({
+                        ...prev,
+                        hipossuficiencia: { ...prev.hipossuficiencia, numerarPaginas: val }
+                      }))}
+                      onRestaurar={handleRestaurarRodapeHipossuficiencia}
+                    />
+                  )}
 
                   {/* Rodapé de Ações de Padrão */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">
@@ -1836,33 +2454,130 @@ export default function GerarDocumentos() {
               >
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-secondary" />
-                  <h3 className="font-bold text-white text-sm">Dados da Declaração de Isenção IRPF</h3>
+                  <h3 className="font-bold text-white text-sm">Dados e Minuta da Declaração de Isenção IRPF</h3>
                 </div>
                 {secaoAberta.irpf ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </div>
 
               {secaoAberta.irpf && (
                 <div className="space-y-4 pt-2 border-t border-white/5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Exercício(s)</Label>
-                      <Input
-                        placeholder="2025 e 2026"
-                        value={formData.irpf.exercicios}
-                        onChange={e => setFormData({ ...formData, irpf: { ...formData.irpf, exercicios: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Finalidade</Label>
-                      <Input
-                        placeholder="instrução de pedido de gratuidade..."
-                        value={formData.irpf.finalidade}
-                        onChange={e => setFormData({ ...formData, irpf: { ...formData.irpf, finalidade: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
+                  {/* Seletor de visualização do IRPF */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-900/90 border border-white/10">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setAbaIrpf('parametros')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                          abaIrpf === 'parametros'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        1. Dados & Parâmetros
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaIrpf('texto')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaIrpf === 'texto'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-secondary" />
+                        2. Texto da Declaração
+                        {formData.irpf.textoPersonalizado && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-secondary" title="Texto personalizado ativo" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaIrpf('rodape')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaIrpf === 'rodape'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <Settings className="w-3.5 h-3.5 text-secondary" />
+                        3. Cabeçalho & Rodapé
+                      </button>
                     </div>
                   </div>
+
+                  {abaIrpf === 'parametros' && (
+                    <div className="space-y-4 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Exercício(s)</Label>
+                          <Input
+                            placeholder="2025 e 2026"
+                            value={formData.irpf.exercicios}
+                            onChange={e => setFormData({ ...formData, irpf: { ...formData.irpf, exercicios: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Finalidade</Label>
+                          <Input
+                            placeholder="instrução de pedido de gratuidade..."
+                            value={formData.irpf.finalidade}
+                            onChange={e => setFormData({ ...formData, irpf: { ...formData.irpf, finalidade: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {abaIrpf === 'texto' && (
+                    <AbaTextoMinuta
+                      titulo="Editor de Texto da Declaração de Isenção IRPF"
+                      descricao="Personalize a redação da declaração de isenção de imposto de renda. Se preenchido, este texto sob medida substituirá o padrão dinâmico."
+                      texto={formData.irpf.textoPersonalizado || ''}
+                      onChangeTexto={val => setFormData(prev => ({
+                        ...prev,
+                        irpf: { ...prev.irpf, textoPersonalizado: val }
+                      }))}
+                      onPreencherPadrao={handlePreencherIrpfComPadrao}
+                      onLimpar={handleLimparIrpf}
+                      placeholder="Deixe em branco para usar a declaração automática, ou clique em 'Preencher com texto padrão atual' para editar frases..."
+                    />
+                  )}
+
+                  {abaIrpf === 'rodape' && (
+                    <AbaCabecalhoRodape
+                      cabecalho={formData.irpf.cabecalhoPersonalizado ?? ''}
+                      onChangeCabecalho={val => setFormData(prev => ({
+                        ...prev,
+                        irpf: { ...prev.irpf, cabecalhoPersonalizado: val }
+                      }))}
+                      linha1={formData.irpf.rodapeLinha1 ?? formData.rodapeLinha1 ?? ''}
+                      onChangeLinha1={val => setFormData(prev => ({
+                        ...prev,
+                        irpf: { ...prev.irpf, rodapeLinha1: val }
+                      }))}
+                      linha2={formData.irpf.rodapeLinha2 ?? formData.rodapeLinha2 ?? ''}
+                      onChangeLinha2={val => setFormData(prev => ({
+                        ...prev,
+                        irpf: { ...prev.irpf, rodapeLinha2: val }
+                      }))}
+                      linha3={formData.irpf.rodapeLinha3 ?? formData.rodapeLinha3 ?? ''}
+                      onChangeLinha3={val => setFormData(prev => ({
+                        ...prev,
+                        irpf: { ...prev.irpf, rodapeLinha3: val }
+                      }))}
+                      numerarPaginas={formData.irpf.numerarPaginas ?? formData.numerarPaginas ?? false}
+                      onChangeNumerarPaginas={val => setFormData(prev => ({
+                        ...prev,
+                        irpf: { ...prev.irpf, numerarPaginas: val }
+                      }))}
+                      onRestaurar={handleRestaurarRodapeIrpf}
+                    />
+                  )}
 
                   {/* Rodapé de Ações de Padrão */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">
@@ -1897,64 +2612,161 @@ export default function GerarDocumentos() {
               >
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-secondary" />
-                  <h3 className="font-bold text-white text-sm">Declaração de Residência</h3>
+                  <h3 className="font-bold text-white text-sm">Dados e Minuta da Declaração de Residência</h3>
                 </div>
                 {secaoAberta.residencia ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </div>
 
               {secaoAberta.residencia && (
                 <div className="space-y-4 pt-2 border-t border-white/5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Destinatário ou Finalidade</Label>
-                      <Input
-                        value={formData.residencia.destinoResidencia}
-                        onChange={e => setFormData({ ...formData, residencia: { ...formData.residencia, destinoResidencia: e.target.value } })}
-                        placeholder="empresa ou órgão solicitante"
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Tipo de Declaração</Label>
-                      <select
-                        value={formData.residencia.tipoResidencia}
-                        onChange={e => setFormData({ ...formData, residencia: { ...formData.residencia, tipoResidencia: e.target.value as any } })}
-                        className="w-full h-10 bg-slate-900 border border-border/60 rounded-xl px-3 text-white text-xs"
+                  {/* Seletor de visualização da Residência */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-900/90 border border-white/10">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setAbaResidencia('parametros')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                          abaResidencia === 'parametros'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
                       >
-                        <option value="proprio">O próprio cliente declara</option>
-                        <option value="terceiro">Titular do comprovante declara residência do cliente</option>
-                      </select>
+                        1. Dados & Parâmetros
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaResidencia('texto')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaResidencia === 'texto'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-secondary" />
+                        2. Texto da Declaração
+                        {formData.residencia.textoPersonalizado && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-secondary" title="Texto personalizado ativo" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaResidencia('rodape')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaResidencia === 'rodape'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <Settings className="w-3.5 h-3.5 text-secondary" />
+                        3. Cabeçalho & Rodapé
+                      </button>
                     </div>
                   </div>
 
-                  {formData.residencia.tipoResidencia === 'terceiro' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-3 bg-slate-900/60 rounded-xl border border-white/5">
-                      <div>
-                        <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Nome do Titular</Label>
-                        <Input
-                          value={formData.residencia.titularResidencia}
-                          onChange={e => setFormData({ ...formData, residencia: { ...formData.residencia, titularResidencia: e.target.value } })}
-                          className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                        />
+                  {abaResidencia === 'parametros' && (
+                    <div className="space-y-4 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Destinatário ou Finalidade</Label>
+                          <Input
+                            value={formData.residencia.destinoResidencia}
+                            onChange={e => setFormData({ ...formData, residencia: { ...formData.residencia, destinoResidencia: e.target.value } })}
+                            placeholder="empresa ou órgão solicitante"
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Tipo de Declaração</Label>
+                          <select
+                            value={formData.residencia.tipoResidencia}
+                            onChange={e => setFormData({ ...formData, residencia: { ...formData.residencia, tipoResidencia: e.target.value as any } })}
+                            className="w-full h-10 bg-slate-900 border border-border/60 rounded-xl px-3 text-white text-xs"
+                          >
+                            <option value="proprio">O próprio cliente declara</option>
+                            <option value="terceiro">Titular do comprovante declara residência do cliente</option>
+                          </select>
+                        </div>
                       </div>
-                      <div>
-                        <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">CPF do Titular</Label>
-                        <Input
-                          value={formData.residencia.cpfTitular}
-                          onChange={e => setFormData({ ...formData, residencia: { ...formData.residencia, cpfTitular: e.target.value } })}
-                          className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Vínculo</Label>
-                        <Input
-                          placeholder="mãe, cônjuge, amigo..."
-                          value={formData.residencia.vinculoTitular}
-                          onChange={e => setFormData({ ...formData, residencia: { ...formData.residencia, vinculoTitular: e.target.value } })}
-                          className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                        />
-                      </div>
+
+                      {formData.residencia.tipoResidencia === 'terceiro' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-3 bg-slate-900/60 rounded-xl border border-white/5">
+                          <div>
+                            <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Nome do Titular</Label>
+                            <Input
+                              value={formData.residencia.titularResidencia}
+                              onChange={e => setFormData({ ...formData, residencia: { ...formData.residencia, titularResidencia: e.target.value } })}
+                              className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">CPF do Titular</Label>
+                            <Input
+                              value={formData.residencia.cpfTitular}
+                              onChange={e => setFormData({ ...formData, residencia: { ...formData.residencia, cpfTitular: e.target.value } })}
+                              className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Vínculo</Label>
+                            <Input
+                              placeholder="mãe, cônjuge, amigo..."
+                              value={formData.residencia.vinculoTitular}
+                              onChange={e => setFormData({ ...formData, residencia: { ...formData.residencia, vinculoTitular: e.target.value } })}
+                              className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
+                  )}
+
+                  {abaResidencia === 'texto' && (
+                    <AbaTextoMinuta
+                      titulo="Editor de Texto da Declaração de Residência"
+                      descricao="Personalize a redação da declaração de endereço residencial. Se preenchido, este texto sob medida substituirá o padrão dinâmico."
+                      texto={formData.residencia.textoPersonalizado || ''}
+                      onChangeTexto={val => setFormData(prev => ({
+                        ...prev,
+                        residencia: { ...prev.residencia, textoPersonalizado: val }
+                      }))}
+                      onPreencherPadrao={handlePreencherResidenciaComPadrao}
+                      onLimpar={handleLimparResidencia}
+                      placeholder="Deixe em branco para usar a declaração automática, ou clique em 'Preencher com texto padrão atual' para editar frases..."
+                    />
+                  )}
+
+                  {abaResidencia === 'rodape' && (
+                    <AbaCabecalhoRodape
+                      cabecalho={formData.residencia.cabecalhoPersonalizado ?? ''}
+                      onChangeCabecalho={val => setFormData(prev => ({
+                        ...prev,
+                        residencia: { ...prev.residencia, cabecalhoPersonalizado: val }
+                      }))}
+                      linha1={formData.residencia.rodapeLinha1 ?? formData.rodapeLinha1 ?? ''}
+                      onChangeLinha1={val => setFormData(prev => ({
+                        ...prev,
+                        residencia: { ...prev.residencia, rodapeLinha1: val }
+                      }))}
+                      linha2={formData.residencia.rodapeLinha2 ?? formData.rodapeLinha2 ?? ''}
+                      onChangeLinha2={val => setFormData(prev => ({
+                        ...prev,
+                        residencia: { ...prev.residencia, rodapeLinha2: val }
+                      }))}
+                      linha3={formData.residencia.rodapeLinha3 ?? formData.rodapeLinha3 ?? ''}
+                      onChangeLinha3={val => setFormData(prev => ({
+                        ...prev,
+                        residencia: { ...prev.residencia, rodapeLinha3: val }
+                      }))}
+                      numerarPaginas={formData.residencia.numerarPaginas ?? formData.numerarPaginas ?? false}
+                      onChangeNumerarPaginas={val => setFormData(prev => ({
+                        ...prev,
+                        residencia: { ...prev.residencia, numerarPaginas: val }
+                      }))}
+                      onRestaurar={handleRestaurarRodapeResidencia}
+                    />
                   )}
 
                   {/* Rodapé de Ações de Padrão */}
@@ -1990,65 +2802,162 @@ export default function GerarDocumentos() {
               >
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-secondary" />
-                  <h3 className="font-bold text-white text-sm">Dados do Recibo de Pagamento</h3>
+                  <h3 className="font-bold text-white text-sm">Dados e Minuta do Recibo de Pagamento</h3>
                 </div>
                 {secaoAberta.recibo ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </div>
 
               {secaoAberta.recibo && (
                 <div className="space-y-4 pt-2 border-t border-white/5">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Valor (R$)</Label>
-                      <Input
-                        value={formData.recibo.valorRecibo}
-                        onChange={e => setFormData({ ...formData, recibo: { ...formData.recibo, valorRecibo: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Valor por Extenso</Label>
-                      <Input
-                        value={formData.recibo.valorExtenso}
-                        onChange={e => setFormData({ ...formData, recibo: { ...formData.recibo, valorExtenso: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Forma de Pagamento</Label>
-                      <select
-                        value={formData.recibo.formaPagamento}
-                        onChange={e => setFormData({ ...formData, recibo: { ...formData.recibo, formaPagamento: e.target.value } })}
-                        className="w-full h-10 bg-slate-900 border border-border/60 rounded-xl px-3 text-white text-xs"
+                  {/* Seletor de visualização do Recibo */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-900/90 border border-white/10">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setAbaRecibo('parametros')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                          abaRecibo === 'parametros'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
                       >
-                        <option value="PIX">PIX</option>
-                        <option value="transferência bancária">Transferência Bancária</option>
-                        <option value="dinheiro">Dinheiro</option>
-                        <option value="cartão de crédito">Cartão de Crédito</option>
-                        <option value="boleto">Boleto</option>
-                      </select>
+                        1. Dados & Parâmetros
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaRecibo('texto')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaRecibo === 'texto'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-secondary" />
+                        2. Texto do Recibo
+                        {formData.recibo.textoPersonalizado && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-secondary" title="Texto personalizado ativo" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaRecibo('rodape')}
+                        className={cn(
+                          'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+                          abaRecibo === 'rodape'
+                            ? 'bg-secondary/20 text-secondary border border-secondary/30 shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        )}
+                      >
+                        <Settings className="w-3.5 h-3.5 text-secondary" />
+                        3. Cabeçalho & Rodapé
+                      </button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Referente a</Label>
-                      <Input
-                        value={formData.recibo.referenciaRecibo}
-                        onChange={e => setFormData({ ...formData, recibo: { ...formData.recibo, referenciaRecibo: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
+                  {abaRecibo === 'parametros' && (
+                    <div className="space-y-4 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Valor (R$)</Label>
+                          <Input
+                            value={formData.recibo.valorRecibo}
+                            onChange={e => setFormData({ ...formData, recibo: { ...formData.recibo, valorRecibo: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Valor por Extenso</Label>
+                          <Input
+                            value={formData.recibo.valorExtenso}
+                            onChange={e => setFormData({ ...formData, recibo: { ...formData.recibo, valorExtenso: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Forma de Pagamento</Label>
+                          <select
+                            value={formData.recibo.formaPagamento}
+                            onChange={e => setFormData({ ...formData, recibo: { ...formData.recibo, formaPagamento: e.target.value } })}
+                            className="w-full h-10 bg-slate-900 border border-border/60 rounded-xl px-3 text-white text-xs"
+                          >
+                            <option value="PIX">PIX</option>
+                            <option value="transferência bancária">Transferência Bancária</option>
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="cartão de crédito">Cartão de Crédito</option>
+                            <option value="boleto">Boleto</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Referente a</Label>
+                          <Input
+                            value={formData.recibo.referenciaRecibo}
+                            onChange={e => setFormData({ ...formData, recibo: { ...formData.recibo, referenciaRecibo: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Identificação da Parcela</Label>
+                          <Input
+                            placeholder="Ex: 1ª de 4 parcelas"
+                            value={formData.recibo.parcelaRecibo}
+                            onChange={e => setFormData({ ...formData, recibo: { ...formData.recibo, parcelaRecibo: e.target.value } })}
+                            className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-slate-300 text-[11px] font-bold uppercase tracking-widest pl-1 mb-1 block">Identificação da Parcela</Label>
-                      <Input
-                        placeholder="Ex: 1ª de 4 parcelas"
-                        value={formData.recibo.parcelaRecibo}
-                        onChange={e => setFormData({ ...formData, recibo: { ...formData.recibo, parcelaRecibo: e.target.value } })}
-                        className="h-10 bg-slate-900 border-border/60 text-white rounded-xl text-xs"
-                      />
-                    </div>
-                  </div>
+                  )}
+
+                  {abaRecibo === 'texto' && (
+                    <AbaTextoMinuta
+                      titulo="Editor de Texto do Recibo de Pagamento"
+                      descricao="Personalize a redação da quitação e declaração de pagamento de honorários. Se preenchido, este texto sob medida substituirá o padrão dinâmico."
+                      texto={formData.recibo.textoPersonalizado || ''}
+                      onChangeTexto={val => setFormData(prev => ({
+                        ...prev,
+                        recibo: { ...prev.recibo, textoPersonalizado: val }
+                      }))}
+                      onPreencherPadrao={handlePreencherReciboComPadrao}
+                      onLimpar={handleLimparRecibo}
+                      placeholder="Deixe em branco para usar o recibo automático, ou clique em 'Preencher com texto padrão atual' para editar termos..."
+                    />
+                  )}
+
+                  {abaRecibo === 'rodape' && (
+                    <AbaCabecalhoRodape
+                      cabecalho={formData.recibo.cabecalhoPersonalizado ?? ''}
+                      onChangeCabecalho={val => setFormData(prev => ({
+                        ...prev,
+                        recibo: { ...prev.recibo, cabecalhoPersonalizado: val }
+                      }))}
+                      linha1={formData.recibo.rodapeLinha1 ?? formData.rodapeLinha1 ?? ''}
+                      onChangeLinha1={val => setFormData(prev => ({
+                        ...prev,
+                        recibo: { ...prev.recibo, rodapeLinha1: val }
+                      }))}
+                      linha2={formData.recibo.rodapeLinha2 ?? formData.rodapeLinha2 ?? ''}
+                      onChangeLinha2={val => setFormData(prev => ({
+                        ...prev,
+                        recibo: { ...prev.recibo, rodapeLinha2: val }
+                      }))}
+                      linha3={formData.recibo.rodapeLinha3 ?? formData.rodapeLinha3 ?? ''}
+                      onChangeLinha3={val => setFormData(prev => ({
+                        ...prev,
+                        recibo: { ...prev.recibo, rodapeLinha3: val }
+                      }))}
+                      numerarPaginas={formData.recibo.numerarPaginas ?? formData.numerarPaginas ?? false}
+                      onChangeNumerarPaginas={val => setFormData(prev => ({
+                        ...prev,
+                        recibo: { ...prev.recibo, numerarPaginas: val }
+                      }))}
+                      onRestaurar={handleRestaurarRodapeRecibo}
+                    />
+                  )}
 
                   {/* Rodapé de Ações de Padrão */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs">
