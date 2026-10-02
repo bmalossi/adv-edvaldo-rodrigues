@@ -10,7 +10,19 @@ import {
   OpcaoResidencia,
   ClausulaContrato
 } from './tipos'
-import { esc, dateLong, dateShort, formatarDataBr, money, clienteEndereco, clienteQualificacao } from './formatacao'
+import {
+  esc,
+  dateLong,
+  dateShort,
+  formatarDataBr,
+  money,
+  clienteEndereco,
+  clienteQualificacao,
+  extrairClientes,
+  clientesNomesFormatados,
+  clientesCpfsFormatados,
+  clientesQualificacaoMulti
+} from './formatacao'
 import { CLAUSULAS_PADRAO_CONTRATO } from './config-local'
 
 export const DADOS_ESCRITORIO_DOCUMENTO: AdvogadoConfigDoc = {
@@ -91,11 +103,14 @@ export function formatParagrafosPersonalizados(text: string): string {
 }
 
 export function obterTextoPadraoProcuracao(
-  c: Partial<Cliente> | null,
+  c: Partial<Cliente> | Partial<Cliente>[] | null,
   adv: AdvogadoConfigDoc,
   cfg: ConfigDocumentos,
   o: Partial<OpcaoProcuracao>
 ): string {
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  const isMulti = clientes.length > 1
+
   let special = 'receber citação, confessar, reconhecer a procedência do pedido'
   if (o.transigir !== false) special += ', transigir, conciliar, desistir e renunciar ao direito sobre o qual se funda a ação'
   if (o.receber !== false) special += ', receber, dar quitação, requerer, receber e levantar valores e depósitos judiciais ou extrajudiciais, inclusive por alvará, MLE, RPV, precatório, depósito recursal ou transferência bancária'
@@ -114,77 +129,129 @@ export function obterTextoPadraoProcuracao(
 
   const rotuloOutorgado = temConjunto ? 'OUTORGADOS:' : 'OUTORGADO:'
   const textoProcuradores = temConjunto
-    ? 'seus bastantes procuradores os advogados acima qualificados, conferindo-lhes poderes para o foro em geral'
-    : 'seu bastante procurador o advogado acima qualificado, conferindo-lhe poderes para o foro em geral'
+    ? (isMulti ? 'seus bastantes procuradores os advogados acima qualificados, conferindo-lhes poderes para o foro em geral' : 'seus bastantes procuradores os advogados acima qualificados, conferindo-lhes poderes para o foro em geral')
+    : (isMulti ? 'seu bastante procurador o advogado acima qualificado, conferindo-lhe poderes para o foro em geral' : 'seu bastante procurador o advogado acima qualificado, conferindo-lhe poderes para o foro em geral')
   const textoAutorizacao = temConjunto ? 'Ficam os OUTORGADOS autorizados' : 'Fica o OUTORGADO autorizado'
 
   const finalidade = o.finalidadeProc ? `\n\nFINALIDADE ESPECÍFICA: ${o.finalidadeProc}.` : ''
-  const qualif = c ? clienteQualificacao(c) : '[DADOS DO OUTORGANTE QUALIFICADO]'
 
-  return `OUTORGANTE: ${qualif}.
+  const rotuloOutorgante = isMulti ? 'OUTORGANTES:' : 'OUTORGANTE:'
+  const qualif = isMulti
+    ? clientes.map((cli, i) => `${i + 1}) ${clienteQualificacao(cli)}`).join(';\n\n')
+    : (clientes[0]?.nome_razao_social ? clienteQualificacao(clientes[0]) : '[DADOS DO OUTORGANTE QUALIFICADO]')
+
+  const pronomeOutorgantes = isMulti ? 'os OUTORGANTES nomeiam e constituem' : 'o OUTORGANTE nomeia e constitui'
+  const representacaoPronome = isMulti ? 'para representá-los' : 'para representá-lo'
+  const conferePronome = isMulti ? 'Conferem, ainda' : 'Confere, ainda'
+
+  return `${rotuloOutorgante} ${qualif}.
 
 ${rotuloOutorgado} ${adv.nome}, advogado inscrito na ${adv.oab}, com escritório em ${enderecoAdv}, e-mail ${adv.email}, integrante da ${cfg.empresa}, registro OAB nº ${cfg.socOab}, CNPJ nº ${cfg.cnpj}${outorgadosConjunto}.
 
-Pelo presente instrumento particular, o OUTORGANTE nomeia e constitui ${textoProcuradores}, com a cláusula AD JUDICIA ET EXTRA, para representá-lo judicial, administrativa e extrajudicialmente, ativa ou passivamente, perante qualquer Juízo, Tribunal, órgão público ou entidade privada, em qualquer instância, podendo propor ações, apresentar defesas, recursos, requerimentos, notificações e demais medidas cabíveis, produzir provas, requerer documentos e certidões, acompanhar processos, procedimentos, inquéritos, perícias e audiências, praticando todos os atos necessários à defesa de seus interesses.
+Pelo presente instrumento particular, ${pronomeOutorgantes} ${textoProcuradores}, com a cláusula AD JUDICIA ET EXTRA, ${representacaoPronome} judicial, administrativa e extrajudicialmente, ativa ou passivamente, perante qualquer Juízo, Tribunal, órgão público ou entidade privada, em qualquer instância, podendo propor ações, apresentar defesas, recursos, requerimentos, notificações e demais medidas cabíveis, produzir provas, requerer documentos e certidões, acompanhar processos, procedimentos, inquéritos, perícias e audiências, praticando todos os atos necessários à defesa de seus interesses.
 
-Confere, ainda, nos termos do artigo 105 do Código de Processo Civil, poderes especiais para ${special}.
+${conferePronome}, nos termos do artigo 105 do Código de Processo Civil, poderes especiais para ${special}.
 
 ${textoAutorizacao} a requerer reserva, destaque e levantamento de honorários contratuais e sucumbenciais; nomear preposto, quando legalmente cabível; praticar atos físicos ou eletrônicos; e ${o.substabelecer === false ? 'não substabelecer sem autorização expressa' : 'substabelecer, no todo ou em parte, com ou sem reserva de poderes'}.${finalidade}`
 }
 
 export function obterTextoPadraoHipossuficiencia(
-  c: Partial<Cliente> | null,
+  c: Partial<Cliente> | Partial<Cliente>[] | null,
   o: Partial<OpcaoHipossuficiencia>
 ): string {
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  const isMulti = clientes.length > 1
+
   let extra = ''
-  if (o.situacao) extra += ` Declara, ainda, que atualmente se encontra na condição de ${o.situacao}.`
+  if (o.situacao) extra += ` ${isMulti ? 'Declaram' : 'Declara'}, ainda, que atualmente se ${isMulti ? 'encontram' : 'encontra'} na condição de ${o.situacao}.`
   if (o.rendaMensal) extra += ` Sua renda mensal aproximada é de ${o.rendaMensal}.`
   if (o.dependentes) extra += ` Possui ${o.dependentes} dependente(s).`
   if (o.hipoExtra) extra += ` ${o.hipoExtra}`
 
-  const qualif = c ? [c.nacionalidade, c.estado_civil, c.profissao].filter(Boolean).join(', ') : 'brasileiro(a), profissão...'
-  const rgPart = c?.rg_ie ? `portador(a) do RG nº ${c.rg_ie}, ` : ''
-  const nome = c ? String(c.nome_razao_social || '').toUpperCase() : '[NOME DO DECLARANTE]'
-  const docNum = c?.cpf_cnpj || '[CPF/CNPJ]'
-  const end = c ? clienteEndereco(c) : '[ENDEREÇO]'
-  const emailPart = c?.email ? `e-mail: ${c.email} e ` : ''
-  const telPart = c?.telefone_whatsapp ? `telefone: ${c.telefone_whatsapp}` : ''
-  const contatos = [emailPart, telPart].filter(Boolean).join('')
+  if (!isMulti) {
+    const cli = clientes[0]
+    const qualif = cli ? [cli.nacionalidade, cli.estado_civil, cli.profissao].filter(Boolean).join(', ') : 'brasileiro(a), profissão...'
+    const rgPart = cli?.rg_ie ? `portador(a) do RG nº ${cli.rg_ie}, ` : ''
+    const nome = cli?.nome_razao_social ? String(cli.nome_razao_social).toUpperCase() : '[NOME DO DECLARANTE]'
+    const docNum = cli?.cpf_cnpj || '[CPF/CNPJ]'
+    const end = cli ? clienteEndereco(cli) : '[ENDEREÇO]'
+    const emailPart = cli?.email ? `e-mail: ${cli.email} e ` : ''
+    const telPart = cli?.telefone_whatsapp ? `telefone: ${cli.telefone_whatsapp}` : ''
+    const contatos = [emailPart, telPart].filter(Boolean).join('')
 
-  return `${nome}, ${qualif}, ${rgPart}inscrito(a) no CPF/CNPJ nº ${docNum}, residente e domiciliado(a) em ${end}${contatos ? `, ${contatos}` : ''}, DECLARA, para os devidos fins de direito e sob as penas da lei, que é pobre na expressão jurídica da palavra, não podendo suportar o pagamento das custas e despesas processuais sem prejuízo de seu sustento e de sua família.${extra}
+    return `${nome}, ${qualif}, ${rgPart}inscrito(a) no CPF/CNPJ nº ${docNum}, residente e domiciliado(a) em ${end}${contatos ? `, ${contatos}` : ''}, DECLARA, para os devidos fins de direito e sob as penas da lei, que é pobre na expressão jurídica da palavra, não podendo suportar o pagamento das custas e despesas processuais sem prejuízo de seu sustento e de sua família.${extra}
 
 Por ser a expressão da verdade, firma a presente.`
+  }
+
+  const qualificacoesMulti = clientes.map(cli => {
+    const qualif = [cli.nacionalidade, cli.estado_civil, cli.profissao].filter(Boolean).join(', ')
+    const rgPart = cli.rg_ie ? `portador(a) do RG nº ${cli.rg_ie}, ` : ''
+    const nome = String(cli.nome_razao_social || '').toUpperCase()
+    const docNum = cli.cpf_cnpj || '[CPF/CNPJ]'
+    const end = clienteEndereco(cli)
+    return `${nome}, ${qualif}, ${rgPart}inscrito(a) no CPF/CNPJ nº ${docNum}, residente e domiciliado(a) em ${end}`
+  }).join(';\n\ne ')
+
+  return `${qualificacoesMulti}, DECLARAM CONJUNTAMENTE, para os devidos fins de direito e sob as penas da lei, que são pessoas pobres na expressão jurídica da palavra, não podendo suportar o pagamento das custas e despesas processuais sem prejuízo de seus próprios sustentos e de suas famílias.${extra}
+
+Por ser a expressão da verdade, firmam a presente.`
 }
 
 export function obterTextoPadraoIrpf(
-  c: Partial<Cliente> | null,
+  c: Partial<Cliente> | Partial<Cliente>[] | null,
   o: Partial<OpcaoIrpf>
 ): string {
-  const rgPart = c?.rg_ie ? `RG nº ${c.rg_ie}, ` : ''
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  const isMulti = clientes.length > 1
   const finalidadePart = o.finalidade ? `\n\nFinalidade: ${o.finalidade}.` : ''
-  const nome = c ? String(c.nome_razao_social || '').toUpperCase() : '[NOME DO DECLARANTE]'
-  const docNum = c?.cpf_cnpj || '[CPF/CNPJ]'
-  const end = c ? clienteEndereco(c) : '[ENDEREÇO]'
-  const telPart = c?.telefone_whatsapp ? `, telefone ${c.telefone_whatsapp}` : ''
 
-  return `Eu, ${nome}, ${rgPart}CPF/CNPJ nº ${docNum}, residente em ${end}${telPart}, DECLARO ser isento(a) da apresentação da Declaração do Imposto de Renda Pessoa Física – DIRPF no(s) exercício(s) ${o.exercicios || '________________'}, por não incorrer em nenhuma das hipóteses de obrigatoriedade estabelecidas pela Receita Federal do Brasil.
+  if (!isMulti) {
+    const cli = clientes[0]
+    const rgPart = cli?.rg_ie ? `RG nº ${cli.rg_ie}, ` : ''
+    const nome = cli?.nome_razao_social ? String(cli.nome_razao_social).toUpperCase() : '[NOME DO DECLARANTE]'
+    const docNum = cli?.cpf_cnpj || '[CPF/CNPJ]'
+    const end = cli ? clienteEndereco(cli) : '[ENDEREÇO]'
+    const telPart = cli?.telefone_whatsapp ? `, telefone ${cli.telefone_whatsapp}` : ''
+
+    return `Eu, ${nome}, ${rgPart}CPF/CNPJ nº ${docNum}, residente em ${end}${telPart}, DECLARO ser isento(a) da apresentação da Declaração do Imposto de Renda Pessoa Física – DIRPF no(s) exercício(s) ${o.exercicios || '________________'}, por não incorrer em nenhuma das hipóteses de obrigatoriedade estabelecidas pela Receita Federal do Brasil.
+
+Esta declaração é firmada sob as penas da lei, nos termos da Lei nº 7.115/1983, declarando serem verdadeiras todas as informações prestadas.${finalidadePart}`
+  }
+
+  const nomesEDocs = clientes.map(cli => `${String(cli.nome_razao_social || '').toUpperCase()}, CPF/CNPJ nº ${cli.cpf_cnpj || ''}`).join(' e ')
+  const end = clienteEndereco(clientes[0])
+
+  return `Nós, ${nomesEDocs}, residentes em ${end}, DECLARAMOS ser isentos da apresentação da Declaração do Imposto de Renda Pessoa Física – DIRPF no(s) exercício(s) ${o.exercicios || '________________'}, por não incorrer em nenhuma das hipóteses de obrigatoriedade estabelecidas pela Receita Federal do Brasil.
 
 Esta declaração é firmada sob as penas da lei, nos termos da Lei nº 7.115/1983, declarando serem verdadeiras todas as informações prestadas.${finalidadePart}`
 }
 
 export function obterTextoPadraoRecibo(
-  c: Partial<Cliente> | null,
+  c: Partial<Cliente> | Partial<Cliente>[] | null,
   adv: AdvogadoConfigDoc,
   cfg: ConfigDocumentos,
   o: Partial<OpcaoRecibo>
 ): string {
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  const isMulti = clientes.length > 1
   const parcela = o.parcelaRecibo ? ` (${o.parcelaRecibo})` : ''
   const obs = o.obsRecibo ? ` ${o.obsRecibo}` : ''
-  const nome = c ? String(c.nome_razao_social || '').toUpperCase() : '[NOME DO CLIENTE]'
-  const docNum = c?.cpf_cnpj || '[CPF/CNPJ]'
   const val = o.valorRecibo ? money(o.valorRecibo) : 'R$ 0,00'
 
-  return `${nome}, inscrito(a) no CPF/CNPJ nº ${docNum}, declara, para os devidos fins, que efetuou o pagamento no valor de ${val} (${o.valorExtenso || 'valor por extenso não informado'}) para ${adv.nome}, advogado, inscrito no CPF nº ${cfg.lawyerCpf} e ${adv.oab}, integrante da ${cfg.empresa}.
+  if (!isMulti) {
+    const cli = clientes[0]
+    const nome = cli?.nome_razao_social ? String(cli.nome_razao_social).toUpperCase() : '[NOME DO CLIENTE]'
+    const docNum = cli?.cpf_cnpj || '[CPF/CNPJ]'
+    return `${nome}, inscrito(a) no CPF/CNPJ nº ${docNum}, declara, para os devidos fins, que efetuou o pagamento no valor de ${val} (${o.valorExtenso || 'valor por extenso não informado'}) para ${adv.nome}, advogado, inscrito no CPF nº ${cfg.lawyerCpf} e ${adv.oab}, integrante da ${cfg.empresa}.
+
+O valor refere-se a ${o.referenciaRecibo || 'prestação de serviços advocatícios'}${parcela}. O pagamento foi realizado por ${o.formaPagamento || 'PIX'} nesta data.${obs}
+
+Por ser a expressão da verdade, firma-se o presente recibo.`
+  }
+
+  const clientesStr = clientes.map(cli => `${String(cli.nome_razao_social || '').toUpperCase()}, inscrito(a) no CPF/CNPJ nº ${cli.cpf_cnpj || ''}`).join(' e ')
+  return `${clientesStr}, declaram, para os devidos fins, que efetuaram conjuntamente o pagamento no valor de ${val} (${o.valorExtenso || 'valor por extenso não informado'}) para ${adv.nome}, advogado, inscrito no CPF nº ${cfg.lawyerCpf} e ${adv.oab}, integrante da ${cfg.empresa}.
 
 O valor refere-se a ${o.referenciaRecibo || 'prestação de serviços advocatícios'}${parcela}. O pagamento foi realizado por ${o.formaPagamento || 'PIX'} nesta data.${obs}
 
@@ -192,31 +259,48 @@ Por ser a expressão da verdade, firma-se o presente recibo.`
 }
 
 export function obterTextoPadraoResidencia(
-  c: Partial<Cliente> | null,
+  c: Partial<Cliente> | Partial<Cliente>[] | null,
   o: Partial<OpcaoResidencia>
 ): string {
-  const third = o.tipoResidencia === 'terceiro' && o.titularResidencia
-  const declarant = third ? o.titularResidencia : (c?.nome_razao_social || '[NOME DO DECLARANTE]')
-  const cpf = third ? (o.cpfTitular || '[CPF DO TITULAR]') : (c?.cpf_cnpj || '[CPF DO DECLARANTE]')
-  const end = c ? clienteEndereco(c) : '[ENDEREÇO DO IMÓVEL]'
-  const resident = third
-    ? `DECLARO que ${c?.nome_razao_social || '[NOME DO CLIENTE]'}, inscrito(a) no CPF/CNPJ nº ${c?.cpf_cnpj || '[CPF/CNPJ]'}, reside e é domiciliado(a) no endereço ${end}${o.vinculoTitular ? `, sendo meu/minha ${o.vinculoTitular}` : ''}`
-    : `DECLARO que sou residente e domiciliado(a) no endereço ${end}`
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  const isMulti = clientes.length > 1
 
-  return `Eu, ${String(declarant || '').toUpperCase()}, inscrito(a) no CPF/CNPJ nº ${cpf || ''}, ${resident}, para fins de comprovação de residência junto a ${o.destinoResidencia || 'empresa ou órgão solicitante'}.
+  if (!isMulti) {
+    const cli = clientes[0]
+    const third = o.tipoResidencia === 'terceiro' && o.titularResidencia
+    const declarant = third ? o.titularResidencia : (cli?.nome_razao_social || '[NOME DO DECLARANTE]')
+    const cpf = third ? (o.cpfTitular || '[CPF DO TITULAR]') : (cli?.cpf_cnpj || '[CPF DO DECLARANTE]')
+    const end = cli ? clienteEndereco(cli) : '[ENDEREÇO DO IMÓVEL]'
+    const resident = third
+      ? `DECLARO que ${cli?.nome_razao_social || '[NOME DO CLIENTE]'}, inscrito(a) no CPF/CNPJ nº ${cli?.cpf_cnpj || '[CPF/CNPJ]'}, reside e é domiciliado(a) no endereço ${end}${o.vinculoTitular ? `, sendo meu/minha ${o.vinculoTitular}` : ''}`
+      : `DECLARO que sou residente e domiciliado(a) no endereço ${end}`
+
+    return `Eu, ${String(declarant || '').toUpperCase()}, inscrito(a) no CPF/CNPJ nº ${cpf || ''}, ${resident}, para fins de comprovação de residência junto a ${o.destinoResidencia || 'empresa ou órgão solicitante'}.
 
 Declaro, sob as penas da lei e nos termos dos artigos 1º, 2º e 3º da Lei nº 7.115/1983, que as informações são verdadeiras, estando ciente das responsabilidades civis, administrativas e criminais decorrentes de declaração falsa, inclusive do disposto no artigo 299 do Código Penal.
 
 Por ser a expressão da verdade, firmo a presente para que produza seus efeitos legais.`
+  }
+
+  const nomesEDocs = clientes.map(cli => `${String(cli.nome_razao_social || '').toUpperCase()}, inscrito(a) no CPF/CNPJ nº ${cli.cpf_cnpj || ''}`).join(' e ')
+  const end = clienteEndereco(clientes[0])
+
+  return `Nós, ${nomesEDocs}, DECLARAMOS que somos residentes e domiciliados no endereço ${end}, para fins de comprovação de residência junto a ${o.destinoResidencia || 'empresa ou órgão solicitante'}.
+
+Declaramos, sob as penas da lei e nos termos dos artigos 1º, 2º e 3º da Lei nº 7.115/1983, que as informações são verdadeiras, estando cientes das responsabilidades civis, administrativas e criminais decorrentes de declaração falsa, inclusive do disposto no artigo 299 do Código Penal.
+
+Por ser a expressão da verdade, firmamos a presente para que produza seus efeitos legais.`
 }
 
 export function buildProcuracao(
-  c: Partial<Cliente>,
+  c: Partial<Cliente> | Partial<Cliente>[],
   adv: AdvogadoConfigDoc,
   cfg: ConfigDocumentos,
   logo: string | null,
-  o: OpcaoProcuracao & { date?: string; city?: string; uf?: string; number?: string; signatureImg?: string | null }
+  o: OpcaoProcuracao & { date?: string; city?: string; uf?: string; number?: string; signatureImg?: string | null; clientesAdicionais?: Partial<Cliente>[] }
 ): string {
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  const isMulti = clientes.length > 1
   const date = o.date || new Date().toISOString().slice(0, 10)
   const city = o.city || 'Praia Grande'
   const uf = o.uf || 'SP'
@@ -242,25 +326,46 @@ export function buildProcuracao(
 
   const rotuloOutorgado = temConjunto ? 'OUTORGADOS:' : 'OUTORGADO:'
   const textoProcuradores = temConjunto
-    ? 'seus bastantes procuradores os advogados acima qualificados, conferindo-lhes poderes para o foro em geral'
-    : 'seu bastante procurador o advogado acima qualificado, conferindo-lhe poderes para o foro em geral'
+    ? (isMulti ? 'seus bastantes procuradores os advogados acima qualificados, conferindo-lhes poderes para o foro em geral' : 'seus bastantes procuradores os advogados acima qualificados, conferindo-lhes poderes para o foro em geral')
+    : (isMulti ? 'seu bastante procurador o advogado acima qualificado, conferindo-lhe poderes para o foro em geral' : 'seu bastante procurador o advogado acima qualificado, conferindo-lhe poderes para o foro em geral')
   const textoAutorizacao = temConjunto ? 'Ficam os OUTORGADOS autorizados' : 'Fica o OUTORGADO autorizado'
+
+  const rotuloOutorgante = isMulti ? 'OUTORGANTES:' : 'OUTORGANTE:'
+  const qualifOutorgantesHtml = isMulti
+    ? clientes.map((cli, i) => `<strong>${i + 1})</strong> ${esc(clienteQualificacao(cli))}`).join('; e ')
+    : esc(clienteQualificacao(clientes[0]))
+
+  const pronomeOutorgantes = isMulti ? 'os OUTORGANTES nomeiam e constituem' : 'o OUTORGANTE nomeia e constitui'
+  const representacaoPronome = isMulti ? 'para representá-los' : 'para representá-lo'
+  const conferePronome = isMulti ? 'Conferem, ainda' : 'Confere, ainda'
 
   const bodyText = (o.textoPersonalizado && o.textoPersonalizado.trim())
     ? formatParagrafosPersonalizados(o.textoPersonalizado)
-    : `<p><strong>OUTORGANTE:</strong> ${esc(clienteQualificacao(c))}.</p>
+    : `<p><strong>${rotuloOutorgante}</strong> ${qualifOutorgantesHtml}.</p>
   <p><strong>${rotuloOutorgado}</strong> ${esc(adv.nome)}, advogado inscrito na ${esc(adv.oab)}, com escritório em ${esc(enderecoAdv)}, e-mail ${esc(adv.email)}, integrante da ${esc(cfg.empresa)}, registro OAB nº ${esc(cfg.socOab)}, CNPJ nº ${esc(cfg.cnpj)}${outorgadosConjunto}.</p>
-  <p>Pelo presente instrumento particular, o OUTORGANTE nomeia e constitui ${textoProcuradores}, com a cláusula <strong>AD JUDICIA ET EXTRA</strong>, para representá-lo judicial, administrativa e extrajudicialmente, ativa ou passivamente, perante qualquer Juízo, Tribunal, órgão público ou entidade privada, em qualquer instância, podendo propor ações, apresentar defesas, recursos, requerimentos, notificações e demais medidas cabíveis, produzir provas, requerer documentos e certidões, acompanhar processos, procedimentos, inquéritos, perícias e audiências, praticando todos os atos necessários à defesa de seus interesses.</p>
-  <p>Confere, ainda, nos termos do artigo 105 do Código de Processo Civil, poderes especiais para <strong>${esc(special)}</strong>.</p>
+  <p>Pelo presente instrumento particular, ${pronomeOutorgantes} ${textoProcuradores}, com a cláusula <strong>AD JUDICIA ET EXTRA</strong>, ${representacaoPronome} judicial, administrativa e extrajudicialmente, ativa ou passivamente, perante qualquer Juízo, Tribunal, órgão público ou entidade privada, em qualquer instância, podendo propor ações, apresentar defesas, recursos, requerimentos, notificações e demais medidas cabíveis, produzir provas, requerer documentos e certidões, acompanhar processos, procedimentos, inquéritos, perícias e audiências, praticando todos os atos necessários à defesa de seus interesses.</p>
+  <p>${conferePronome}, nos termos do artigo 105 do Código de Processo Civil, poderes especiais para <strong>${esc(special)}</strong>.</p>
   <p>${textoAutorizacao} a requerer reserva, destaque e levantamento de honorários contratuais e sucumbenciais; nomear preposto, quando legalmente cabível; praticar atos físicos ou eletrônicos; e ${o.substabelecer === false ? 'não substabelecer sem autorização expressa' : 'substabelecer, no todo ou em parte, com ou sem reserva de poderes'}.</p>${finalidade}`
+
+  const assinaturasClientesHtml = !isMulti
+    ? `<div class="signature-block" style="margin-top:12mm;">
+        <div class="signature-line"></div>
+        <strong>${esc(String(clientes[0].nome_razao_social || '').toUpperCase())}</strong><br>
+        CPF/CNPJ nº ${esc(clientes[0].cpf_cnpj || '')}
+      </div>`
+    : `<div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-top:12mm; flex-wrap:wrap; gap:8mm;">
+        ${clientes.map(cli => `
+          <div class="sigbox" style="width:48%;">
+            <div class="line"></div>
+            <strong>${esc(String(cli.nome_razao_social || '').toUpperCase())}</strong><br>
+            CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}
+          </div>
+        `).join('')}
+      </div>`
 
   const body = `${bodyText}
   <p style="margin-top:5mm;">${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
-  <div class="signature-block" style="margin-top:12mm;">
-    <div class="signature-line"></div>
-    <strong>${esc(String(c.nome_razao_social || '').toUpperCase())}</strong><br>
-    CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}
-  </div>`
+  ${assinaturasClientesHtml}`
 
   return `<div class="document">${buildPage(
     body,
@@ -281,38 +386,67 @@ export function buildProcuracao(
 }
 
 export function buildHipossuficiencia(
-  c: Partial<Cliente>,
+  c: Partial<Cliente> | Partial<Cliente>[],
   adv: AdvogadoConfigDoc,
   _cfg: ConfigDocumentos,
   logo: string | null,
-  o: OpcaoHipossuficiencia & { date?: string; city?: string; uf?: string; number?: string }
+  o: OpcaoHipossuficiencia & { date?: string; city?: string; uf?: string; number?: string; clientesAdicionais?: Partial<Cliente>[] }
 ): string {
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  const isMulti = clientes.length > 1
   const date = o.date || new Date().toISOString().slice(0, 10)
   const city = o.city || 'Praia Grande'
   const uf = o.uf || 'SP'
   const num = o.number || ''
 
   let extra = ''
-  if (o.situacao) extra += ` Declara, ainda, que atualmente se encontra na condição de ${esc(o.situacao)}.`
+  if (o.situacao) extra += ` ${isMulti ? 'Declaram' : 'Declara'}, ainda, que atualmente se ${isMulti ? 'encontram' : 'encontra'} na condição de ${esc(o.situacao)}.`
   if (o.rendaMensal) extra += ` Sua renda mensal aproximada é de ${esc(o.rendaMensal)}.`
   if (o.dependentes) extra += ` Possui ${esc(o.dependentes)} dependente(s).`
   if (o.hipoExtra) extra += ` ${esc(o.hipoExtra)}`
 
-  const qualif = [c.nacionalidade, c.estado_civil, c.profissao].filter(Boolean).join(', ')
-  const rgPart = c.rg_ie ? `portador(a) do RG nº ${esc(c.rg_ie)}, ` : ''
+  let conteudoPadrao = ''
+  if (!isMulti) {
+    const cli = clientes[0]
+    const qualif = [cli.nacionalidade, cli.estado_civil, cli.profissao].filter(Boolean).join(', ')
+    const rgPart = cli.rg_ie ? `portador(a) do RG nº ${esc(cli.rg_ie)}, ` : ''
+    conteudoPadrao = `<p><strong>${esc(String(cli.nome_razao_social || '').toUpperCase())}</strong>, ${esc(qualif)}, ${rgPart}inscrito(a) no CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}, residente e domiciliado(a) em ${esc(clienteEndereco(cli))}, ${cli.email ? `e-mail: ${esc(cli.email)} e ` : ''}telefone: ${esc(cli.telefone_whatsapp || '')}, <strong>DECLARA</strong>, para os devidos fins de direito e sob as penas da lei, que é pobre na expressão jurídica da palavra, não podendo suportar o pagamento das custas e despesas processuais sem prejuízo de seu sustento e de sua família.${extra}</p>
+    <p>Por ser a expressão da verdade, firma a presente.</p>`
+  } else {
+    const qualificacoesMulti = clientes.map(cli => {
+      const qualif = [cli.nacionalidade, cli.estado_civil, cli.profissao].filter(Boolean).join(', ')
+      const rgPart = cli.rg_ie ? `portador(a) do RG nº ${esc(cli.rg_ie)}, ` : ''
+      return `<strong>${esc(String(cli.nome_razao_social || '').toUpperCase())}</strong>, ${esc(qualif)}, ${rgPart}inscrito(a) no CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}, residente e domiciliado(a) em ${esc(clienteEndereco(cli))}`
+    }).join('; e ')
+
+    conteudoPadrao = `<p>${qualificacoesMulti}, <strong>DECLARAM CONJUNTAMENTE</strong>, para os devidos fins de direito e sob as penas da lei, que são pessoas pobres na expressão jurídica da palavra, não podendo suportar o pagamento das custas e despesas processuais sem prejuízo de seus próprios sustentos e de suas famílias.${extra}</p>
+    <p>Por ser a expressão da verdade, firmam a presente.</p>`
+  }
 
   const bodyText = (o.textoPersonalizado && o.textoPersonalizado.trim())
     ? formatParagrafosPersonalizados(o.textoPersonalizado)
-    : `<p><strong>${esc(String(c.nome_razao_social || '').toUpperCase())}</strong>, ${esc(qualif)}, ${rgPart}inscrito(a) no CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}, residente e domiciliado(a) em ${esc(clienteEndereco(c))}, ${c.email ? `e-mail: ${esc(c.email)} e ` : ''}telefone: ${esc(c.telefone_whatsapp || '')}, <strong>DECLARA</strong>, para os devidos fins de direito e sob as penas da lei, que é pobre na expressão jurídica da palavra, não podendo suportar o pagamento das custas e despesas processuais sem prejuízo de seu sustento e de sua família.${extra}</p>
-  <p>Por ser a expressão da verdade, firma a presente.</p>`
+    : conteudoPadrao
+
+  const assinaturasClientesHtml = !isMulti
+    ? `<div class="signature-block" style="margin-top:16mm;">
+        <div class="signature-line"></div>
+        <strong>ASSINATURA DO(A) DECLARANTE</strong><br>
+        ${esc(clientes[0].nome_razao_social || '')}
+      </div>`
+    : `<div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-top:16mm; flex-wrap:wrap; gap:8mm;">
+        ${clientes.map(cli => `
+          <div class="sigbox" style="width:48%;">
+            <div class="line"></div>
+            <strong>ASSINATURA DO(A) DECLARANTE</strong><br>
+            ${esc(cli.nome_razao_social || '')}<br>
+            CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}
+          </div>
+        `).join('')}
+      </div>`
 
   const body = `${bodyText}
   <p style="margin-top:6mm;">${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
-  <div class="signature-block" style="margin-top:16mm;">
-    <div class="signature-line"></div>
-    <strong>ASSINATURA DO(A) DECLARANTE</strong><br>
-    ${esc(c.nome_razao_social || '')}
-  </div>`
+  ${assinaturasClientesHtml}`
 
   return `<div class="document">${buildPage(
     body,
@@ -333,31 +467,56 @@ export function buildHipossuficiencia(
 }
 
 export function buildIrpf(
-  c: Partial<Cliente>,
+  c: Partial<Cliente> | Partial<Cliente>[],
   adv: AdvogadoConfigDoc,
   _cfg: ConfigDocumentos,
   logo: string | null,
-  o: OpcaoIrpf & { date?: string; city?: string; uf?: string; number?: string }
+  o: OpcaoIrpf & { date?: string; city?: string; uf?: string; number?: string; clientesAdicionais?: Partial<Cliente>[] }
 ): string {
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  const isMulti = clientes.length > 1
   const date = o.date || new Date().toISOString().slice(0, 10)
   const city = o.city || 'Praia Grande'
   const uf = o.uf || 'SP'
   const num = o.number || ''
-  const rgPart = c.rg_ie ? `RG nº ${esc(c.rg_ie)}, ` : ''
+
+  let conteudoPadrao = ''
+  if (!isMulti) {
+    const cli = clientes[0]
+    const rgPart = cli.rg_ie ? `RG nº ${esc(cli.rg_ie)}, ` : ''
+    conteudoPadrao = `<p>Eu, <strong>${esc(String(cli.nome_razao_social || '').toUpperCase())}</strong>, ${rgPart}CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}, residente em ${esc(clienteEndereco(cli))}, telefone ${esc(cli.telefone_whatsapp || '')}, <strong>DECLARO</strong> ser isento(a) da apresentação da Declaração do Imposto de Renda Pessoa Física – DIRPF no(s) exercício(s) <strong>${esc(o.exercicios || '________________')}</strong>, por não incorrer em nenhuma das hipóteses de obrigatoriedade estabelecidas pela Receita Federal do Brasil.</p>
+    <p>Esta declaração é firmada sob as penas da lei, nos termos da Lei nº 7.115/1983, declarando serem verdadeiras todas as informações prestadas.</p>
+    ${o.finalidade ? `<p>Finalidade: ${esc(o.finalidade)}.</p>` : ''}`
+  } else {
+    const nomesDocs = clientes.map(cli => `<strong>${esc(String(cli.nome_razao_social || '').toUpperCase())}</strong>, CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}`).join(' e ')
+    conteudoPadrao = `<p>Nós, ${nomesDocs}, residentes em ${esc(clienteEndereco(clientes[0]))}, <strong>DECLARAMOS</strong> ser isentos da apresentação da Declaração do Imposto de Renda Pessoa Física – DIRPF no(s) exercício(s) <strong>${esc(o.exercicios || '________________')}</strong>, por não incorrer em nenhuma das hipóteses de obrigatoriedade estabelecidas pela Receita Federal do Brasil.</p>
+    <p>Esta declaração é firmada sob as penas da lei, nos termos da Lei nº 7.115/1983, declarando serem verdadeiras todas as informações prestadas.</p>
+    ${o.finalidade ? `<p>Finalidade: ${esc(o.finalidade)}.</p>` : ''}`
+  }
 
   const bodyText = (o.textoPersonalizado && o.textoPersonalizado.trim())
     ? formatParagrafosPersonalizados(o.textoPersonalizado)
-    : `<p>Eu, <strong>${esc(String(c.nome_razao_social || '').toUpperCase())}</strong>, ${rgPart}CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}, residente em ${esc(clienteEndereco(c))}, telefone ${esc(c.telefone_whatsapp || '')}, <strong>DECLARO</strong> ser isento(a) da apresentação da Declaração do Imposto de Renda Pessoa Física – DIRPF no(s) exercício(s) <strong>${esc(o.exercicios || '________________')}</strong>, por não incorrer em nenhuma das hipóteses de obrigatoriedade estabelecidas pela Receita Federal do Brasil.</p>
-  <p>Esta declaração é firmada sob as penas da lei, nos termos da Lei nº 7.115/1983, declarando serem verdadeiras todas as informações prestadas.</p>
-  ${o.finalidade ? `<p>Finalidade: ${esc(o.finalidade)}.</p>` : ''}`
+    : conteudoPadrao
+
+  const assinaturasClientesHtml = !isMulti
+    ? `<div class="signature-block" style="margin-top:16mm;">
+        <div class="signature-line"></div>
+        <strong>${esc(String(clientes[0].nome_razao_social || '').toUpperCase())}</strong><br>
+        CPF/CNPJ nº ${esc(clientes[0].cpf_cnpj || '')}
+      </div>`
+    : `<div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-top:16mm; flex-wrap:wrap; gap:8mm;">
+        ${clientes.map(cli => `
+          <div class="sigbox" style="width:48%;">
+            <div class="line"></div>
+            <strong>${esc(String(cli.nome_razao_social || '').toUpperCase())}</strong><br>
+            CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}
+          </div>
+        `).join('')}
+      </div>`
 
   const body = `${bodyText}
   <p style="margin-top:6mm;">${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
-  <div class="signature-block" style="margin-top:16mm;">
-    <div class="signature-line"></div>
-    <strong>${esc(String(c.nome_razao_social || '').toUpperCase())}</strong><br>
-    CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}
-  </div>
+  ${assinaturasClientesHtml}
   <p style="font-size:8pt;color:#64748b;margin-top:14mm;line-height:1.4;"><strong>Observação:</strong> a Receita Federal não emite declaração anual de isento. A ausência de obrigatoriedade pode ser declarada pelo próprio interessado, sob sua responsabilidade, conforme a legislação aplicável.</p>`
 
   return `<div class="document">${buildPage(
@@ -379,12 +538,14 @@ export function buildIrpf(
 }
 
 export function buildRecibo(
-  c: Partial<Cliente>,
+  c: Partial<Cliente> | Partial<Cliente>[],
   adv: AdvogadoConfigDoc,
   cfg: ConfigDocumentos,
   logo: string | null,
-  o: OpcaoRecibo & { date?: string; city?: string; uf?: string; number?: string; signatureImg?: string | null }
+  o: OpcaoRecibo & { date?: string; city?: string; uf?: string; number?: string; signatureImg?: string | null; clientesAdicionais?: Partial<Cliente>[] }
 ): string {
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  const isMulti = clientes.length > 1
   const date = o.date || new Date().toISOString().slice(0, 10)
   const city = o.city || 'Praia Grande'
   const uf = o.uf || 'SP'
@@ -392,9 +553,15 @@ export function buildRecibo(
 
   const parcela = o.parcelaRecibo ? ` (${esc(o.parcelaRecibo)})` : ''
 
+  const nomesDocs = !isMulti
+    ? `<strong>${esc(String(clientes[0].nome_razao_social || '').toUpperCase())}</strong>, inscrito(a) no CPF/CNPJ nº ${esc(clientes[0].cpf_cnpj || '')}`
+    : clientes.map(cli => `<strong>${esc(String(cli.nome_razao_social || '').toUpperCase())}</strong>, inscrito(a) no CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}`).join(' e ')
+
+  const acaoVerbo = isMulti ? 'declaram, para os devidos fins, que efetuaram conjuntamente o pagamento' : 'declara, para os devidos fins, que efetuou o pagamento'
+
   const bodyText = (o.textoPersonalizado && o.textoPersonalizado.trim())
     ? formatParagrafosPersonalizados(o.textoPersonalizado)
-    : `<p><strong>${esc(String(c.nome_razao_social || '').toUpperCase())}</strong>, inscrito(a) no CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}, declara, para os devidos fins, que efetuou o pagamento no valor de <strong>${money(o.valorRecibo)} (${esc(o.valorExtenso || 'valor por extenso não informado')})</strong> para <strong>${esc(adv.nome)}</strong>, advogado, inscrito no CPF nº ${esc(cfg.lawyerCpf)} e ${esc(adv.oab)}, integrante da ${esc(cfg.empresa)}.</p>
+    : `<p>${nomesDocs}, ${acaoVerbo} no valor de <strong>${money(o.valorRecibo)} (${esc(o.valorExtenso || 'valor por extenso não informado')})</strong> para <strong>${esc(adv.nome)}</strong>, advogado, inscrito no CPF nº ${esc(cfg.lawyerCpf)} e ${esc(adv.oab)}, integrante da ${esc(cfg.empresa)}.</p>
   <p>O valor refere-se a <strong>${esc(o.referenciaRecibo || 'prestação de serviços advocatícios')}${parcela}</strong>. O pagamento foi realizado por ${esc(o.formaPagamento || 'PIX')} nesta data.${o.obsRecibo ? ' ' + esc(o.obsRecibo) : ''}</p>
   <p>Por ser a expressão da verdade, firma-se o presente recibo.</p>`
 
@@ -429,37 +596,62 @@ export function buildRecibo(
 }
 
 export function buildResidencia(
-  c: Partial<Cliente>,
+  c: Partial<Cliente> | Partial<Cliente>[],
   adv: AdvogadoConfigDoc,
   _cfg: ConfigDocumentos,
   logo: string | null,
-  o: OpcaoResidencia & { date?: string; city?: string; uf?: string; number?: string }
+  o: OpcaoResidencia & { date?: string; city?: string; uf?: string; number?: string; clientesAdicionais?: Partial<Cliente>[] }
 ): string {
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  const isMulti = clientes.length > 1
   const date = o.date || new Date().toISOString().slice(0, 10)
   const city = o.city || 'Praia Grande'
   const uf = o.uf || 'SP'
   const num = o.number || ''
 
-  const third = o.tipoResidencia === 'terceiro' && o.titularResidencia
-  const declarant = third ? o.titularResidencia : c.nome_razao_social
-  const cpf = third ? o.cpfTitular : c.cpf_cnpj
-  const resident = third
-    ? `DECLARO que ${esc(c.nome_razao_social || '')}, inscrito(a) no CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}, reside e é domiciliado(a) no endereço ${esc(clienteEndereco(c))}${o.vinculoTitular ? `, sendo meu/minha ${esc(o.vinculoTitular)}` : ''}`
-    : `DECLARO que sou residente e domiciliado(a) no endereço ${esc(clienteEndereco(c))}`
+  let conteudoPadrao = ''
+  if (!isMulti) {
+    const cli = clientes[0]
+    const third = o.tipoResidencia === 'terceiro' && o.titularResidencia
+    const declarant = third ? o.titularResidencia : cli.nome_razao_social
+    const cpf = third ? o.cpfTitular : cli.cpf_cnpj
+    const resident = third
+      ? `DECLARO que ${esc(cli.nome_razao_social || '')}, inscrito(a) no CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}, reside e é domiciliado(a) no endereço ${esc(clienteEndereco(cli))}${o.vinculoTitular ? `, sendo meu/minha ${esc(o.vinculoTitular)}` : ''}`
+      : `DECLARO que sou residente e domiciliado(a) no endereço ${esc(clienteEndereco(cli))}`
+
+    conteudoPadrao = `<p>Eu, <strong>${esc(String(declarant || '').toUpperCase())}</strong>, inscrito(a) no CPF/CNPJ nº ${esc(cpf || '')}, ${resident}, para fins de comprovação de residência junto a ${esc(o.destinoResidencia || 'empresa ou órgão solicitante')}.</p>
+    <p>Declaro, sob as penas da lei e nos termos dos artigos 1º, 2º e 3º da Lei nº 7.115/1983, que as informações são verdadeiras, estando ciente das responsabilidades civis, administrativas e criminais decorrentes de declaração falsa, inclusive do disposto no artigo 299 do Código Penal.</p>
+    <p>Por ser a expressão da verdade, firmo a presente para que produza seus efeitos legais.</p>`
+  } else {
+    const nomesDocs = clientes.map(cli => `<strong>${esc(String(cli.nome_razao_social || '').toUpperCase())}</strong>, inscrito(a) no CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}`).join(' e ')
+    conteudoPadrao = `<p>Nós, ${nomesDocs}, DECLARAMOS que somos residentes e domiciliados no endereço ${esc(clienteEndereco(clientes[0]))}, para fins de comprovação de residência junto a ${esc(o.destinoResidencia || 'empresa ou órgão solicitante')}.</p>
+    <p>Declaramos, sob as penas da lei e nos termos dos artigos 1º, 2º e 3º da Lei nº 7.115/1983, que as informações são verdadeiras, estando cientes das responsabilidades civis, administrativas e criminais decorrentes de declaração falsa, inclusive do disposto no artigo 299 do Código Penal.</p>
+    <p>Por ser a expressão da verdade, firmamos a presente para que produza seus efeitos legais.</p>`
+  }
 
   const bodyText = (o.textoPersonalizado && o.textoPersonalizado.trim())
     ? formatParagrafosPersonalizados(o.textoPersonalizado)
-    : `<p>Eu, <strong>${esc(String(declarant || '').toUpperCase())}</strong>, inscrito(a) no CPF/CNPJ nº ${esc(cpf || '')}, ${resident}, para fins de comprovação de residência junto a ${esc(o.destinoResidencia || 'empresa ou órgão solicitante')}.</p>
-  <p>Declaro, sob as penas da lei e nos termos dos artigos 1º, 2º e 3º da Lei nº 7.115/1983, que as informações são verdadeiras, estando ciente das responsabilidades civis, administrativas e criminais decorrentes de declaração falsa, inclusive do disposto no artigo 299 do Código Penal.</p>
-  <p>Por ser a expressão da verdade, firmo a presente para que produza seus efeitos legais.</p>`
+    : conteudoPadrao
+
+  const assinaturasClientesHtml = !isMulti
+    ? `<div class="signature-block" style="margin-top:16mm;">
+        <div class="signature-line"></div>
+        <strong>${esc(String(clientes[0].nome_razao_social || '').toUpperCase())}</strong><br>
+        CPF/CNPJ nº ${esc(clientes[0].cpf_cnpj || '')}
+      </div>`
+    : `<div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-top:16mm; flex-wrap:wrap; gap:8mm;">
+        ${clientes.map(cli => `
+          <div class="sigbox" style="width:48%;">
+            <div class="line"></div>
+            <strong>${esc(String(cli.nome_razao_social || '').toUpperCase())}</strong><br>
+            CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}
+          </div>
+        `).join('')}
+      </div>`
 
   const body = `${bodyText}
   <p style="margin-top:6mm;">${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
-  <div class="signature-block" style="margin-top:16mm;">
-    <div class="signature-line"></div>
-    <strong>${esc(String(declarant || '').toUpperCase())}</strong><br>
-    CPF/CNPJ nº ${esc(cpf || '')}
-  </div>`
+  ${assinaturasClientesHtml}`
 
   return `<div class="document">${buildPage(
     body,
@@ -548,7 +740,7 @@ function estimateHtmlHeightMm(html: string): number {
 }
 
 export function gerarPreambuloContrato(
-  c: Partial<Cliente>,
+  c: Partial<Cliente> | Partial<Cliente>[],
   adv: AdvogadoConfigDoc,
   cfg: ConfigDocumentos,
   o: Partial<OpcaoContrato>
@@ -562,11 +754,20 @@ export function gerarPreambuloContrato(
     ? `, com atuação conjunta de <strong>${esc(o.advogadoConjuntoNome)}, ${esc(o.advogadoConjuntoTratamento || 'advogada')}, ${esc(o.advogadoConjuntoOab || '')}</strong>, com escritório profissional na ${esc(o.advogadoConjuntoEndereco || adv.endereco || cfg.foro)}`
     : ''
 
-  return `<p>Pelo presente instrumento, <strong>${esc(cfg.empresa)}</strong>, registrada na OAB/SP nº ${esc(cfg.socOab)}, CNPJ nº ${esc(cfg.cnpj)}, com sede na ${esc(adv.endereco || cfg.foro)}, neste ato representada por <strong>Dr. ${esc(adv.nome)}, ${esc(adv.oab)}</strong>${parteConjuntaHtml}, doravante <strong>CONTRATADA</strong>, e <strong>${esc(clienteQualificacao(c))}</strong>, doravante <strong>CONTRATANTE</strong>, ajustam o seguinte:</p>`
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  if (clientes.length <= 1) {
+    return `<p>Pelo presente instrumento, <strong>${esc(cfg.empresa)}</strong>, registrada na OAB/SP nº ${esc(cfg.socOab)}, CNPJ nº ${esc(cfg.cnpj)}, com sede na ${esc(adv.endereco || cfg.foro)}, neste ato representada por <strong>Dr. ${esc(adv.nome)}, ${esc(adv.oab)}</strong>${parteConjuntaHtml}, doravante <strong>CONTRATADA</strong>, e <strong>${esc(clienteQualificacao(clientes[0]))}</strong>, doravante <strong>CONTRATANTE</strong>, ajustam o seguinte:</p>`
+  }
+
+  const listaQualifHtml = clientes
+    .map((cli, i) => `<strong>${i + 1}) ${esc(clienteQualificacao(cli))}</strong>`)
+    .join('; e ')
+
+  return `<p>Pelo presente instrumento, <strong>${esc(cfg.empresa)}</strong>, registrada na OAB/SP nº ${esc(cfg.socOab)}, CNPJ nº ${esc(cfg.cnpj)}, com sede na ${esc(adv.endereco || cfg.foro)}, neste ato representada por <strong>Dr. ${esc(adv.nome)}, ${esc(adv.oab)}</strong>${parteConjuntaHtml}, doravante <strong>CONTRATADA</strong>, e, conjuntamente como <strong>CONTRATANTES</strong>: ${listaQualifHtml}, doravante denominados em conjunto <strong>CONTRATANTES</strong>, ajustam o seguinte:</p>`
 }
 
 export function obterTextoPreambuloPadrao(
-  c: Partial<Cliente> | null,
+  c: Partial<Cliente> | Partial<Cliente>[] | null,
   adv: AdvogadoConfigDoc,
   cfg: ConfigDocumentos,
   o: Partial<OpcaoContrato>
@@ -575,25 +776,39 @@ export function obterTextoPreambuloPadrao(
     ? `, com atuação conjunta de ${o.advogadoConjuntoNome}, ${o.advogadoConjuntoTratamento || 'advogada'}, ${o.advogadoConjuntoOab || ''}, com escritório profissional na ${o.advogadoConjuntoEndereco || adv.endereco || cfg.foro}`
     : ''
 
-  const qualifCliente = c ? clienteQualificacao(c) : '[DADOS DO CONTRATANTE QUALIFICADO]'
+  const clientes = extrairClientes(c, o.clientesAdicionais)
+  if (clientes.length <= 1) {
+    const qualifCliente = clientes[0]?.nome_razao_social ? clienteQualificacao(clientes[0]) : '[DADOS DO CONTRATANTE QUALIFICADO]'
+    return `Pelo presente instrumento, ${cfg.empresa}, registrada na OAB/SP nº ${cfg.socOab}, CNPJ nº ${cfg.cnpj}, com sede na ${adv.endereco || cfg.foro}, neste ato representada por Dr. ${adv.nome}, ${adv.oab}${parteConjunta}, doravante CONTRATADA, e ${qualifCliente}, doravante CONTRATANTE, ajustam o seguinte:`
+  }
 
-  return `Pelo presente instrumento, ${cfg.empresa}, registrada na OAB/SP nº ${cfg.socOab}, CNPJ nº ${cfg.cnpj}, com sede na ${adv.endereco || cfg.foro}, neste ato representada por Dr. ${adv.nome}, ${adv.oab}${parteConjunta}, doravante CONTRATADA, e ${qualifCliente}, doravante CONTRATANTE, ajustam o seguinte:`
+  const listaQualif = clientes
+    .map((cli, i) => `${i + 1}) ${clienteQualificacao(cli)}`)
+    .join('; e ')
+
+  return `Pelo presente instrumento, ${cfg.empresa}, registrada na OAB/SP nº ${cfg.socOab}, CNPJ nº ${cfg.cnpj}, com sede na ${adv.endereco || cfg.foro}, neste ato representada por Dr. ${adv.nome}, ${adv.oab}${parteConjunta}, doravante CONTRATADA, e, conjuntamente como CONTRATANTES: ${listaQualif}, doravante denominados em conjunto CONTRATANTES, ajustam o seguinte:`
 }
 
 function estimateSignaturesHeightMm(signaturesHtml: string): number {
   const hasWitnesses = signaturesHtml.includes('TESTEMUNHA')
-  const hasCoCounsel = signaturesHtml.includes('gap:10mm') || signaturesHtml.includes('gap: 10mm')
-
   const dateHeight = 7
   const bufferMm = 12
 
-  let signaturesHeight = 0
-  if (hasCoCounsel) {
-    // 2 advogados empilhados: margin-top (12mm) + titular (33mm) + gap (10mm) + conjunto (33mm) = 88mm
+  const sigboxesCount = (signaturesHtml.match(/class="sigbox"/g) || []).length
+  const partySigboxesCount = hasWitnesses ? Math.max(0, sigboxesCount - 2) : sigboxesCount
+
+  // Contratantes têm rótulo com 'CONTRATANTE'
+  const contratantesCount = (signaturesHtml.match(/CONTRATANTE/g) || []).length || 1
+  // Advogados são os demais sigboxes de partes (pelo menos 1)
+  const lawyersCount = Math.max(1, partySigboxesCount - contratantesCount)
+  // O número de linhas empilhadas na coluna esquerda ou direita é o máximo entre os dois
+  const maxRows = Math.max(1, contratantesCount, lawyersCount)
+
+  let signaturesHeight = 45
+  if (maxRows === 2) {
     signaturesHeight = 88
-  } else {
-    // Assinaturas em linha única: margin-top (12mm) + box (33mm) = 45mm
-    signaturesHeight = 45
+  } else if (maxRows > 2) {
+    signaturesHeight = 12 + (maxRows * 33) + ((maxRows - 1) * 10)
   }
 
   const witnessesHeight = hasWitnesses ? 44 : 0
@@ -815,12 +1030,13 @@ function distributeContractPages(
 }
 
 export function buildContrato(
-  c: Partial<Cliente>,
+  c: Partial<Cliente> | Partial<Cliente>[],
   adv: AdvogadoConfigDoc,
   cfg: ConfigDocumentos,
   logo: string | null,
-  o: OpcaoContrato & { date?: string; city?: string; uf?: string; number?: string; useSignature?: boolean; signatureImg?: string | null }
+  o: OpcaoContrato & { date?: string; city?: string; uf?: string; number?: string; useSignature?: boolean; signatureImg?: string | null; clientesAdicionais?: Partial<Cliente>[] }
 ): string {
+  const clientes = extrairClientes(c, o.clientesAdicionais)
   const date = o.date || new Date().toISOString().slice(0, 10)
   const city = o.city || 'Praia Grande'
   const uf = o.uf || 'SP'
@@ -869,12 +1085,15 @@ export function buildContrato(
   </div>`
     : ''
 
-  const sigContratante = `
+  const sigsContratantes = clientes.map((cli, idx) => {
+    const rotulo = clientes.length > 1 ? `CONTRATANTE ${idx + 1}:` : 'CONTRATANTE:'
+    return `
     <div class="sigbox" style="width:100%;">
       <div class="sig-space"></div>
       <div class="line"></div>
-      <strong>CONTRATANTE:</strong><br>${esc(c.nome_razao_social || '')}<br>CPF/CNPJ nº ${esc(c.cpf_cnpj || '')}
+      <strong>${rotulo}</strong><br>${esc(cli.nome_razao_social || '')}<br>CPF/CNPJ nº ${esc(cli.cpf_cnpj || '')}
     </div>`
+  })
 
   const sigAdvTitular = `
     <div class="sigbox" style="width:100%;">
@@ -894,29 +1113,23 @@ export function buildContrato(
     </div>`
     : ''
 
-  let blocoAssinaturasPartes = ''
-  if (o.atuacaoConjunta && o.advogadoConjuntoNome) {
-    blocoAssinaturasPartes = `
+  const sigsAdvogados = [sigAdvTitular, sigAdvConjunto].filter(Boolean)
+
+  const blocoAssinaturasPartes = `
     <div class="party-signatures" style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-top:12mm;">
-      <div style="width:48%;">${sigContratante}</div>
       <div style="width:48%; display:flex; flex-direction:column; gap:10mm;">
-        ${sigAdvTitular}
-        ${sigAdvConjunto}
+        ${sigsContratantes.join('')}
+      </div>
+      <div style="width:48%; display:flex; flex-direction:column; gap:10mm;">
+        ${sigsAdvogados.join('')}
       </div>
     </div>`
-  } else {
-    blocoAssinaturasPartes = `
-    <div class="party-signatures" style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-top:12mm;">
-      <div style="width:48%;">${sigContratante}</div>
-      <div style="width:48%;">${sigAdvTitular}</div>
-    </div>`
-  }
 
   const assinaturasHtml = `<p>${esc(city)}/${esc(uf)}, ${dateLong(date)}.</p>
   ${blocoAssinaturasPartes}
   ${blocoTestemunhas}`
 
-  const preambuloHtml = gerarPreambuloContrato(c, adv, cfg, o)
+  const preambuloHtml = gerarPreambuloContrato(clientes, adv, cfg, o)
 
   const clausulasParaUsar = (o.clausulas && o.clausulas.length > 0)
     ? o.clausulas
@@ -937,8 +1150,8 @@ export function buildContrato(
     multa: multaFormatted,
     foro: foro,
     texto_executivo: textoExecutivo,
-    nome_cliente: c.nome_razao_social || '',
-    cpf_cliente: c.cpf_cnpj || '',
+    nome_cliente: clientesNomesFormatados(clientes),
+    cpf_cliente: clientesCpfsFormatados(clientes),
     nome_advogado: adv.nome || '',
     oab_advogado: adv.oab || '',
     empresa_advogado: cfg.empresa || '',

@@ -81,7 +81,7 @@ import {
   obterTextoPadraoResidencia
 } from '@/domain/crm/documentos/templates'
 import { downloadWord, imprimirDocumento, estilosDocumentoCss } from '@/domain/crm/documentos/exportacao'
-import { TIPO_NOMES, dateShort } from '@/domain/crm/documentos/formatacao'
+import { TIPO_NOMES, dateShort, clientesNomesFormatados } from '@/domain/crm/documentos/formatacao'
 
 interface AbaCabecalhoRodapeProps {
   cabecalho: string
@@ -289,7 +289,19 @@ export default function GerarDocumentos() {
   const [loadingClientes, setLoadingClientes] = useState(true)
   const [buscaCliente, setBuscaCliente] = useState('')
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null)
+  const [clientesAdicionais, setClientesAdicionais] = useState<Cliente[]>([])
+  const [buscaClienteAdicional, setBuscaClienteAdicional] = useState('')
+  const [mostrarBuscaAdicional, setMostrarBuscaAdicional] = useState(false)
   const [modalImportarOpen, setModalImportarOpen] = useState(false)
+
+  // Lista unificada de todos os clientes selecionados (principal + adicionais)
+  const todosClientesSelecionados = useMemo(() => {
+    return clienteSelecionado ? [clienteSelecionado, ...clientesAdicionais] : []
+  }, [clienteSelecionado, clientesAdicionais])
+
+  const todosClientesNomes = useMemo(() => {
+    return clientesNomesFormatados(todosClientesSelecionados)
+  }, [todosClientesSelecionados])
 
   // Documentos selecionados
   const [docsSelecionados, setDocsSelecionados] = useState<Record<TipoDocumento, boolean>>({
@@ -466,19 +478,62 @@ export default function GerarDocumentos() {
     )
   }, [clientes, buscaCliente])
 
+  // Filtragem para busca de co-contratantes / clientes adicionais
+  const clientesFiltradosAdicionais = useMemo(() => {
+    const idsJaSelecionados = new Set(todosClientesSelecionados.map(c => c.id))
+    const disponiveis = clientes.filter(c => !idsJaSelecionados.has(c.id))
+    if (!buscaClienteAdicional.trim()) return disponiveis.slice(0, 15)
+    const q = buscaClienteAdicional.toLowerCase()
+    return disponiveis.filter(c =>
+      c.nome_razao_social.toLowerCase().includes(q) ||
+      (c.cpf_cnpj && c.cpf_cnpj.includes(q)) ||
+      (c.telefone_whatsapp && c.telefone_whatsapp.includes(q))
+    )
+  }, [clientes, todosClientesSelecionados, buscaClienteAdicional])
+
+  const handleAdicionarClienteAdicional = (cli: Cliente) => {
+    if (clienteSelecionado?.id === cli.id) {
+      toast.info('Este cliente já é o contratante principal.')
+      return
+    }
+    if (clientesAdicionais.some(c => c.id === cli.id)) {
+      toast.info('Este cliente já foi adicionado como co-contratante.')
+      return
+    }
+    setClientesAdicionais(prev => [...prev, cli])
+    setBuscaClienteAdicional('')
+    setMostrarBuscaAdicional(false)
+    toast.success(`${cli.nome_razao_social} adicionado(a) como co-contratante!`)
+  }
+
+  const handleRemoverClienteAdicional = (cliId: string) => {
+    setClientesAdicionais(prev => prev.filter(c => c.id !== cliId))
+    toast.info('Co-contratante removido.')
+  }
+
+  const handleLimparClientes = () => {
+    setClienteSelecionado(null)
+    setClientesAdicionais([])
+    setMostrarBuscaAdicional(false)
+  }
+
   // Objeto institucional do escritório para renderizar nos documentos (não varia com usuário logado)
   const advDoc: AdvogadoConfigDoc = useMemo(() => {
     return DADOS_ESCRITORIO_DOCUMENTO
   }, [])
 
   // Gerar HTML de um documento específico
-  const gerarHtmlDoc = (tipo: TipoDocumento, c: Cliente, num: string): string => {
+  const gerarHtmlDoc = (tipo: TipoDocumento, c: Cliente | Cliente[], num: string): string => {
+    const listaClientes = Array.isArray(c) ? c : (clientesAdicionais.length > 0 ? [c, ...clientesAdicionais] : [c])
+    const clientesAdicionaisLista = listaClientes.slice(1)
+
     const generalDocOpts = {
       cabecalhoPersonalizado: formData.contrato.cabecalhoPersonalizado || formData.cabecalhoPersonalizado,
       rodapeLinha1: formData.contrato.rodapeLinha1 || formData.rodapeLinha1,
       rodapeLinha2: formData.contrato.rodapeLinha2 || formData.rodapeLinha2,
       rodapeLinha3: formData.contrato.rodapeLinha3 || formData.rodapeLinha3,
       numerarPaginas: formData.contrato.numerarPaginas ?? formData.numerarPaginas,
+      clientesAdicionais: clientesAdicionaisLista,
     }
 
     const opts = {
@@ -488,15 +543,17 @@ export default function GerarDocumentos() {
       number: num,
       useSignature: formData.useSignature,
       signatureImg: assinatura,
+      clientesAdicionais: clientesAdicionaisLista,
       ...generalDocOpts
     }
 
     switch (tipo) {
       case 'contrato':
-        return buildContrato(c, advDoc, config, logo, {
+        return buildContrato(listaClientes, advDoc, config, logo, {
           ...generalDocOpts,
           ...formData.contrato,
           ...opts,
+          clientesAdicionais: clientesAdicionaisLista,
           cabecalhoPersonalizado: formData.contrato.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
           rodapeLinha1: formData.contrato.rodapeLinha1 || generalDocOpts.rodapeLinha1,
           rodapeLinha2: formData.contrato.rodapeLinha2 || generalDocOpts.rodapeLinha2,
@@ -504,10 +561,11 @@ export default function GerarDocumentos() {
           numerarPaginas: formData.contrato.numerarPaginas ?? generalDocOpts.numerarPaginas,
         })
       case 'procuracao':
-        return buildProcuracao(c, advDoc, config, logo, {
+        return buildProcuracao(listaClientes, advDoc, config, logo, {
           ...generalDocOpts,
           ...formData.procuracao,
           ...opts,
+          clientesAdicionais: clientesAdicionaisLista,
           cabecalhoPersonalizado: formData.procuracao.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
           rodapeLinha1: formData.procuracao.rodapeLinha1 || generalDocOpts.rodapeLinha1,
           rodapeLinha2: formData.procuracao.rodapeLinha2 || generalDocOpts.rodapeLinha2,
@@ -520,10 +578,11 @@ export default function GerarDocumentos() {
           advogadoConjuntoEndereco: formData.procuracao.advogadoConjuntoEndereco ?? formData.contrato.advogadoConjuntoEndereco,
         })
       case 'hipossuficiencia':
-        return buildHipossuficiencia(c, advDoc, config, logo, {
+        return buildHipossuficiencia(listaClientes, advDoc, config, logo, {
           ...generalDocOpts,
           ...formData.hipossuficiencia,
           ...opts,
+          clientesAdicionais: clientesAdicionaisLista,
           cabecalhoPersonalizado: formData.hipossuficiencia.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
           rodapeLinha1: formData.hipossuficiencia.rodapeLinha1 || generalDocOpts.rodapeLinha1,
           rodapeLinha2: formData.hipossuficiencia.rodapeLinha2 || generalDocOpts.rodapeLinha2,
@@ -531,10 +590,11 @@ export default function GerarDocumentos() {
           numerarPaginas: formData.hipossuficiencia.numerarPaginas ?? generalDocOpts.numerarPaginas,
         })
       case 'irpf':
-        return buildIrpf(c, advDoc, config, logo, {
+        return buildIrpf(listaClientes, advDoc, config, logo, {
           ...generalDocOpts,
           ...formData.irpf,
           ...opts,
+          clientesAdicionais: clientesAdicionaisLista,
           cabecalhoPersonalizado: formData.irpf.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
           rodapeLinha1: formData.irpf.rodapeLinha1 || generalDocOpts.rodapeLinha1,
           rodapeLinha2: formData.irpf.rodapeLinha2 || generalDocOpts.rodapeLinha2,
@@ -542,10 +602,11 @@ export default function GerarDocumentos() {
           numerarPaginas: formData.irpf.numerarPaginas ?? generalDocOpts.numerarPaginas,
         })
       case 'recibo':
-        return buildRecibo(c, advDoc, config, logo, {
+        return buildRecibo(listaClientes, advDoc, config, logo, {
           ...generalDocOpts,
           ...formData.recibo,
           ...opts,
+          clientesAdicionais: clientesAdicionaisLista,
           cabecalhoPersonalizado: formData.recibo.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
           rodapeLinha1: formData.recibo.rodapeLinha1 || generalDocOpts.rodapeLinha1,
           rodapeLinha2: formData.recibo.rodapeLinha2 || generalDocOpts.rodapeLinha2,
@@ -553,10 +614,11 @@ export default function GerarDocumentos() {
           numerarPaginas: formData.recibo.numerarPaginas ?? generalDocOpts.numerarPaginas,
         })
       case 'residencia':
-        return buildResidencia(c, advDoc, config, logo, {
+        return buildResidencia(listaClientes, advDoc, config, logo, {
           ...generalDocOpts,
           ...formData.residencia,
           ...opts,
+          clientesAdicionais: clientesAdicionaisLista,
           cabecalhoPersonalizado: formData.residencia.cabecalhoPersonalizado || generalDocOpts.cabecalhoPersonalizado,
           rodapeLinha1: formData.residencia.rodapeLinha1 || generalDocOpts.rodapeLinha1,
           rodapeLinha2: formData.residencia.rodapeLinha2 || generalDocOpts.rodapeLinha2,
@@ -576,26 +638,28 @@ export default function GerarDocumentos() {
   // Gerar pacote ou documento único
   const gerarPacoteHtml = (commitCounters: boolean = false): { html: string; titulo: string; tipo: string; numero: string } => {
     if (!clienteSelecionado) {
-      throw new Error('Selecione um cliente para gerar os documentos.')
+      throw new Error('Selecione pelo menos um cliente para gerar os documentos.')
     }
     if (tiposMarcados.length === 0) {
       throw new Error('Selecione pelo menos um documento para emissão.')
     }
 
+    const nomeFormatado = todosClientesNomes || clienteSelecionado.nome_razao_social
+
     if (tiposMarcados.length === 1) {
       const tipo = tiposMarcados[0]
       const numero = proximoNumeroDoc(tipo, config.prefixo, commitCounters)
-      const html = gerarHtmlDoc(tipo, clienteSelecionado, numero)
-      const titulo = `${TIPO_NOMES[tipo]} - ${clienteSelecionado.nome_razao_social}`
+      const html = gerarHtmlDoc(tipo, todosClientesSelecionados, numero)
+      const titulo = `${TIPO_NOMES[tipo]} - ${nomeFormatado}`
       return { html, titulo, tipo, numero }
     } else {
       const numero = proximoNumeroDoc('lote', config.prefixo, commitCounters)
       const docsHtml = tiposMarcados.map(tipo => {
         const subNum = proximoNumeroDoc(tipo, config.prefixo, commitCounters)
-        return gerarHtmlDoc(tipo, clienteSelecionado, subNum)
+        return gerarHtmlDoc(tipo, todosClientesSelecionados, subNum)
       })
       const html = `<div class="package-document">${docsHtml.join('')}</div>`
-      const titulo = `Pacote (${tiposMarcados.length} docs) - ${clienteSelecionado.nome_razao_social}`
+      const titulo = `Pacote (${tiposMarcados.length} docs) - ${nomeFormatado}`
       return { html, titulo, tipo: 'lote', numero }
     }
   }
@@ -610,7 +674,7 @@ export default function GerarDocumentos() {
         .insert({
           advogado_id: advogado.id,
           cliente_id: clienteSelecionado.id,
-          cliente_nome: clienteSelecionado.nome_razao_social,
+          cliente_nome: todosClientesNomes || clienteSelecionado.nome_razao_social,
           tipo: doc.tipo,
           numero: doc.numero,
           titulo: doc.titulo,
@@ -798,7 +862,12 @@ export default function GerarDocumentos() {
   }
 
   const handlePreencherPreambuloComPadrao = () => {
-    const texto = obterTextoPreambuloPadrao(clienteSelecionado, advDoc, config, formData.contrato)
+    const texto = obterTextoPreambuloPadrao(
+      todosClientesSelecionados.length > 0 ? todosClientesSelecionados : clienteSelecionado,
+      advDoc,
+      config,
+      { ...formData.contrato, clientesAdicionais }
+    )
     setFormData(prev => ({
       ...prev,
       contrato: {
@@ -841,14 +910,20 @@ export default function GerarDocumentos() {
   }
 
   const handlePreencherProcuracaoComPadrao = () => {
-    const texto = obterTextoPadraoProcuracao(clienteSelecionado, advDoc, config, {
-      ...formData.procuracao,
-      atuacaoConjunta: formData.procuracao.atuacaoConjunta ?? formData.contrato.atuacaoConjunta,
-      advogadoConjuntoNome: formData.procuracao.advogadoConjuntoNome ?? formData.contrato.advogadoConjuntoNome,
-      advogadoConjuntoTratamento: formData.procuracao.advogadoConjuntoTratamento ?? formData.contrato.advogadoConjuntoTratamento,
-      advogadoConjuntoOab: formData.procuracao.advogadoConjuntoOab ?? formData.contrato.advogadoConjuntoOab,
-      advogadoConjuntoEndereco: formData.procuracao.advogadoConjuntoEndereco ?? formData.contrato.advogadoConjuntoEndereco,
-    })
+    const texto = obterTextoPadraoProcuracao(
+      todosClientesSelecionados.length > 0 ? todosClientesSelecionados : clienteSelecionado,
+      advDoc,
+      config,
+      {
+        ...formData.procuracao,
+        clientesAdicionais,
+        atuacaoConjunta: formData.procuracao.atuacaoConjunta ?? formData.contrato.atuacaoConjunta,
+        advogadoConjuntoNome: formData.procuracao.advogadoConjuntoNome ?? formData.contrato.advogadoConjuntoNome,
+        advogadoConjuntoTratamento: formData.procuracao.advogadoConjuntoTratamento ?? formData.contrato.advogadoConjuntoTratamento,
+        advogadoConjuntoOab: formData.procuracao.advogadoConjuntoOab ?? formData.contrato.advogadoConjuntoOab,
+        advogadoConjuntoEndereco: formData.procuracao.advogadoConjuntoEndereco ?? formData.contrato.advogadoConjuntoEndereco,
+      }
+    )
     setFormData(prev => ({
       ...prev,
       procuracao: { ...prev.procuracao, textoPersonalizado: texto }
@@ -880,7 +955,13 @@ export default function GerarDocumentos() {
   }
 
   const handlePreencherHipossuficienciaComPadrao = () => {
-    const texto = obterTextoPadraoHipossuficiencia(clienteSelecionado, formData.hipossuficiencia)
+    const texto = obterTextoPadraoHipossuficiencia(
+      todosClientesSelecionados.length > 0 ? todosClientesSelecionados : clienteSelecionado,
+      {
+        ...formData.hipossuficiencia,
+        clientesAdicionais
+      }
+    )
     setFormData(prev => ({
       ...prev,
       hipossuficiencia: { ...prev.hipossuficiencia, textoPersonalizado: texto }
@@ -912,7 +993,13 @@ export default function GerarDocumentos() {
   }
 
   const handlePreencherIrpfComPadrao = () => {
-    const texto = obterTextoPadraoIrpf(clienteSelecionado, formData.irpf)
+    const texto = obterTextoPadraoIrpf(
+      todosClientesSelecionados.length > 0 ? todosClientesSelecionados : clienteSelecionado,
+      {
+        ...formData.irpf,
+        clientesAdicionais
+      }
+    )
     setFormData(prev => ({
       ...prev,
       irpf: { ...prev.irpf, textoPersonalizado: texto }
@@ -944,7 +1031,15 @@ export default function GerarDocumentos() {
   }
 
   const handlePreencherReciboComPadrao = () => {
-    const texto = obterTextoPadraoRecibo(clienteSelecionado, advDoc, config, formData.recibo)
+    const texto = obterTextoPadraoRecibo(
+      todosClientesSelecionados.length > 0 ? todosClientesSelecionados : clienteSelecionado,
+      advDoc,
+      config,
+      {
+        ...formData.recibo,
+        clientesAdicionais
+      }
+    )
     setFormData(prev => ({
       ...prev,
       recibo: { ...prev.recibo, textoPersonalizado: texto }
@@ -976,7 +1071,13 @@ export default function GerarDocumentos() {
   }
 
   const handlePreencherResidenciaComPadrao = () => {
-    const texto = obterTextoPadraoResidencia(clienteSelecionado, formData.residencia)
+    const texto = obterTextoPadraoResidencia(
+      todosClientesSelecionados.length > 0 ? todosClientesSelecionados : clienteSelecionado,
+      {
+        ...formData.residencia,
+        clientesAdicionais
+      }
+    )
     setFormData(prev => ({
       ...prev,
       residencia: { ...prev.residencia, textoPersonalizado: texto }
@@ -1054,51 +1155,204 @@ export default function GerarDocumentos() {
                 <div className="p-1.5 bg-secondary/10 rounded-lg text-secondary">
                   <User className="w-4 h-4" />
                 </div>
-                <h2 className="font-serif text-lg font-bold text-white">1. Selecionar Cliente do CRM</h2>
+                <div>
+                  <h2 className="font-serif text-lg font-bold text-white">1. Selecionar Cliente(s) do CRM</h2>
+                  {todosClientesSelecionados.length > 1 && (
+                    <p className="text-xs text-secondary font-medium">
+                      {todosClientesSelecionados.length} clientes selecionados (multi-contratantes)
+                    </p>
+                  )}
+                </div>
               </div>
               {clienteSelecionado && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setClienteSelecionado(null)}
+                  onClick={handleLimparClientes}
                   className="text-slate-400 hover:text-white h-7 text-xs"
                 >
-                  Trocar cliente
+                  {clientesAdicionais.length > 0 ? 'Limpar todos' : 'Trocar cliente'}
                 </Button>
               )}
             </div>
 
             {clienteSelecionado ? (
-              <div className="p-4 bg-slate-900/80 border border-secondary/30 rounded-xl flex items-start justify-between">
-                <div>
-                  <h3 className="font-bold text-white text-base">{clienteSelecionado.nome_razao_social}</h3>
-                  <div className="text-xs text-slate-300 space-y-0.5 mt-1">
-                    <p>
-                      <strong>Documento:</strong> {clienteSelecionado.cpf_cnpj || 'Não informado'} |{' '}
-                      <strong>RG:</strong> {clienteSelecionado.rg_ie || 'Não informado'}
-                    </p>
-                    <p>
-                      <strong>WhatsApp:</strong> {clienteSelecionado.telefone_whatsapp} |{' '}
-                      <strong>E-mail:</strong> {clienteSelecionado.email || 'Não informado'}
-                    </p>
-                    <p>
-                      <strong>Endereço:</strong>{' '}
-                      {[
-                        clienteSelecionado.endereco_logradouro,
-                        clienteSelecionado.endereco_numero && 'nº ' + clienteSelecionado.endereco_numero,
-                        clienteSelecionado.endereco_cidade && `${clienteSelecionado.endereco_cidade}/${clienteSelecionado.endereco_uf}`
-                      ]
-                        .filter(Boolean)
-                        .join(', ') || 'Endereço não cadastrado'}
-                    </p>
+              <div className="space-y-4">
+                {/* 1º Contratante (Principal) */}
+                <div className="p-4 bg-slate-900/80 border border-secondary/30 rounded-xl space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-secondary/20 text-secondary border border-secondary/30 tracking-wide uppercase">
+                        1º Contratante (Principal)
+                      </span>
+                    </div>
+                    <Link
+                      to={`/admin/crm/clientes/${clienteSelecionado.id}`}
+                      className="text-secondary hover:underline text-xs flex items-center gap-1 font-medium"
+                    >
+                      Ver Ficha <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-base">{clienteSelecionado.nome_razao_social}</h3>
+                    <div className="text-xs text-slate-300 space-y-0.5 mt-1">
+                      <p>
+                        <strong>Documento:</strong> {clienteSelecionado.cpf_cnpj || 'Não informado'} |{' '}
+                        <strong>RG:</strong> {clienteSelecionado.rg_ie || 'Não informado'}
+                      </p>
+                      <p>
+                        <strong>WhatsApp:</strong> {clienteSelecionado.telefone_whatsapp} |{' '}
+                        <strong>E-mail:</strong> {clienteSelecionado.email || 'Não informado'}
+                      </p>
+                      <p>
+                        <strong>Endereço:</strong>{' '}
+                        {[
+                          clienteSelecionado.endereco_logradouro,
+                          clienteSelecionado.endereco_numero && 'nº ' + clienteSelecionado.endereco_numero,
+                          clienteSelecionado.endereco_cidade && `${clienteSelecionado.endereco_cidade}/${clienteSelecionado.endereco_uf}`
+                        ]
+                          .filter(Boolean)
+                          .join(', ') || 'Endereço não cadastrado'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <Link
-                  to={`/admin/crm/clientes/${clienteSelecionado.id}`}
-                  className="text-secondary hover:underline text-xs flex items-center gap-1 font-medium"
-                >
-                  Ver Ficha <ExternalLink className="w-3 h-3" />
-                </Link>
+
+                {/* Clientes Adicionais (Co-contratantes / Cônjuge / Outorgantes) */}
+                {clientesAdicionais.map((c, idx) => (
+                  <div key={c.id} className="p-4 bg-slate-900/60 border border-blue-500/30 rounded-xl space-y-2 animate-in fade-in">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 tracking-wide uppercase">
+                          {idx + 2}º Contratante (Co-cliente)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/admin/crm/clientes/${c.id}`}
+                          className="text-slate-400 hover:text-white text-xs flex items-center gap-1 font-medium mr-2"
+                        >
+                          Ver Ficha <ExternalLink className="w-3 h-3" />
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoverClienteAdicional(c.id)}
+                          className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 h-6 px-2 text-xs flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white text-base">{c.nome_razao_social}</h3>
+                      <div className="text-xs text-slate-300 space-y-0.5 mt-1">
+                        <p>
+                          <strong>Documento:</strong> {c.cpf_cnpj || 'Não informado'} |{' '}
+                          <strong>RG:</strong> {c.rg_ie || 'Não informado'}
+                        </p>
+                        <p>
+                          <strong>WhatsApp:</strong> {c.telefone_whatsapp} |{' '}
+                          <strong>E-mail:</strong> {c.email || 'Não informado'}
+                        </p>
+                        <p>
+                          <strong>Endereço:</strong>{' '}
+                          {[
+                            c.endereco_logradouro,
+                            c.endereco_numero && 'nº ' + c.endereco_numero,
+                            c.endereco_cidade && `${c.endereco_cidade}/${c.endereco_uf}`
+                          ]
+                            .filter(Boolean)
+                            .join(', ') || 'Endereço não cadastrado'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Painel para Adicionar Mais Clientes (Co-contratantes) */}
+                {mostrarBuscaAdicional ? (
+                  <div className="p-4 bg-slate-950/70 border border-secondary/40 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-secondary" />
+                        <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                          Adicionar Co-contratante / Cônjuge / Outorgante
+                        </h4>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setMostrarBuscaAdicional(false)
+                          setBuscaClienteAdicional('')
+                        }}
+                        className="text-slate-400 hover:text-white h-6 text-xs px-2"
+                      >
+                        <X className="w-3.5 h-3.5 mr-1" />
+                        Fechar busca
+                      </Button>
+                    </div>
+
+                    <div className="relative">
+                      <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                      <Input
+                        placeholder="Buscar por nome, CPF ou WhatsApp para adicionar..."
+                        value={buscaClienteAdicional}
+                        onChange={e => setBuscaClienteAdicional(e.target.value)}
+                        className="pl-9 h-9 bg-slate-900 border-border/60 text-white text-xs rounded-lg"
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto border border-white/5 rounded-lg divide-y divide-white/5 bg-slate-900/60">
+                      {clientesFiltradosAdicionais.length === 0 ? (
+                        <div className="p-3 text-center text-slate-500 text-xs">
+                          Nenhum cliente disponível encontrado.
+                        </div>
+                      ) : (
+                        clientesFiltradosAdicionais.map(c => (
+                          <div
+                            key={c.id}
+                            onClick={() => handleAdicionarClienteAdicional(c)}
+                            className="p-2.5 hover:bg-slate-800/70 cursor-pointer flex items-center justify-between transition-colors text-xs"
+                          >
+                            <div>
+                              <p className="font-semibold text-white">{c.nome_razao_social}</p>
+                              <p className="text-[11px] text-slate-400">
+                                {c.cpf_cnpj || 'Sem CPF'} · {c.telefone_whatsapp}
+                              </p>
+                            </div>
+                            <Button size="sm" variant="ghost" className="text-secondary hover:text-white h-6 text-[11px]">
+                              <Plus className="w-3 h-3 mr-1" />
+                              Adicionar
+                            </Button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMostrarBuscaAdicional(true)}
+                      className="border-dashed border-secondary/40 text-secondary hover:text-white hover:bg-secondary/10 text-xs rounded-xl h-9"
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1.5" />
+                      Adicionar outro cliente (Co-contratante / Cônjuge / Sócio)
+                    </Button>
+                    <span className="text-[11px] text-slate-400 italic">
+                      {todosClientesSelecionados.length > 1
+                        ? `✓ ${todosClientesSelecionados.length} clientes qualificados simultaneamente`
+                        : 'Permite 2 ou mais contratantes com assinaturas individuais'}
+                    </span>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3">

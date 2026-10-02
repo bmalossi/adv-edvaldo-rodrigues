@@ -671,5 +671,143 @@ describe('Persistência Local dos Demais Documentos (Opção A)', () => {
   });
 });
 
+describe('Suporte a Múltiplos Clientes (Multi-contratantes / Co-clientes)', () => {
+  const mockCliente2: Partial<Cliente> = {
+    id: 'cli-test-2',
+    nome_razao_social: 'JOÃO PEREIRA DA SILVA',
+    cpf_cnpj: '999.888.777-00',
+    rg_ie: '98.765.432-1',
+    nacionalidade: 'brasileiro',
+    estado_civil: 'casado',
+    profissao: 'Engenheiro',
+    endereco_logradouro: 'Rua das Flores',
+    endereco_numero: '120',
+    endereco_bairro: 'Canto do Forte',
+    endereco_cidade: 'Praia Grande',
+    endereco_uf: 'SP',
+    endereco_cep: '11700-001',
+    telefone_whatsapp: '(13) 98888-7777',
+    email: 'joao@teste.com',
+  };
+
+  it('deve gerar Contrato com qualificação plural e campo de assinatura para cada cliente', () => {
+    const html = buildContrato([mockCliente, mockCliente2], mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      incluirTestemunhas: false,
+    });
+
+    // Preâmbulo com CONTRATANTES e ambos os nomes
+    expect(html).toContain('CONTRATANTES');
+    expect(html).toContain('MARIA DAS DORES');
+    expect(html).toContain('JOÃO PEREIRA DA SILVA');
+    expect(html).toContain('1)');
+    expect(html).toContain('2)');
+
+    // Campos de assinatura dos contratantes
+    expect(html).toContain('CONTRATANTE 1:');
+    expect(html).toContain('CONTRATANTE 2:');
+    expect(html).toContain('111.222.333-44');
+    expect(html).toContain('999.888.777-00');
+
+    // Assinatura do advogado contratado
+    expect(html).toContain('CONTRATADA');
+    expect(html).toContain('EDVALDO RODRIGUES FERREIRA');
+  });
+
+  it('deve gerar Contrato com múltiplos clientes passados via clientesAdicionais', () => {
+    const html = buildContrato(mockCliente, mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      clientesAdicionais: [mockCliente2],
+      incluirTestemunhas: false,
+    });
+
+    expect(html).toContain('CONTRATANTES');
+    expect(html).toContain('MARIA DAS DORES');
+    expect(html).toContain('JOÃO PEREIRA DA SILVA');
+    expect(html).toContain('CONTRATANTE 1:');
+    expect(html).toContain('CONTRATANTE 2:');
+  });
+
+  it('deve suportar simultaneamente múltiplos clientes e atuação conjunta de advogados no Contrato', () => {
+    const html = buildContrato([mockCliente, mockCliente2], mockAdv, mockConfig, null, {
+      ...baseOpcaoContrato,
+      atuacaoConjunta: true,
+      advogadoConjuntoNome: 'Dra. Vania Regina Malossi',
+      advogadoConjuntoTratamento: 'advogada',
+      advogadoConjuntoOab: 'OAB/SP 387.405',
+      incluirTestemunhas: false,
+    });
+
+    // Clientes
+    expect(html).toContain('CONTRATANTE 1:');
+    expect(html).toContain('CONTRATANTE 2:');
+
+    // Advogados
+    expect(html).toContain('EDVALDO RODRIGUES FERREIRA');
+    expect(html).toContain('Dra. Vania Regina Malossi');
+    expect(html).toContain('OAB/SP 387.405');
+  });
+
+  it('deve gerar Procuração com OUTORGANTES e caixas de assinatura individuais', () => {
+    const html = buildProcuracao([mockCliente, mockCliente2], mockAdv, mockConfig, null, {
+      transigir: true,
+      receber: true,
+      substabelecer: true,
+      hipossuf: true,
+    });
+
+    expect(html).toContain('OUTORGANTES:');
+    expect(html).toContain('MARIA DAS DORES');
+    expect(html).toContain('JOÃO PEREIRA DA SILVA');
+    expect(html).toContain('111.222.333-44');
+    expect(html).toContain('999.888.777-00');
+  });
+
+  it('deve gerar Declaração de Hipossuficiência no plural com assinaturas individuais', () => {
+    const html = buildHipossuficiencia([mockCliente, mockCliente2], mockAdv, mockConfig, null, {
+      situacao: 'assalariados',
+    });
+
+    expect(html).toContain('DECLARAM CONJUNTAMENTE');
+    expect(html).toContain('são pessoas pobres na expressão jurídica da palavra');
+    expect(html).toContain('MARIA DAS DORES');
+    expect(html).toContain('JOÃO PEREIRA DA SILVA');
+  });
+
+  it('deve gerar Declaração de IRPF no plural com assinaturas individuais', () => {
+    const html = buildIrpf([mockCliente, mockCliente2], mockAdv, mockConfig, null, {
+      exercicios: '2024 e 2025',
+    });
+
+    expect(html).toContain('DECLARAMOS');
+    expect(html).toContain('MARIA DAS DORES');
+    expect(html).toContain('JOÃO PEREIRA DA SILVA');
+  });
+
+  it('deve gerar Recibo no plural mencionando pagamento conjunto', () => {
+    const html = buildRecibo([mockCliente, mockCliente2], mockAdv, mockConfig, null, {
+      valorRecibo: 2500,
+      valorExtenso: 'dois mil e quinhentos reais',
+      referenciaRecibo: 'honorários iniciais',
+      formaPagamento: 'PIX',
+    });
+
+    expect(html).toContain('efetuaram conjuntamente o pagamento');
+    expect(html).toContain('MARIA DAS DORES');
+    expect(html).toContain('JOÃO PEREIRA DA SILVA');
+  });
+
+  it('deve gerar Declaração de Residência no plural com assinaturas individuais', () => {
+    const html = buildResidencia([mockCliente, mockCliente2], mockAdv, mockConfig, null, {
+      tipoResidencia: 'proprio',
+      destinoResidencia: 'Banco do Brasil',
+    });
+
+    expect(html).toContain('DECLARAMOS que somos residentes e domiciliados');
+    expect(html).toContain('MARIA DAS DORES');
+    expect(html).toContain('JOÃO PEREIRA DA SILVA');
+  });
+});
+
 
 

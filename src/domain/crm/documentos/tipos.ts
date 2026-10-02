@@ -75,6 +75,9 @@ export interface OpcaoContrato {
 
   // Opções visuais de layout
   centralizarTitulos?: boolean
+
+  // Multi-clientes (co-contratantes / clientes adicionais)
+  clientesAdicionais?: Partial<Cliente>[]
 }
 
 export interface OpcaoProcuracao {
@@ -104,6 +107,9 @@ export interface OpcaoProcuracao {
   rodapeLinha2?: string
   rodapeLinha3?: string
   numerarPaginas?: boolean
+
+  // Multi-clientes
+  clientesAdicionais?: Partial<Cliente>[]
 }
 
 export interface OpcaoHipossuficiencia {
@@ -120,6 +126,9 @@ export interface OpcaoHipossuficiencia {
   rodapeLinha2?: string
   rodapeLinha3?: string
   numerarPaginas?: boolean
+
+  // Multi-clientes
+  clientesAdicionais?: Partial<Cliente>[]
 }
 
 export interface OpcaoIrpf {
@@ -134,6 +143,9 @@ export interface OpcaoIrpf {
   rodapeLinha2?: string
   rodapeLinha3?: string
   numerarPaginas?: boolean
+
+  // Multi-clientes
+  clientesAdicionais?: Partial<Cliente>[]
 }
 
 export interface OpcaoRecibo {
@@ -153,6 +165,9 @@ export interface OpcaoRecibo {
   rodapeLinha2?: string
   rodapeLinha3?: string
   numerarPaginas?: boolean
+
+  // Multi-clientes
+  clientesAdicionais?: Partial<Cliente>[]
 }
 
 export interface OpcaoResidencia {
@@ -170,6 +185,9 @@ export interface OpcaoResidencia {
   rodapeLinha2?: string
   rodapeLinha3?: string
   numerarPaginas?: boolean
+
+  // Multi-clientes
+  clientesAdicionais?: Partial<Cliente>[]
 }
 
 export interface OpcoesDocumentoForm {

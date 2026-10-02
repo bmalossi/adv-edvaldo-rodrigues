@@ -105,3 +105,50 @@ export const TIPO_NOMES: Record<string, string> = {
   residencia: 'Declaração de residência',
   lote: 'Pacote de Documentos'
 }
+
+export function extrairClientes(
+  c: Partial<Cliente> | Partial<Cliente>[] | null | undefined,
+  adicionais?: Partial<Cliente>[]
+): Partial<Cliente>[] {
+  const lista: Partial<Cliente>[] = []
+  if (Array.isArray(c)) {
+    lista.push(...c.filter(item => item && (item.nome_razao_social || item.cpf_cnpj || item.id)))
+  } else if (c && typeof c === 'object' && (c.nome_razao_social || c.cpf_cnpj || c.id)) {
+    lista.push(c)
+  }
+  if (adicionais && Array.isArray(adicionais)) {
+    for (const ad of adicionais) {
+      if (ad && (ad.nome_razao_social || ad.cpf_cnpj || ad.id)) {
+        if (!lista.some(existing => (existing.id && existing.id === ad.id) || (existing.cpf_cnpj && existing.cpf_cnpj === ad.cpf_cnpj))) {
+          lista.push(ad)
+        }
+      }
+    }
+  }
+  return lista.length > 0 ? lista : (c ? (Array.isArray(c) ? c : [c]) : [{}])
+}
+
+export function clientesNomesFormatados(clientes: Partial<Cliente>[]): string {
+  const nomes = clientes.map(c => c.nome_razao_social?.trim()).filter(Boolean) as string[]
+  if (nomes.length === 0) return ''
+  if (nomes.length === 1) return nomes[0]
+  if (nomes.length === 2) return `${nomes[0]} e ${nomes[1]}`
+  return `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}`
+}
+
+export function clientesCpfsFormatados(clientes: Partial<Cliente>[]): string {
+  const cpfs = clientes.map(c => c.cpf_cnpj?.trim()).filter(Boolean) as string[]
+  if (cpfs.length === 0) return ''
+  if (cpfs.length === 1) return cpfs[0]
+  if (cpfs.length === 2) return `${cpfs[0]} e ${cpfs[1]}`
+  return `${cpfs.slice(0, -1).join(', ')} e ${cpfs[cpfs.length - 1]}`
+}
+
+export function clientesQualificacaoMulti(clientes: Partial<Cliente>[]): string {
+  if (clientes.length === 0) return ''
+  if (clientes.length === 1) return clienteQualificacao(clientes[0])
+  return clientes
+    .map((cli, idx) => `${idx + 1}) ${clienteQualificacao(cli)}`)
+    .join('; e ')
+}
+
