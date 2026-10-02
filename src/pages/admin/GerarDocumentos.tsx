@@ -63,7 +63,14 @@ import {
   CLAUSULAS_PADRAO_CONTRATO,
   carregarPadroesDocumentosLocal,
   salvarPadraoDocumentoLocal,
-  restaurarPadraoDocumentoFabrica
+  restaurarPadraoDocumentoFabrica,
+  carregarDadosDocumentosCompletos,
+  salvarPadraoDocumento,
+  restaurarPadraoDocumento,
+  carregarHistoricoLocal,
+  salvarHistoricoDocumento,
+  carregarHistoricoCompleto,
+  excluirHistoricoDocumento
 } from '@/domain/crm/documentos/config-local'
 import {
   buildContrato,
@@ -81,7 +88,13 @@ import {
   obterTextoPadraoResidencia
 } from '@/domain/crm/documentos/templates'
 import { downloadWord, imprimirDocumento, estilosDocumentoCss } from '@/domain/crm/documentos/exportacao'
-import { TIPO_NOMES, dateShort, clientesNomesFormatados } from '@/domain/crm/documentos/formatacao'
+import {
+  TIPO_NOMES,
+  dateShort,
+  clientesNomesFormatados,
+  extrairTiposDocumentoEmitido,
+  formatarNomesDocumentosEmitidos
+} from '@/domain/crm/documentos/formatacao'
 
 interface AbaCabecalhoRodapeProps {
   cabecalho: string
@@ -282,7 +295,8 @@ function AbaTextoMinuta({
 export default function GerarDocumentos() {
   const [searchParams] = useSearchParams()
   const clienteIdUrl = searchParams.get('clienteId')
-  const { user, advogado, perfil } = useAuth()
+  const { user, advogado, perfil, role, papel } = useAuth()
+  const isAdm = role?.nome === 'Administrador' || papel === 'Administrador' || papel === 'admin'
 
   // Lista de clientes
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -320,7 +334,7 @@ export default function GerarDocumentos() {
 
   // Formulário de dados compartilhados e específicos
   const [formData, setFormData] = useState<OpcoesDocumentoForm>(() => {
-    const padroes = carregarPadroesDocumentosLocal()
+    const padroes = carregarPadroesDocumentosLocal(user?.id, isAdm)
     return {
       ...DEFAULTS_FORM_DOCUMENTO,
       ...padroes,
@@ -361,6 +375,7 @@ export default function GerarDocumentos() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewHtml, setPreviewHtml] = useState('')
   const [previewTitulo, setPreviewTitulo] = useState('')
+  const [previewDoc, setPreviewDoc] = useState<{ html: string; titulo: string; tipo: string; numero: string } | null>(null)
 
   // Acordeões abertos no formulário
   const [secaoAberta, setSecaoAberta] = useState<Record<string, boolean>>({
@@ -406,6 +421,65 @@ export default function GerarDocumentos() {
     carregarHistorico()
     carregarPerfis()
   }, [])
+
+  // Sincroniza dados institucionais e modelos salvos no Supabase (escritório vs usuário)
+  useEffect(() => {
+    let ativo = true
+    const carregarConfigRemota = async () => {
+      try {
+        const dados = await carregarDadosDocumentosCompletos(user?.id, isAdm)
+        if (!ativo) return
+        if (dados.logo !== undefined) {
+          setLogo(dados.logo)
+        }
+        if (dados.config) {
+          setConfig(dados.config)
+        }
+        if (dados.padroes) {
+          setFormData(prev => {
+            const pad = dados.padroes || {}
+            return {
+              ...prev,
+              ...pad,
+              contrato: {
+                ...prev.contrato,
+                ...(pad.contrato || {}),
+                clausulas: pad.contrato?.clausulas || prev.contrato.clausulas || DEFAULTS_FORM_DOCUMENTO.contrato.clausulas
+              },
+              procuracao: {
+                ...prev.procuracao,
+                ...(pad.procuracao || {})
+              },
+              hipossuficiencia: {
+                ...prev.hipossuficiencia,
+                ...(pad.hipossuficiencia || {})
+              },
+              irpf: {
+                ...prev.irpf,
+                ...(pad.irpf || {})
+              },
+              recibo: {
+                ...prev.recibo,
+                ...(pad.recibo || {})
+              },
+              residencia: {
+                ...prev.residencia,
+                ...(pad.residencia || {})
+              }
+            }
+          })
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar configurações completas de documentos:', err)
+      }
+    }
+
+    carregarConfigRemota()
+    carregarHistorico()
+    return () => {
+      ativo = false
+    }
+  }, [user?.id, isAdm])
 
   const carregarPerfis = async () => {
     try {
@@ -455,16 +529,22 @@ export default function GerarDocumentos() {
 
   const carregarHistorico = async () => {
     setLoadingHistorico(true)
-    const { data, error } = await supabase
-      .from('documentos_emitidos')
-      .select('*')
-      .order('emitido_em', { ascending: false })
-      .limit(50)
-
-    if (!error && data) {
-      setHistorico(data)
+    try {
+      // 1. Carrega dados locais imediatamente para renderização rápida e offline
+      const local = carregarHistoricoLocal()
+      if (local && local.length > 0) {
+        setHistorico(local)
+      }
+      // 2. Sincroniza com o Supabase e mescla
+      const consolidado = await carregarHistoricoCompleto(user?.id, isAdm)
+      if (consolidado && consolidado.length > 0) {
+        setHistorico(consolidado)
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar histórico:', e)
+    } finally {
+      setLoadingHistorico(false)
     }
-    setLoadingHistorico(false)
   }
 
   // Filtragem de clientes para a busca
@@ -659,34 +739,40 @@ export default function GerarDocumentos() {
         return gerarHtmlDoc(tipo, todosClientesSelecionados, subNum)
       })
       const html = `<div class="package-document">${docsHtml.join('')}</div>`
-      const titulo = `Pacote (${tiposMarcados.length} docs) - ${nomeFormatado}`
+      const nomesDosDocs = tiposMarcados.map(t => TIPO_NOMES[t] || t).join(', ')
+      const titulo = `Pacote (${tiposMarcados.length} docs: ${nomesDosDocs}) - ${nomeFormatado}`
       return { html, titulo, tipo: 'lote', numero }
     }
   }
 
-  // Salvar no histórico Supabase
+  // Salvar no histórico Supabase + LocalStorage com metadados completos para reedição
   const salvarHistorico = async (doc: { html: string; titulo: string; tipo: string; numero: string }) => {
-    if (!advogado?.id || !clienteSelecionado) return
+    const clienteAlvo = clienteSelecionado || todosClientesSelecionados[0]
+    if (!clienteAlvo && !todosClientesNomes) return
+
+    const marcados = (Object.keys(docsSelecionados) as TipoDocumento[]).filter(t => docsSelecionados[t])
+    const opcoesCompletas = {
+      ...formData,
+      tipos_documentos: marcados,
+      docs_selecionados: docsSelecionados,
+      cliente_principal: clienteSelecionado,
+      clientes_adicionais: clientesAdicionais,
+    }
 
     try {
-      const { data, error } = await supabase
-        .from('documentos_emitidos')
-        .insert({
-          advogado_id: advogado.id,
-          cliente_id: clienteSelecionado.id,
-          cliente_nome: todosClientesNomes || clienteSelecionado.nome_razao_social,
-          tipo: doc.tipo,
-          numero: doc.numero,
-          titulo: doc.titulo,
-          html_content: doc.html,
-          opcoes_json: formData as any
-        })
-        .select()
-        .single()
+      const item = await salvarHistoricoDocumento({
+        advogado_id: advogado?.id || null,
+        user_id: user?.id || null,
+        cliente_id: clienteAlvo?.id || null,
+        cliente_nome: todosClientesNomes || clienteAlvo?.nome_razao_social || 'Cliente não informado',
+        tipo: doc.tipo,
+        numero: doc.numero,
+        titulo: doc.titulo,
+        html_content: doc.html,
+        opcoes_json: opcoesCompletas as any
+      })
 
-      if (!error && data) {
-        setHistorico(prev => [data, ...prev])
-      }
+      setHistorico(prev => [item, ...prev.filter(h => h.id !== item.id && h.numero !== item.numero)])
     } catch (e) {
       console.warn('Erro ao salvar no histórico', e)
     }
@@ -696,6 +782,7 @@ export default function GerarDocumentos() {
   const handleVisualizar = () => {
     try {
       const doc = gerarPacoteHtml(false)
+      setPreviewDoc(doc)
       setPreviewHtml(doc.html)
       setPreviewTitulo(doc.titulo)
       setPreviewOpen(true)
@@ -726,8 +813,154 @@ export default function GerarDocumentos() {
     }
   }
 
+  // Ações de Emissão de dentro do Modal de Preview
+  const handleWordDoPreview = async () => {
+    downloadWord(previewHtml, previewTitulo)
+    if (previewDoc) {
+      await salvarHistorico(previewDoc)
+    }
+    toast.success('Documento Word (.doc) baixado com sucesso!')
+  }
+
+  const handleImprimirDoPreview = async () => {
+    imprimirDocumento(previewHtml, previewTitulo)
+    if (previewDoc) {
+      await salvarHistorico(previewDoc)
+    }
+    toast.success('Janela de impressão gerada.')
+  }
+
   // Ações do Histórico
+  const handleRetomarHistorico = (item: DocumentoEmitido) => {
+    try {
+      let opts = item.opcoes_json as any
+      if (typeof opts === 'string') {
+        try {
+          opts = JSON.parse(opts)
+        } catch {
+          opts = null
+        }
+      }
+
+      // 1. Restaurar cliente principal
+      let cliPrincipal: Cliente | null = null
+      if (item.cliente_id && clientes.length > 0) {
+        cliPrincipal = clientes.find(c => c.id === item.cliente_id) || null
+      }
+      if (!cliPrincipal && opts?.cliente_principal) {
+        cliPrincipal = opts.cliente_principal
+      }
+      if (!cliPrincipal && item.cliente_nome) {
+        const primeiroNome = item.cliente_nome.split(' e ')[0].trim()
+        cliPrincipal = clientes.find(c => c.nome_razao_social.toLowerCase() === primeiroNome.toLowerCase()) || null
+      }
+      if (cliPrincipal) {
+        setClienteSelecionado(cliPrincipal)
+      }
+
+      // 2. Restaurar clientes adicionais
+      if (opts?.clientes_adicionais && Array.isArray(opts.clientes_adicionais)) {
+        setClientesAdicionais(opts.clientes_adicionais)
+      } else if (item.cliente_nome && item.cliente_nome.includes(' e ')) {
+        const partes = item.cliente_nome.split(' e ').map(s => s.trim().toLowerCase())
+        const extras: Cliente[] = []
+        for (let i = 1; i < partes.length; i++) {
+          const c = clientes.find(cli => cli.nome_razao_social.toLowerCase() === partes[i])
+          if (c && !extras.some(e => e.id === c.id)) {
+            extras.push(c)
+          }
+        }
+        setClientesAdicionais(extras)
+      } else {
+        setClientesAdicionais([])
+      }
+
+      // 3. Restaurar tipos de documentos marcados
+      if (opts?.docs_selecionados) {
+        setDocsSelecionados(opts.docs_selecionados)
+      } else if (opts?.tipos_documentos && Array.isArray(opts.tipos_documentos)) {
+        const novoDocs: Record<TipoDocumento, boolean> = {
+          contrato: false,
+          procuracao: false,
+          hipossuficiencia: false,
+          irpf: false,
+          residencia: false,
+          recibo: false
+        }
+        for (const t of opts.tipos_documentos as TipoDocumento[]) {
+          if (novoDocs[t] !== undefined) novoDocs[t] = true
+        }
+        setDocsSelecionados(novoDocs)
+      } else {
+        const tipos = extrairTiposDocumentoEmitido(item)
+        const novoDocs: Record<TipoDocumento, boolean> = {
+          contrato: tipos.includes('contrato'),
+          procuracao: tipos.includes('procuracao'),
+          hipossuficiencia: tipos.includes('hipossuficiencia'),
+          irpf: tipos.includes('irpf'),
+          residencia: tipos.includes('residencia'),
+          recibo: tipos.includes('recibo')
+        }
+        setDocsSelecionados(novoDocs)
+      }
+
+      // 4. Restaurar todas as configurações de formulário (cláusulas, valores, textos personalizados)
+      if (opts) {
+        setFormData(prev => ({
+          ...prev,
+          ...opts,
+          contrato: {
+            ...prev.contrato,
+            ...(opts.contrato || {}),
+            clausulas: opts.contrato?.clausulas || prev.contrato.clausulas
+          },
+          procuracao: {
+            ...prev.procuracao,
+            ...(opts.procuracao || {})
+          },
+          hipossuficiencia: {
+            ...prev.hipossuficiencia,
+            ...(opts.hipossuficiencia || {})
+          },
+          irpf: {
+            ...prev.irpf,
+            ...(opts.irpf || {})
+          },
+          recibo: {
+            ...prev.recibo,
+            ...(opts.recibo || {})
+          },
+          residencia: {
+            ...prev.residencia,
+            ...(opts.residencia || {})
+          }
+        }))
+      }
+
+      // 5. Garantir que as seções dos documentos marcados estejam abertas para edição imediata
+      const tiposMarcados = extrairTiposDocumentoEmitido(item)
+      setSecaoAberta(prev => {
+        const atualizado = { ...prev }
+        tiposMarcados.forEach(t => {
+          atualizado[t] = true
+        })
+        return atualizado
+      })
+
+      // 6. Rolar para o topo suavemente
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+
+      toast.success(`Configurações do documento nº ${item.numero} retomadas para reedição!`, {
+        description: 'Cláusulas, clientes e parâmetros foram restaurados no formulário.'
+      })
+    } catch (err: any) {
+      console.error('Erro ao retomar configurações do histórico:', err)
+      toast.error('Não foi possível carregar todas as configurações deste documento.')
+    }
+  }
+
   const handleAbrirHistorico = (item: DocumentoEmitido) => {
+    setPreviewDoc(item)
     setPreviewHtml(item.html_content)
     setPreviewTitulo(item.titulo)
     setPreviewOpen(true)
@@ -740,39 +973,66 @@ export default function GerarDocumentos() {
 
   const handleExcluirHistorico = async (id: string) => {
     if (!confirm('Deseja realmente remover este documento do histórico?')) return
-    const { error } = await supabase.from('documentos_emitidos').delete().eq('id', id)
-    if (!error) {
-      setHistorico(prev => prev.filter(h => h.id !== id))
-      toast.success('Item removido do histórico.')
-    } else {
-      toast.error('Não foi possível remover o item.')
-    }
+    await excluirHistoricoDocumento(id)
+    setHistorico(prev => prev.filter(h => h.id !== id))
+    toast.success('Item removido do histórico.')
   }
 
   const toggleSecao = (key: string) => {
     setSecaoAberta(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const handleSalvarPadrao = <K extends keyof OpcoesDocumentoForm>(
+  const handleSalvarPadrao = async <K extends keyof OpcoesDocumentoForm>(
     tipo: K,
     nomeAmigavel: string
   ) => {
-    salvarPadraoDocumentoLocal(tipo, formData[tipo])
-    toast.success(`Padrão de "${nomeAmigavel}" salvo com sucesso!`, {
-      description: 'As próximas emissões utilizarão estas configurações como padrão do escritório.'
-    })
+    try {
+      const res = await salvarPadraoDocumento({
+        tipo,
+        valor: formData[tipo],
+        isAdm,
+        userId: user?.id
+      })
+      if (res.escopo === 'escritorio') {
+        toast.success(`Padrão de "${nomeAmigavel}" salvo para o escritório!`, {
+          description: 'As alterações foram salvas para todos os usuários do sistema.'
+        })
+      } else {
+        toast.success(`Padrão de "${nomeAmigavel}" salvo para sua conta!`, {
+          description: 'As alterações foram salvas exclusivamente no seu perfil de usuário.'
+        })
+      }
+    } catch (e) {
+      toast.error(`Erro ao salvar padrão de "${nomeAmigavel}".`)
+    }
   }
 
-  const handleRestaurarPadrao = <K extends keyof OpcoesDocumentoForm>(
+  const handleRestaurarPadrao = async <K extends keyof OpcoesDocumentoForm>(
     tipo: K,
     nomeAmigavel: string
   ) => {
-    restaurarPadraoDocumentoFabrica(tipo)
-    setFormData(prev => ({
-      ...prev,
-      [tipo]: DEFAULTS_FORM_DOCUMENTO[tipo]
-    }))
-    toast.info(`Padrão de fábrica de "${nomeAmigavel}" restaurado.`)
+    try {
+      const res = await restaurarPadraoDocumento({
+        tipo,
+        isAdm,
+        userId: user?.id
+      })
+      setFormData(prev => ({
+        ...prev,
+        [tipo]: res.valorRestaurado
+      }))
+      if (res.escopo === 'escritorio') {
+        toast.info(`Padrão de fábrica de "${nomeAmigavel}" restaurado no escritório.`, {
+          description: 'O modelo oficial foi redefinido para o padrão original de fábrica.'
+        })
+      } else {
+        toast.info(`Padrão do escritório de "${nomeAmigavel}" restaurado na sua conta.`, {
+          description: 'Suas personalizações foram removidas e o modelo do escritório está ativo.'
+        })
+      }
+    } catch (e) {
+      toast.error(`Erro ao restaurar padrão de "${nomeAmigavel}".`)
+    }
   }
 
   // Manipulação de cláusulas do contrato
@@ -793,7 +1053,9 @@ export default function GerarDocumentos() {
     }))
     setAbaContrato('clausulas')
     toast.success(`Cláusula ${proximoNum}ª adicionada ao contrato.`, {
-      description: 'Você pode editar o título e o texto livremente e salvá-la como padrão do escritório.'
+      description: isAdm
+        ? 'Você pode editar o título e o texto livremente e salvá-la como padrão do escritório.'
+        : 'Você pode editar o título e o texto livremente e salvá-la para sua conta.'
     })
   }
 
@@ -2303,7 +2565,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleRestaurarPadrao('contrato', 'Contrato de Honorários')}
                       className="text-slate-400 hover:text-white h-8 gap-1.5"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                      <RotateCcw className="w-3.5 h-3.5" /> {isAdm ? 'Restaurar Padrão de Fábrica' : 'Restaurar Padrão do Escritório'}
                     </Button>
                     <Button
                       type="button"
@@ -2311,7 +2573,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleSalvarPadrao('contrato', 'Contrato de Honorários')}
                       className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
                     >
-                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                      <Save className="w-3.5 h-3.5" /> {isAdm ? 'Salvar como Padrão do Escritório' : 'Salvar para Minha Conta'}
                     </Button>
                   </div>
                 </div>
@@ -2506,7 +2768,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleRestaurarPadrao('procuracao', 'Procuração Ad Judicia')}
                       className="text-slate-400 hover:text-white h-8 gap-1.5"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                      <RotateCcw className="w-3.5 h-3.5" /> {isAdm ? 'Restaurar Padrão de Fábrica' : 'Restaurar Padrão do Escritório'}
                     </Button>
                     <Button
                       type="button"
@@ -2514,7 +2776,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleSalvarPadrao('procuracao', 'Procuração Ad Judicia')}
                       className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
                     >
-                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                      <Save className="w-3.5 h-3.5" /> {isAdm ? 'Salvar como Padrão do Escritório' : 'Salvar para Minha Conta'}
                     </Button>
                   </div>
                 </div>
@@ -2684,7 +2946,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleRestaurarPadrao('hipossuficiencia', 'Declaração de Hipossuficiência')}
                       className="text-slate-400 hover:text-white h-8 gap-1.5"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                      <RotateCcw className="w-3.5 h-3.5" /> {isAdm ? 'Restaurar Padrão de Fábrica' : 'Restaurar Padrão do Escritório'}
                     </Button>
                     <Button
                       type="button"
@@ -2692,7 +2954,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleSalvarPadrao('hipossuficiencia', 'Declaração de Hipossuficiência')}
                       className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
                     >
-                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                      <Save className="w-3.5 h-3.5" /> {isAdm ? 'Salvar como Padrão do Escritório' : 'Salvar para Minha Conta'}
                     </Button>
                   </div>
                 </div>
@@ -2842,7 +3104,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleRestaurarPadrao('irpf', 'Isenção de IRPF')}
                       className="text-slate-400 hover:text-white h-8 gap-1.5"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                      <RotateCcw className="w-3.5 h-3.5" /> {isAdm ? 'Restaurar Padrão de Fábrica' : 'Restaurar Padrão do Escritório'}
                     </Button>
                     <Button
                       type="button"
@@ -2850,7 +3112,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleSalvarPadrao('irpf', 'Isenção de IRPF')}
                       className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
                     >
-                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                      <Save className="w-3.5 h-3.5" /> {isAdm ? 'Salvar como Padrão do Escritório' : 'Salvar para Minha Conta'}
                     </Button>
                   </div>
                 </div>
@@ -3032,7 +3294,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleRestaurarPadrao('residencia', 'Declaração de Residência')}
                       className="text-slate-400 hover:text-white h-8 gap-1.5"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                      <RotateCcw className="w-3.5 h-3.5" /> {isAdm ? 'Restaurar Padrão de Fábrica' : 'Restaurar Padrão do Escritório'}
                     </Button>
                     <Button
                       type="button"
@@ -3040,7 +3302,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleSalvarPadrao('residencia', 'Declaração de Residência')}
                       className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
                     >
-                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                      <Save className="w-3.5 h-3.5" /> {isAdm ? 'Salvar como Padrão do Escritório' : 'Salvar para Minha Conta'}
                     </Button>
                   </div>
                 </div>
@@ -3222,7 +3484,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleRestaurarPadrao('recibo', 'Recibo de Pagamento')}
                       className="text-slate-400 hover:text-white h-8 gap-1.5"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão de Fábrica
+                      <RotateCcw className="w-3.5 h-3.5" /> {isAdm ? 'Restaurar Padrão de Fábrica' : 'Restaurar Padrão do Escritório'}
                     </Button>
                     <Button
                       type="button"
@@ -3230,7 +3492,7 @@ export default function GerarDocumentos() {
                       onClick={() => handleSalvarPadrao('recibo', 'Recibo de Pagamento')}
                       className="bg-secondary/20 text-secondary hover:bg-secondary/30 border border-secondary/30 h-8 gap-1.5 font-semibold rounded-xl"
                     >
-                      <Save className="w-3.5 h-3.5" /> Salvar como Padrão do Escritório
+                      <Save className="w-3.5 h-3.5" /> {isAdm ? 'Salvar como Padrão do Escritório' : 'Salvar para Minha Conta'}
                     </Button>
                   </div>
                 </div>
@@ -3369,11 +3631,41 @@ export default function GerarDocumentos() {
                   )
                   .map(item => (
                     <tr key={item.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="p-3 font-mono text-secondary font-bold">{item.numero}</td>
-                      <td className="p-3 font-medium text-white">{item.titulo}</td>
+                      <td className="p-3 font-mono text-secondary font-bold whitespace-nowrap">{item.numero}</td>
+                      <td className="p-3">
+                        <div className="flex flex-col gap-1 max-w-md">
+                          <span className="font-medium text-white">{item.titulo}</span>
+                          {(() => {
+                            const nomes = formatarNomesDocumentosEmitidos(item)
+                            if (nomes.length === 0) return null
+                            return (
+                              <div className="flex flex-wrap gap-1 mt-0.5">
+                                {nomes.map((nomeDoc, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-secondary/15 text-secondary border border-secondary/30"
+                                  >
+                                    <FileText className="w-2.5 h-2.5 opacity-70" />
+                                    {nomeDoc}
+                                  </span>
+                                ))}
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      </td>
                       <td className="p-3">{item.cliente_nome}</td>
-                      <td className="p-3 text-slate-400">{dateShort(item.emitido_em.slice(0, 10))}</td>
-                      <td className="p-3 text-right space-x-1">
+                      <td className="p-3 text-slate-400 whitespace-nowrap">{dateShort(item.emitido_em.slice(0, 10))}</td>
+                      <td className="p-3 text-right space-x-1 whitespace-nowrap">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRetomarHistorico(item)}
+                          className="h-7 text-xs text-cta-gold hover:text-amber-300 hover:bg-cta-gold/10 font-medium"
+                          title="Retomar clientes, cláusulas e configurações deste documento para reeditar"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 mr-1 text-cta-gold" /> Retomar
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -3422,7 +3714,7 @@ export default function GerarDocumentos() {
                 type="button"
                 size="sm"
                 variant="outline"
-                onClick={() => downloadWord(previewHtml, previewTitulo)}
+                onClick={handleWordDoPreview}
                 className="h-8 border-secondary/40 text-secondary hover:bg-secondary/10 text-xs"
               >
                 <Download className="w-3.5 h-3.5 mr-1" /> Baixar Word
@@ -3430,7 +3722,7 @@ export default function GerarDocumentos() {
               <Button
                 type="button"
                 size="sm"
-                onClick={() => imprimirDocumento(previewHtml, previewTitulo)}
+                onClick={handleImprimirDoPreview}
                 className="h-8 bg-cta-gold hover:opacity-90 text-primary font-bold text-xs"
               >
                 <Printer className="w-3.5 h-3.5 mr-1" /> Imprimir / PDF

@@ -33,7 +33,11 @@ import {
     carregarAssinaturaLocal,
     salvarAssinaturaLocal,
     removerAssinaturaLocal,
-    DEFAULTS_CONFIG
+    DEFAULTS_CONFIG,
+    carregarDadosDocumentosCompletos,
+    salvarLogoEscritorio,
+    removerLogoEscritorio,
+    salvarConfigInstitucionalEscritorio
 } from '@/domain/crm/documentos/config-local'
 import { ConfigDocumentos } from '@/domain/crm/documentos/tipos'
 
@@ -78,12 +82,19 @@ export default function Configuracoes() {
         const assinaturaSalva = perfil?.assinatura_url || (user?.id ? carregarAssinaturaLocal(user.id) : null)
         setAssinaturaUrl(assinaturaSalva)
 
-        // Configurações institucionais
+        // Configurações institucionais (cache local + sincronização com banco)
         setDocConfig(carregarConfigDocumentosLocal())
         setLogoUrl(carregarLogoLocal())
 
+        carregarDadosDocumentosCompletos(user?.id, isAdm).then(dados => {
+            if (dados.logo !== undefined) setLogoUrl(dados.logo)
+            if (dados.config) setDocConfig(dados.config)
+        }).catch(err => {
+            console.warn('Erro ao carregar dados remotos do escritório:', err)
+        })
+
         setLoading(false)
-    }, [user?.id, perfil?.id, perfil?.assinatura_url, advogado?.id])
+    }, [user?.id, perfil?.id, perfil?.assinatura_url, advogado?.id, isAdm])
 
     const handleSalvarPerfil = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -213,7 +224,7 @@ export default function Configuracoes() {
         toast.info('Assinatura digitalizada removida.')
     }
 
-    // Logotipo Institucional (Exclusivo Administrador)
+    // Logotipo Institucional (Exclusivo Administrador - Reflete para todo o escritório)
     const handleUploadLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
@@ -222,28 +233,36 @@ export default function Configuracoes() {
             return
         }
         const reader = new FileReader()
-        reader.onload = () => {
+        reader.onload = async () => {
             const dataUrl = reader.result as string
-            salvarLogoLocal(dataUrl)
             setLogoUrl(dataUrl)
-            toast.success('Logotipo institucional atualizado!')
+            const res = await salvarLogoEscritorio(dataUrl, user?.id)
+            if (res.sucesso) {
+                toast.success('Logotipo institucional salvo e atualizado para todo o escritório!')
+            } else {
+                toast.warning('Logotipo salvo localmente, mas não foi possível sincronizar com o banco: ' + (res.erro || ''))
+            }
         }
         reader.readAsDataURL(file)
     }
 
-    const handleRemoverLogo = () => {
-        removerLogoLocal()
+    const handleRemoverLogo = async () => {
         setLogoUrl(null)
         if (fileLogoRef.current) fileLogoRef.current.value = ''
-        toast.info('Logotipo institucional removido.')
+        await removerLogoEscritorio(user?.id)
+        toast.info('Logotipo institucional removido de todo o escritório.')
     }
 
-    const handleSalvarDocConfig = (e: React.FormEvent) => {
+    const handleSalvarDocConfig = async (e: React.FormEvent) => {
         e.preventDefault()
         setSalvandoDocs(true)
-        salvarConfigDocumentosLocal(docConfig)
+        const res = await salvarConfigInstitucionalEscritorio(docConfig, user?.id)
         setSalvandoDocs(false)
-        toast.success('Dados institucionais salvos com sucesso!')
+        if (res.sucesso) {
+            toast.success('Dados institucionais salvos com sucesso para todo o escritório!')
+        } else {
+            toast.warning('Dados salvos localmente, mas não foi possível sincronizar com o banco: ' + (res.erro || ''))
+        }
     }
 
     if (loading) {

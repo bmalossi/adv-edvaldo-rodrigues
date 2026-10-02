@@ -1,4 +1,5 @@
-import { ConfigDocumentos, OpcoesDocumentoForm, ClausulaContrato, RodapeConfig } from './tipos'
+import { ConfigDocumentos, OpcoesDocumentoForm, ClausulaContrato, RodapeConfig, DocumentoEmitido } from './tipos'
+import { supabase } from '@/lib/supabase'
 
 const STORAGE_KEYS = {
   logo: 'erf_doc_logo_v1',
@@ -6,6 +7,8 @@ const STORAGE_KEYS = {
   config: 'erf_doc_config_v1',
   counters: 'erf_doc_counters_v1',
   padroes: 'erf_doc_padroes_templates_v1',
+  padroesUsuarioPrefix: 'erf_doc_padroes_usuario_',
+  historico: 'erf_doc_historico_v1',
 }
 
 export const DEFAULTS_CONFIG: ConfigDocumentos = {
@@ -297,13 +300,26 @@ export const DEFAULTS_FORM_DOCUMENTO: OpcoesDocumentoForm = {
   }
 }
 
-export function carregarPadroesDocumentosLocal(): Partial<OpcoesDocumentoForm> {
+export function carregarPadroesDocumentosLocal(
+  userId?: string,
+  isAdm: boolean = false
+): Partial<OpcoesDocumentoForm> {
+  let escritorio: Partial<OpcoesDocumentoForm> = {}
   try {
     const salvo = localStorage.getItem(STORAGE_KEYS.padroes)
-    if (!salvo) return {}
-    return JSON.parse(salvo)
+    if (salvo) escritorio = JSON.parse(salvo)
   } catch {
-    return {}
+    escritorio = {}
+  }
+
+  if (isAdm || !userId) {
+    return escritorio
+  }
+
+  const usuario = carregarPadroesUsuarioLocal(userId)
+  return {
+    ...escritorio,
+    ...usuario
   }
 }
 
@@ -333,3 +349,585 @@ export function restaurarPadraoDocumentoFabrica(chave?: keyof OpcoesDocumentoFor
     console.warn('Erro ao restaurar padrão de documento', e)
   }
 }
+
+export function carregarPadroesUsuarioLocal(userId: string): Partial<OpcoesDocumentoForm> {
+  try {
+    if (!userId) return {}
+    const salvo = localStorage.getItem(`${STORAGE_KEYS.padroesUsuarioPrefix}${userId}`)
+    if (!salvo) return {}
+    return JSON.parse(salvo)
+  } catch {
+    return {}
+  }
+}
+
+export function salvarPadraoUsuarioLocal<K extends keyof OpcoesDocumentoForm>(
+  chave: K,
+  valor: OpcoesDocumentoForm[K],
+  userId: string
+): void {
+  try {
+    if (!userId) return
+    const atuais = carregarPadroesUsuarioLocal(userId)
+    const novos = { ...atuais, [chave]: valor }
+    localStorage.setItem(`${STORAGE_KEYS.padroesUsuarioPrefix}${userId}`, JSON.stringify(novos))
+  } catch (e) {
+    console.warn('Erro ao salvar padrão de usuário em localStorage', e)
+  }
+}
+
+export function restaurarPadraoUsuarioLocal(
+  chave: keyof OpcoesDocumentoForm | undefined,
+  userId: string
+): void {
+  try {
+    if (!userId) return
+    if (!chave) {
+      localStorage.removeItem(`${STORAGE_KEYS.padroesUsuarioPrefix}${userId}`)
+      return
+    }
+    const atuais = carregarPadroesUsuarioLocal(userId)
+    delete atuais[chave]
+    localStorage.setItem(`${STORAGE_KEYS.padroesUsuarioPrefix}${userId}`, JSON.stringify(atuais))
+  } catch (e) {
+    console.warn('Erro ao restaurar padrão de usuário', e)
+  }
+}
+
+export interface DadosDocumentosCarregados {
+  logo: string | null
+  config: ConfigDocumentos
+  padroes: Partial<OpcoesDocumentoForm>
+  padroesEscritorio: Partial<OpcoesDocumentoForm>
+  temPadroesUsuario: boolean
+  isAdm: boolean
+}
+
+/**
+ * Carrega a configuração institucional completa e modelos de documentos.
+ * Prioriza a busca no banco de dados (Supabase) sob a chave 'escritorio' (salva pelo Administrador)
+ * e mescla com eventuais preferências salvas exclusivamente para a conta do usuário (quando não-administrador).
+ * Mantém cache no localStorage para velocidade e operação offline.
+ */
+export async function carregarDadosDocumentosCompletos(
+  userId?: string,
+  isAdm: boolean = false
+): Promise<DadosDocumentosCarregados> {
+  let logo = carregarLogoLocal()
+  let config = carregarConfigDocumentosLocal()
+  let padroesEscritorio = carregarPadroesDocumentosLocal()
+  let padroesUsuario: Partial<OpcoesDocumentoForm> = userId ? carregarPadroesUsuarioLocal(userId) : {}
+  let temPadroesUsuario = Boolean(userId && Object.keys(padroesUsuario).length > 0)
+
+  try {
+    const chavesParaBuscar = ['escritorio']
+    if (userId) {
+      chavesParaBuscar.push(`usuario_${userId}`)
+    }
+
+    const { data, error } = await supabase
+      .from('configuracoes_documentos')
+      .select('*')
+      .in('chave', chavesParaBuscar)
+
+    if (!error && Array.isArray(data)) {
+      const rowEscritorio = data.find((r: any) => r.chave === 'escritorio')
+      const rowUsuario = userId ? data.find((r: any) => r.chave === `usuario_${userId}`) : null
+
+      if (rowEscritorio) {
+        // Logotipo institucional adicionado pelo administrador reflete para TODOS os usuários
+        if (rowEscritorio.logo_url !== undefined && rowEscritorio.logo_url !== null) {
+          logo = rowEscritorio.logo_url
+          salvarLogoLocal(logo)
+        } else if (rowEscritorio.logo_url === null) {
+          logo = null
+          removerLogoLocal()
+        }
+
+        // Dados institucionais do escritório (empresa, foro, CNPJ, OAB etc.)
+        if (rowEscritorio.config_institucional && typeof rowEscritorio.config_institucional === 'object') {
+          config = { ...DEFAULTS_CONFIG, ...rowEscritorio.config_institucional }
+          salvarConfigDocumentosLocal(config)
+        }
+
+        // Modelos e cláusulas padrão do escritório salvos pelo administrador
+        if (rowEscritorio.padroes_json && typeof rowEscritorio.padroes_json === 'object') {
+          padroesEscritorio = rowEscritorio.padroes_json
+          try {
+            localStorage.setItem(STORAGE_KEYS.padroes, JSON.stringify(padroesEscritorio))
+          } catch {}
+        }
+      }
+
+      // Preferências exclusivas do usuário
+      if (rowUsuario && rowUsuario.padroes_json && typeof rowUsuario.padroes_json === 'object') {
+        padroesUsuario = rowUsuario.padroes_json
+        temPadroesUsuario = Object.keys(padroesUsuario).length > 0
+        if (userId) {
+          try {
+            localStorage.setItem(`${STORAGE_KEYS.padroesUsuarioPrefix}${userId}`, JSON.stringify(padroesUsuario))
+          } catch {}
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[config-documentos] Sincronização com o banco de dados indisponível, utilizando cache local:', err)
+  }
+
+  // Se o usuário for Administrador, opera diretamente sobre o padrão do escritório ('escritorio')
+  // Se for usuário comum, utiliza o padrão do escritório e aplica sobreposições que ele tenha salvo para si
+  let padroesAtivos: Partial<OpcoesDocumentoForm> = padroesEscritorio
+
+  if (!isAdm && temPadroesUsuario) {
+    padroesAtivos = {
+      ...padroesEscritorio,
+      ...padroesUsuario
+    }
+  }
+
+  return {
+    logo,
+    config,
+    padroes: padroesAtivos,
+    padroesEscritorio,
+    temPadroesUsuario,
+    isAdm
+  }
+}
+
+/**
+ * Salva o modelo de documento:
+ * - Se for Administrador (isAdm === true), salva na chave 'escritorio' (refletindo para TODOS os usuários).
+ * - Se for usuário comum, salva exclusivamente na sua própria conta ('usuario_<uid>'), sem afetar outros usuários.
+ */
+export async function salvarPadraoDocumento<K extends keyof OpcoesDocumentoForm>({
+  tipo,
+  valor,
+  isAdm,
+  userId
+}: {
+  tipo: K
+  valor: OpcoesDocumentoForm[K]
+  isAdm: boolean
+  userId?: string
+}): Promise<{ sucesso: boolean; escopo: 'escritorio' | 'usuario'; erro?: string }> {
+  if (isAdm) {
+    salvarPadraoDocumentoLocal(tipo, valor)
+
+    try {
+      const { data: rowAtual } = await supabase
+        .from('configuracoes_documentos')
+        .select('padroes_json')
+        .eq('chave', 'escritorio')
+        .maybeSingle()
+
+      const padroesAtuais = (rowAtual?.padroes_json && typeof rowAtual.padroes_json === 'object')
+        ? rowAtual.padroes_json
+        : carregarPadroesDocumentosLocal()
+
+      const novoJson = { ...padroesAtuais, [tipo]: valor }
+
+      const { error } = await supabase
+        .from('configuracoes_documentos')
+        .upsert({
+          chave: 'escritorio',
+          tipo_escopo: 'escritorio',
+          padroes_json: novoJson,
+          updated_by: userId,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'chave' })
+
+      if (error) {
+        console.warn('[salvarPadraoDocumento] Erro no Supabase ao salvar escritório:', error)
+        return { sucesso: false, escopo: 'escritorio', erro: error.message }
+      }
+
+      return { sucesso: true, escopo: 'escritorio' }
+    } catch (err: any) {
+      console.warn('[salvarPadraoDocumento] Exceção ao salvar no Supabase:', err)
+      return { sucesso: true, escopo: 'escritorio', erro: err?.message }
+    }
+  } else {
+    if (!userId) {
+      return { sucesso: false, escopo: 'usuario', erro: 'Usuário não autenticado.' }
+    }
+
+    salvarPadraoUsuarioLocal(tipo, valor, userId)
+
+    try {
+      const { data: rowAtual } = await supabase
+        .from('configuracoes_documentos')
+        .select('padroes_json')
+        .eq('chave', `usuario_${userId}`)
+        .maybeSingle()
+
+      const padroesAtuais = (rowAtual?.padroes_json && typeof rowAtual.padroes_json === 'object')
+        ? rowAtual.padroes_json
+        : carregarPadroesUsuarioLocal(userId)
+
+      const novoJson = { ...padroesAtuais, [tipo]: valor }
+
+      const { error } = await supabase
+        .from('configuracoes_documentos')
+        .upsert({
+          chave: `usuario_${userId}`,
+          tipo_escopo: 'usuario',
+          user_id: userId,
+          padroes_json: novoJson,
+          updated_by: userId,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'chave' })
+
+      if (error) {
+        console.warn('[salvarPadraoDocumento] Erro no Supabase ao salvar usuário:', error)
+        return { sucesso: false, escopo: 'usuario', erro: error.message }
+      }
+
+      return { sucesso: true, escopo: 'usuario' }
+    } catch (err: any) {
+      console.warn('[salvarPadraoDocumento] Exceção ao salvar usuário:', err)
+      return { sucesso: true, escopo: 'usuario', erro: err?.message }
+    }
+  }
+}
+
+/**
+ * Restaura o modelo:
+ * - Se for Administrador, restaura o padrão de fábrica no escritório.
+ * - Se for usuário comum, restaura o padrão do escritório para a sua conta (remove override pessoal).
+ */
+export async function restaurarPadraoDocumento<K extends keyof OpcoesDocumentoForm>({
+  tipo,
+  isAdm,
+  userId
+}: {
+  tipo: K
+  isAdm: boolean
+  userId?: string
+}): Promise<{ sucesso: boolean; escopo: 'escritorio' | 'usuario'; valorRestaurado: OpcoesDocumentoForm[K] }> {
+  if (isAdm) {
+    restaurarPadraoDocumentoFabrica(tipo)
+    const valorFabrica = DEFAULTS_FORM_DOCUMENTO[tipo]
+
+    try {
+      const { data: rowAtual } = await supabase
+        .from('configuracoes_documentos')
+        .select('padroes_json')
+        .eq('chave', 'escritorio')
+        .maybeSingle()
+
+      if (rowAtual?.padroes_json) {
+        const novoJson = { ...rowAtual.padroes_json }
+        delete novoJson[tipo]
+
+        await supabase
+          .from('configuracoes_documentos')
+          .upsert({
+            chave: 'escritorio',
+            tipo_escopo: 'escritorio',
+            padroes_json: novoJson,
+            updated_by: userId,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'chave' })
+      }
+    } catch (e) {
+      console.warn('Erro ao restaurar padrão do escritório no Supabase:', e)
+    }
+
+    return { sucesso: true, escopo: 'escritorio', valorRestaurado: valorFabrica }
+  } else {
+    if (userId) {
+      restaurarPadraoUsuarioLocal(tipo, userId)
+      try {
+        const { data: rowAtual } = await supabase
+          .from('configuracoes_documentos')
+          .select('padroes_json')
+          .eq('chave', `usuario_${userId}`)
+          .maybeSingle()
+
+        if (rowAtual?.padroes_json) {
+          const novoJson = { ...rowAtual.padroes_json }
+          delete novoJson[tipo]
+
+          await supabase
+            .from('configuracoes_documentos')
+            .upsert({
+              chave: `usuario_${userId}`,
+              tipo_escopo: 'usuario',
+              user_id: userId,
+              padroes_json: novoJson,
+              updated_by: userId,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'chave' })
+        }
+      } catch (e) {
+        console.warn('Erro ao restaurar override de usuário:', e)
+      }
+    }
+
+    const padroesEscritorio = carregarPadroesDocumentosLocal()
+    const valorEscritorio = padroesEscritorio[tipo] || DEFAULTS_FORM_DOCUMENTO[tipo]
+
+    return { sucesso: true, escopo: 'usuario', valorRestaurado: valorEscritorio as OpcoesDocumentoForm[K] }
+  }
+}
+
+/**
+ * Salva o logotipo institucional do escritório no banco de dados e localmente.
+ * Exclusivo de Administrador. Reflete para todos os usuários.
+ */
+export async function salvarLogoEscritorio(
+  dataUrl: string,
+  userId?: string
+): Promise<{ sucesso: boolean; erro?: string }> {
+  salvarLogoLocal(dataUrl)
+  try {
+    const { error } = await supabase
+      .from('configuracoes_documentos')
+      .upsert({
+        chave: 'escritorio',
+        tipo_escopo: 'escritorio',
+        logo_url: dataUrl,
+        updated_by: userId,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'chave' })
+
+    if (error) {
+      console.warn('[salvarLogoEscritorio] Erro ao salvar logo no Supabase:', error)
+      return { sucesso: false, erro: error.message }
+    }
+    return { sucesso: true }
+  } catch (err: any) {
+    console.warn('[salvarLogoEscritorio] Exceção ao salvar logo:', err)
+    return { sucesso: true }
+  }
+}
+
+/**
+ * Remove o logotipo institucional do escritório.
+ * Exclusivo de Administrador. Reflete para todos os usuários.
+ */
+export async function removerLogoEscritorio(
+  userId?: string
+): Promise<{ sucesso: boolean; erro?: string }> {
+  removerLogoLocal()
+  try {
+    const { error } = await supabase
+      .from('configuracoes_documentos')
+      .upsert({
+        chave: 'escritorio',
+        tipo_escopo: 'escritorio',
+        logo_url: null,
+        updated_by: userId,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'chave' })
+
+    if (error) {
+      console.warn('[removerLogoEscritorio] Erro ao remover logo no Supabase:', error)
+      return { sucesso: false, erro: error.message }
+    }
+    return { sucesso: true }
+  } catch (err: any) {
+    console.warn('[removerLogoEscritorio] Exceção ao remover logo:', err)
+    return { sucesso: true }
+  }
+}
+
+/**
+ * Salva os dados institucionais do escritório no banco de dados e localmente.
+ * Exclusivo de Administrador. Reflete para todos os usuários.
+ */
+export async function salvarConfigInstitucionalEscritorio(
+  cfg: ConfigDocumentos,
+  userId?: string
+): Promise<{ sucesso: boolean; erro?: string }> {
+  salvarConfigDocumentosLocal(cfg)
+  try {
+    const { error } = await supabase
+      .from('configuracoes_documentos')
+      .upsert({
+        chave: 'escritorio',
+        tipo_escopo: 'escritorio',
+        config_institucional: cfg,
+        updated_by: userId,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'chave' })
+
+    if (error) {
+      console.warn('[salvarConfigInstitucionalEscritorio] Erro ao salvar config no Supabase:', error)
+      return { sucesso: false, erro: error.message }
+    }
+    return { sucesso: true }
+  } catch (err: any) {
+    console.warn('[salvarConfigInstitucionalEscritorio] Exceção ao salvar config:', err)
+    return { sucesso: true }
+  }
+}
+
+/**
+ * Funções de persistência e sincronização do Histórico de Emissões de Documentos.
+ * Unifica cache local no localStorage com sincronização assíncrona na tabela public.documentos_emitidos.
+ */
+export function carregarHistoricoLocal(): DocumentoEmitido[] {
+  try {
+    const salvo = localStorage.getItem(STORAGE_KEYS.historico)
+    if (!salvo) return []
+    const parsed = JSON.parse(salvo)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+export function salvarHistoricoLocal(doc: DocumentoEmitido): void {
+  try {
+    const atuais = carregarHistoricoLocal()
+    const filtrados = atuais.filter(h => h.id !== doc.id && h.numero !== doc.numero)
+    const novos = [doc, ...filtrados]
+    localStorage.setItem(STORAGE_KEYS.historico, JSON.stringify(novos.slice(0, 100)))
+  } catch (e) {
+    console.warn('Erro ao salvar documento emitido no localStorage', e)
+  }
+}
+
+export function excluirHistoricoLocal(id: string): void {
+  try {
+    const atuais = carregarHistoricoLocal()
+    const filtrados = atuais.filter(h => h.id !== id)
+    localStorage.setItem(STORAGE_KEYS.historico, JSON.stringify(filtrados))
+  } catch (e) {
+    console.warn('Erro ao excluir documento do histórico no localStorage', e)
+  }
+}
+
+export async function salvarHistoricoDocumento(
+  dados: {
+    id?: string
+    advogado_id?: string | null
+    user_id?: string | null
+    cliente_id?: string | null
+    cliente_nome: string
+    tipo: string
+    numero: string
+    titulo: string
+    html_content: string
+    opcoes_json?: Record<string, unknown> | null
+  }
+): Promise<DocumentoEmitido> {
+  const agora = new Date().toISOString()
+  const docId = dados.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`)
+
+  const item: DocumentoEmitido = {
+    id: docId,
+    advogado_id: dados.advogado_id || null,
+    user_id: dados.user_id || null,
+    cliente_id: dados.cliente_id || null,
+    cliente_nome: dados.cliente_nome,
+    tipo: dados.tipo,
+    numero: dados.numero,
+    titulo: dados.titulo,
+    html_content: dados.html_content,
+    opcoes_json: dados.opcoes_json || null,
+    emitido_em: agora,
+    updated_at: agora
+  }
+
+  // 1. Gravação imediata no localStorage para garantia de exibição instantânea
+  salvarHistoricoLocal(item)
+
+  // 2. Persistência assíncrona no Supabase
+  try {
+    const payload: Record<string, any> = {
+      id: item.id,
+      cliente_id: item.cliente_id,
+      cliente_nome: item.cliente_nome,
+      tipo: item.tipo,
+      numero: item.numero,
+      titulo: item.titulo,
+      html_content: item.html_content,
+      opcoes_json: item.opcoes_json,
+      emitido_em: item.emitido_em,
+      updated_at: item.updated_at
+    }
+
+    if (item.advogado_id) {
+      payload.advogado_id = item.advogado_id
+    }
+    if (item.user_id) {
+      payload.user_id = item.user_id
+    }
+
+    const { data, error } = await supabase
+      .from('documentos_emitidos')
+      .insert(payload)
+      .select()
+      .maybeSingle()
+
+    if (!error && data) {
+      salvarHistoricoLocal(data as DocumentoEmitido)
+      return data as DocumentoEmitido
+    }
+    if (error) {
+      console.warn('[salvarHistoricoDocumento] Aviso ao gravar no Supabase (salvo localmente):', error.message || error)
+    }
+  } catch (err) {
+    console.warn('[salvarHistoricoDocumento] Exceção ao sincronizar Supabase (salvo localmente):', err)
+  }
+
+  return item
+}
+
+export async function carregarHistoricoCompleto(
+  userId?: string,
+  isAdm: boolean = false
+): Promise<DocumentoEmitido[]> {
+  const localDocs = carregarHistoricoLocal()
+
+  try {
+    const { data, error } = await supabase
+      .from('documentos_emitidos')
+      .select('*')
+      .order('emitido_em', { ascending: false })
+      .limit(100)
+
+    if (!error && Array.isArray(data)) {
+      const mapa = new Map<string, DocumentoEmitido>()
+      
+      // Remotos
+      for (const item of data) {
+        mapa.set(item.id, item as DocumentoEmitido)
+      }
+      
+      // Locais
+      for (const item of localDocs) {
+        if (!mapa.has(item.id)) {
+          mapa.set(item.id, item)
+        }
+      }
+
+      const consolidado = Array.from(mapa.values()).sort(
+        (a, b) => new Date(b.emitido_em).getTime() - new Date(a.emitido_em).getTime()
+      )
+
+      try {
+        localStorage.setItem(STORAGE_KEYS.historico, JSON.stringify(consolidado.slice(0, 100)))
+      } catch {}
+
+      return consolidado
+    }
+  } catch (e) {
+    console.warn('[carregarHistoricoCompleto] Usando histórico local:', e)
+  }
+
+  return localDocs
+}
+
+export async function excluirHistoricoDocumento(id: string): Promise<void> {
+  excluirHistoricoLocal(id)
+  try {
+    await supabase.from('documentos_emitidos').delete().eq('id', id)
+  } catch (e) {
+    console.warn('[excluirHistoricoDocumento] Erro ao excluir no Supabase:', e)
+  }
+}
+

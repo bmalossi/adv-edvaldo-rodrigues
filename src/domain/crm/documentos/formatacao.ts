@@ -152,3 +152,85 @@ export function clientesQualificacaoMulti(clientes: Partial<Cliente>[]): string 
     .join('; e ')
 }
 
+export function extrairTiposDocumentoEmitido(doc: {
+  tipo?: string | null
+  titulo?: string | null
+  html_content?: string | null
+  opcoes_json?: Record<string, any> | string | null
+}): string[] {
+  let opts = doc.opcoes_json as any
+  if (typeof opts === 'string') {
+    try {
+      opts = JSON.parse(opts)
+    } catch {
+      opts = null
+    }
+  }
+
+  // 1. Se especificado em opcoes_json
+  if (opts?.tipos_documentos && Array.isArray(opts.tipos_documentos) && opts.tipos_documentos.length > 0) {
+    return opts.tipos_documentos
+  }
+  if (opts?.docs_selecionados && typeof opts.docs_selecionados === 'object') {
+    const tipos = Object.keys(opts.docs_selecionados).filter(k => opts.docs_selecionados[k])
+    if (tipos.length > 0) return tipos
+  }
+
+  // 2. Se for tipo específico diferente de lote
+  if (doc.tipo && doc.tipo !== 'lote' && doc.tipo in TIPO_NOMES) {
+    return [doc.tipo]
+  }
+
+  // 3. Análise pelo html_content para pacotes ou documentos legados
+  const html = doc.html_content || ''
+  const encontrados: string[] = []
+
+  if (html.includes('CONTRATO DE PRESTAÇÃO DE SERVIÇOS') || html.includes('contrato-body')) {
+    encontrados.push('contrato')
+  }
+  if (html.includes('PROCURAÇÃO AD JUDICIA') || html.includes('OUTORGANTE')) {
+    encontrados.push('procuracao')
+  }
+  if (html.includes('DECLARAÇÃO DE HIPOSSUFICIÊNCIA') || html.includes('hipossuficiência') || html.includes('hipossuficiencia')) {
+    encontrados.push('hipossuficiencia')
+  }
+  if (html.includes('DECLARAÇÃO DE ISENÇÃO DO IMPOSTO DE RENDA') || html.includes('DIRPF')) {
+    encontrados.push('irpf')
+  }
+  if (html.includes('RECIBO DE PAGAMENTO')) {
+    encontrados.push('recibo')
+  }
+  if (html.includes('DECLARAÇÃO DE RESIDÊNCIA') || html.includes('residencia')) {
+    encontrados.push('residencia')
+  }
+
+  if (encontrados.length > 0) {
+    return encontrados
+  }
+
+  // 4. Análise pelo título
+  const tit = (doc.titulo || '').toLowerCase()
+  if (tit.includes('contrato')) encontrados.push('contrato')
+  if (tit.includes('procura')) encontrados.push('procuracao')
+  if (tit.includes('hipossufici')) encontrados.push('hipossuficiencia')
+  if (tit.includes('irpf') || tit.includes('isenção') || tit.includes('isencao')) encontrados.push('irpf')
+  if (tit.includes('recibo')) encontrados.push('recibo')
+  if (tit.includes('residência') || tit.includes('residencia')) encontrados.push('residencia')
+
+  if (encontrados.length > 0) {
+    return encontrados
+  }
+
+  return doc.tipo ? [doc.tipo] : ['lote']
+}
+
+export function formatarNomesDocumentosEmitidos(doc: {
+  tipo?: string | null
+  titulo?: string | null
+  html_content?: string | null
+  opcoes_json?: Record<string, any> | string | null
+}): string[] {
+  const tipos = extrairTiposDocumentoEmitido(doc)
+  return tipos.map(t => TIPO_NOMES[t] || t)
+}
+

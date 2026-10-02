@@ -211,7 +211,8 @@ export interface OpcoesDocumentoForm {
 
 export interface DocumentoEmitido {
   id: string
-  advogado_id: string
+  advogado_id?: string | null
+  user_id?: string | null
   cliente_id: string | null
   cliente_nome: string
   tipo: string

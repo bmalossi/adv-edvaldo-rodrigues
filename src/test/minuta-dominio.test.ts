@@ -154,6 +154,21 @@ describe('Motor de Minutas CRM - Domínio', () => {
       expect(resultado.erros).toHaveLength(0);
     });
 
+    it('valida com sucesso cliente com qualificação completa para procuração mesmo sem RG', () => {
+      const clienteSemRG = makeClienteValidoPF({ rg_ie: '' });
+      const template: TemplateMinuta = {
+        id: 't-proc',
+        nome: 'Procuração Ad Judicia',
+        categoria: 'procuracao',
+        arquivo_url: 'templates/procuracao.docx',
+        exige_qualificacao_completa: true,
+      };
+
+      const resultado = validarDadosParaMinuta(clienteSemRG, template);
+      expect(resultado.valido).toBe(true);
+      expect(resultado.erros).toHaveLength(0);
+    });
+
     it('rejeita emissão se qualificação civil essencial estiver ausente', () => {
       const clienteIncompleto = makeClienteValidoPF({
         cpf_cnpj: '',

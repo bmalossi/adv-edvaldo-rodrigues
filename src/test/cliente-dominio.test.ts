@@ -57,6 +57,28 @@ describe('Domínio de CRM: Validação de Qualificação Jurídica e Ciclo de Vi
     expect(resultado.erros).toHaveLength(0);
   });
 
+  it('permite a transição para ativo mesmo sem RG informado (RG é opcional)', () => {
+    const clientePFSemRG: Partial<Cliente> = {
+      tipo_pessoa: 'PF',
+      nome_razao_social: 'Dra. Mariana Costa',
+      cpf_cnpj: '987.654.321-99',
+      rg_ie: '', // Vazio ou undefined
+      nacionalidade: 'Brasileira',
+      estado_civil: 'Solteira',
+      profissao: 'Médica',
+      telefone_whatsapp: '(11) 97777-8888',
+      endereco_logradouro: 'Rua Oscar Freire',
+      endereco_numero: '200',
+      endereco_cidade: 'São Paulo',
+      endereco_uf: 'SP',
+      status_ciclo: 'lead',
+    };
+
+    const resultado = podeTransicionarCiclo(clientePFSemRG, 'ativo');
+    expect(resultado.permitido).toBe(true);
+    expect(resultado.erros).toHaveLength(0);
+  });
+
   it('valida requisitos específicos para Pessoa Jurídica ao ativar o cliente', () => {
     const clientePJIncompleto: Partial<Cliente> = {
       tipo_pessoa: 'PJ',

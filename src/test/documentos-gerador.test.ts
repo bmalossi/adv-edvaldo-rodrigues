@@ -19,7 +19,26 @@ import {
   restaurarPadraoDocumentoFabrica,
   DEFAULTS_FORM_DOCUMENTO,
   CLAUSULAS_PADRAO_CONTRATO,
+  salvarPadraoDocumento,
+  restaurarPadraoDocumento,
+  carregarDadosDocumentosCompletos,
+  salvarLogoEscritorio,
+  removerLogoEscritorio,
+  carregarLogoLocal,
+  salvarPadraoUsuarioLocal,
+  carregarPadroesUsuarioLocal,
+  restaurarPadraoUsuarioLocal,
+  carregarHistoricoLocal,
+  salvarHistoricoDocumento,
+  carregarHistoricoCompleto,
+  excluirHistoricoDocumento,
 } from '@/domain/crm/documentos/config-local';
+import {
+  extrairTiposDocumentoEmitido,
+  formatarNomesDocumentosEmitidos,
+} from '@/domain/crm/documentos/formatacao';
+import { supabase } from '@/lib/supabase';
+import { vi } from 'vitest';
 import type { Cliente } from '@/domain/crm/cliente';
 import type { ConfigDocumentos, AdvogadoConfigDoc, OpcaoContrato, OpcaoProcuracao } from '@/domain/crm/documentos/tipos';
 
@@ -808,6 +827,501 @@ describe('Suporte a Múltiplos Clientes (Multi-contratantes / Co-clientes)', () 
     expect(html).toContain('JOÃO PEREIRA DA SILVA');
   });
 });
+
+describe('Controle de Permissões e Escopo: Administrador vs Usuário Comum', () => {
+  const mockDb = new Map<string, any>();
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockDb.clear();
+    vi.restoreAllMocks();
+
+    vi.spyOn(supabase, 'from').mockImplementation((table: string) => {
+      return {
+        select: vi.fn().mockImplementation((_cols?: string) => ({
+          eq: vi.fn().mockImplementation((col: string, val: string) => ({
+            maybeSingle: vi.fn().mockImplementation(async () => {
+              const row = mockDb.get(`${table}:${val}`);
+              return { data: row || null, error: null };
+            }),
+          })),
+          in: vi.fn().mockImplementation((col: string, vals: string[]) => ({
+            then: (resolve: any) => {
+              const results = vals.map(v => mockDb.get(`${table}:${v}`)).filter(Boolean);
+              return Promise.resolve(resolve({ data: results, error: null }));
+            },
+          })),
+          order: vi.fn().mockReturnValue({
+            limit: vi.fn().mockImplementation(async () => {
+              const rows = Array.from(mockDb.entries())
+                .filter(([k]) => k.startsWith(`${table}:`))
+                .map(([, v]) => v);
+              return { data: rows, error: null };
+            }),
+          }),
+        })),
+        upsert: vi.fn().mockImplementation((row: any) => {
+          mockDb.set(`${table}:${row.chave}`, row);
+          return Promise.resolve({ data: row, error: null });
+        }),
+        insert: vi.fn().mockImplementation((row: any) => {
+          const key = row.id || row.chave || `row-${mockDb.size}`;
+          mockDb.set(`${table}:${key}`, row);
+          return {
+            select: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }),
+              single: vi.fn().mockResolvedValue({ data: row, error: null }),
+            }),
+          };
+        }),
+        delete: vi.fn().mockImplementation(() => ({
+          eq: vi.fn().mockImplementation((col: string, val: string) => {
+            mockDb.delete(`${table}:${val}`);
+            return Promise.resolve({ error: null });
+          }),
+        })),
+      } as any;
+    });
+  });
+
+  it('quando Administrador altera cláusulas e salva, deve salvar no padrão do escritório e refletir para outros usuários', async () => {
+    const adminId = 'admin-user-1';
+    const comumId = 'comum-user-2';
+
+    const contratoCustomAdmin = {
+      ...DEFAULTS_FORM_DOCUMENTO.contrato,
+      valorFixo: '12.000,00',
+      clausulas: [
+        {
+          id: 'clausula-admin',
+          titulo: 'CLÁUSULA ESPECIAL ESCRITÓRIO ADMIN',
+          conteudo: 'Conteúdo padrão determinado pelo administrador para todos os contratos.',
+        },
+      ],
+    };
+
+    // Administrador salva para o escritório
+    const resAdmin = await salvarPadraoDocumento({
+      tipo: 'contrato',
+      valor: contratoCustomAdmin,
+      isAdm: true,
+      userId: adminId,
+    });
+
+    expect(resAdmin.escopo).toBe('escritorio');
+
+    // Usuário comum carrega os padrões: deve receber o modelo do escritório configurado pelo admin
+    const padroesUsuarioComum = carregarPadroesDocumentosLocal(comumId, false);
+    expect(padroesUsuarioComum.contrato?.valorFixo).toBe('12.000,00');
+    expect(padroesUsuarioComum.contrato?.clausulas?.[0].titulo).toBe('CLÁUSULA ESPECIAL ESCRITÓRIO ADMIN');
+  });
+
+  it('quando Usuário Comum altera cláusulas e salva, deve salvar apenas para sua conta sem alterar o escritório', async () => {
+    const adminId = 'admin-user-1';
+    const comumId = 'comum-user-2';
+    const outroComumId = 'comum-user-3';
+
+    // Primeiro, define um padrão de escritório via Admin
+    await salvarPadraoDocumento({
+      tipo: 'contrato',
+      valor: {
+        ...DEFAULTS_FORM_DOCUMENTO.contrato,
+        objeto: 'objeto definido pelo escritório',
+      },
+      isAdm: true,
+      userId: adminId,
+    });
+
+    // Usuário comum altera apenas para sua conta
+    const resComum = await salvarPadraoDocumento({
+      tipo: 'contrato',
+      valor: {
+        ...DEFAULTS_FORM_DOCUMENTO.contrato,
+        objeto: 'objeto personalizado do usuário comum',
+      },
+      isAdm: false,
+      userId: comumId,
+    });
+
+    expect(resComum.escopo).toBe('usuario');
+
+    // Usuário comum vê sua própria customização
+    const padroesComum = carregarPadroesDocumentosLocal(comumId, false);
+    expect(padroesComum.contrato?.objeto).toBe('objeto personalizado do usuário comum');
+
+    // O padrão do escritório continua intacto
+    const padroesEscritorio = carregarPadroesDocumentosLocal(undefined, true);
+    expect(padroesEscritorio.contrato?.objeto).toBe('objeto definido pelo escritório');
+
+    // Outro usuário comum continua vendo o padrão do escritório, sem ser afetado
+    const padroesOutroComum = carregarPadroesDocumentosLocal(outroComumId, false);
+    expect(padroesOutroComum.contrato?.objeto).toBe('objeto definido pelo escritório');
+  });
+
+  it('quando Usuário Comum restaura padrão, deve remover sua personalização e voltar a usar o padrão do escritório', async () => {
+    const adminId = 'admin-user-1';
+    const comumId = 'comum-user-2';
+
+    // Escritório tem modelo customizado pelo admin
+    await salvarPadraoDocumento({
+      tipo: 'procuracao',
+      valor: {
+        ...DEFAULTS_FORM_DOCUMENTO.procuracao,
+        varaJuizado: '1ª Vara Cível da Comarca de Santos',
+      },
+      isAdm: true,
+      userId: adminId,
+    });
+
+    // Usuário comum salva override próprio
+    await salvarPadraoDocumento({
+      tipo: 'procuracao',
+      valor: {
+        ...DEFAULTS_FORM_DOCUMENTO.procuracao,
+        varaJuizado: 'Juizado Especial Cível de Praia Grande',
+      },
+      isAdm: false,
+      userId: comumId,
+    });
+
+    // Verifica que o override pessoal está ativo
+    let padroes = carregarPadroesDocumentosLocal(comumId, false);
+    expect(padroes.procuracao?.varaJuizado).toBe('Juizado Especial Cível de Praia Grande');
+
+    // Usuário comum clica em restaurar padrão do escritório
+    const resRestaurar = await restaurarPadraoDocumento({
+      tipo: 'procuracao',
+      isAdm: false,
+      userId: comumId,
+    });
+
+    expect(resRestaurar.escopo).toBe('usuario');
+    expect(resRestaurar.valorRestaurado.varaJuizado).toBe('1ª Vara Cível da Comarca de Santos');
+
+    // Ao carregar novamente, deve ver o padrão do escritório
+    padroes = carregarPadroesDocumentosLocal(comumId, false);
+    expect(padroes.procuracao?.varaJuizado).toBe('1ª Vara Cível da Comarca de Santos');
+  });
+
+  it('quando Administrador altera o logotipo, deve refletir em carregarLogoLocal e aparecer em todos os documentos', async () => {
+    const adminId = 'admin-user-1';
+    const mockLogoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+    await salvarLogoEscritorio(mockLogoBase64, adminId);
+
+    // O logo agora deve estar disponível no cache do escritório
+    expect(carregarLogoLocal()).toBe(mockLogoBase64);
+
+    // Gera contrato usando o logo: deve conter a imagem do logotipo no cabeçalho
+    const htmlContrato = buildContrato(mockCliente, mockAdv, mockConfig, mockLogoBase64, baseOpcaoContrato);
+    expect(htmlContrato).toContain('<div class="letterhead"><img src="data:image/png;base64,');
+
+    // Gera procuração usando o logo
+    const htmlProc = buildProcuracao(mockCliente, mockAdv, mockConfig, mockLogoBase64, { transigir: true });
+    expect(htmlProc).toContain('<div class="letterhead"><img src="data:image/png;base64,');
+
+    // Remove logo
+    await removerLogoEscritorio(adminId);
+    expect(carregarLogoLocal()).toBeNull();
+
+    const htmlSemLogo = buildContrato(mockCliente, mockAdv, mockConfig, null, baseOpcaoContrato);
+    expect(htmlSemLogo).not.toContain('<div class="letterhead"><img');
+  });
+
+  it('carregarDadosDocumentosCompletos integra dados do Supabase e mescla conforme o papel', async () => {
+    const logoMock = 'https://exemplo.com/logo-escritorio.png';
+    const dadosEscritorio = {
+      chave: 'escritorio',
+      tipo_escopo: 'escritorio',
+      logo_url: logoMock,
+      config_institucional: { empresa: 'Advocacia Edvaldo Rodrigues Associados' },
+      padroes_json: {
+        contrato: {
+          ...DEFAULTS_FORM_DOCUMENTO.contrato,
+          multa: '20',
+        },
+      },
+    };
+
+    const dadosUsuario = {
+      chave: 'usuario_user-999',
+      tipo_escopo: 'usuario',
+      padroes_json: {
+        contrato: {
+          ...DEFAULTS_FORM_DOCUMENTO.contrato,
+          multa: '15',
+        },
+      },
+    };
+
+    // Mock do Supabase
+    vi.spyOn(supabase, 'from').mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        in: vi.fn().mockResolvedValue({
+          data: [dadosEscritorio, dadosUsuario],
+          error: null,
+        }),
+      }),
+    } as any);
+
+    // 1. Usuário comum: recebe multa: '15' (sua sobreposição) e o logotipo do escritório
+    const dadosComum = await carregarDadosDocumentosCompletos('user-999', false);
+    expect(dadosComum.logo).toBe(logoMock);
+    expect(dadosComum.config.empresa).toBe('Advocacia Edvaldo Rodrigues Associados');
+    expect(dadosComum.padroes.contrato?.multa).toBe('15');
+
+    // 2. Administrador: opera sobre os padrões oficiais do escritório (multa: '20')
+    const dadosAdmin = await carregarDadosDocumentosCompletos('user-999', true);
+    expect(dadosAdmin.logo).toBe(logoMock);
+    expect(dadosAdmin.padroes.contrato?.multa).toBe('20');
+  });
+});
+
+describe('Histórico de Emissões: Persistência Robusta com Múltiplos Clientes e Fallback', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('deve salvar documento emitido com múltiplos clientes mesmo se advogado_id for nulo', async () => {
+    const adminUserId = 'admin-user-sem-adv-id';
+    const titulo = 'Pacote (2 docs) - MARIA DAS DORES e JOÃO PEREIRA DA SILVA';
+    const clienteNomes = 'MARIA DAS DORES e JOÃO PEREIRA DA SILVA';
+
+    const item = await salvarHistoricoDocumento({
+      advogado_id: null,
+      user_id: adminUserId,
+      cliente_id: mockCliente.id,
+      cliente_nome: clienteNomes,
+      tipo: 'lote',
+      numero: 'ERF-0001/2026',
+      titulo,
+      html_content: '<div class="package-document">teste</div>',
+      opcoes_json: { contrato: { valorFixo: '5.000,00' } },
+    });
+
+    expect(item).toBeDefined();
+    expect(item.id).toBeDefined();
+    expect(item.cliente_nome).toBe('MARIA DAS DORES e JOÃO PEREIRA DA SILVA');
+    expect(item.titulo).toBe(titulo);
+    expect(item.advogado_id).toBeNull();
+    expect(item.user_id).toBe(adminUserId);
+
+    // Deve estar no cache local imediatamente
+    const historicoLocal = carregarHistoricoLocal();
+    expect(historicoLocal).toHaveLength(1);
+    expect(historicoLocal[0].numero).toBe('ERF-0001/2026');
+    expect(historicoLocal[0].cliente_nome).toBe('MARIA DAS DORES e JOÃO PEREIRA DA SILVA');
+  });
+
+  it('deve carregar histórico com fallback local caso o Supabase falhe ou tabela não exista', async () => {
+    // Simula erro de tabela inexistente no Supabase (PGRST205)
+    vi.spyOn(supabase, 'from').mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        order: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue({
+            data: null,
+            error: { code: 'PGRST205', message: "Could not find the table 'public.documentos_emitidos' in the schema cache" },
+          }),
+        }),
+      }),
+      insert: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: { code: 'PGRST205', message: "Could not find the table 'public.documentos_emitidos' in the schema cache" },
+          }),
+        }),
+      }),
+    } as any);
+
+    // Salva item local
+    await salvarHistoricoDocumento({
+      cliente_nome: 'MARIA DAS DORES',
+      tipo: 'contrato',
+      numero: 'ERF-0002/2026',
+      titulo: 'Contrato de Honorários - MARIA DAS DORES',
+      html_content: '<div>contrato</div>',
+    });
+
+    // carregarHistoricoCompleto deve retornar com sucesso o item salvo no cache local
+    const historico = await carregarHistoricoCompleto('admin-123', true);
+    expect(historico).toHaveLength(1);
+    expect(historico[0].numero).toBe('ERF-0002/2026');
+  });
+
+  it('deve mesclar documentos remotos do Supabase com o cache local sem duplicação', async () => {
+    const docRemoto = {
+      id: 'doc-remoto-1',
+      user_id: 'user-1',
+      advogado_id: null,
+      cliente_id: 'cli-1',
+      cliente_nome: 'CLIENTE REMOTO SUPABASE',
+      tipo: 'procuracao',
+      numero: 'ERF-0010/2026',
+      titulo: 'Procuração - CLIENTE REMOTO SUPABASE',
+      html_content: '<div>proc</div>',
+      opcoes_json: null,
+      emitido_em: '2026-10-02T10:00:00.000Z',
+      updated_at: '2026-10-02T10:00:00.000Z',
+    };
+
+    vi.spyOn(supabase, 'from').mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        order: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue({
+            data: [docRemoto],
+            error: null,
+          }),
+        }),
+      }),
+      insert: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: null,
+          }),
+        }),
+      }),
+    } as any);
+
+    // Salva documento local
+    await salvarHistoricoDocumento({
+      id: 'doc-local-2',
+      cliente_nome: 'CLIENTE LOCAL',
+      tipo: 'contrato',
+      numero: 'ERF-0011/2026',
+      titulo: 'Contrato - CLIENTE LOCAL',
+      html_content: '<div>contrato</div>',
+    });
+
+    const consolidado = await carregarHistoricoCompleto('user-1', false);
+    expect(consolidado).toHaveLength(2);
+    expect(consolidado.some(d => d.numero === 'ERF-0010/2026')).toBe(true);
+    expect(consolidado.some(d => d.numero === 'ERF-0011/2026')).toBe(true);
+  });
+
+  it('deve remover documento emitido tanto do cache local quanto enviar exclusão ao banco', async () => {
+    const deleteMock = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    vi.spyOn(supabase, 'from').mockReturnValue({
+      delete: deleteMock,
+      insert: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: null,
+          }),
+        }),
+      }),
+    } as any);
+
+    const doc = await salvarHistoricoDocumento({
+      id: 'doc-a-excluir',
+      cliente_nome: 'CLIENTE PARA EXCLUSÃO',
+      tipo: 'recibo',
+      numero: 'ERF-0099/2026',
+      titulo: 'Recibo - CLIENTE PARA EXCLUSÃO',
+      html_content: '<div>recibo</div>',
+    });
+
+    expect(carregarHistoricoLocal()).toHaveLength(1);
+
+    await excluirHistoricoDocumento(doc.id);
+
+    expect(carregarHistoricoLocal()).toHaveLength(0);
+    expect(deleteMock).toHaveBeenCalled();
+  });
+
+  describe('Discriminação de Documentos Emitidos e Retomada de Configurações do Histórico', () => {
+    it('deve extrair e discriminar nomes amigáveis de documentos a partir de opcoes_json.tipos_documentos', () => {
+      const doc = {
+        tipo: 'lote',
+        titulo: 'Pacote (2 docs: Contrato de honorários, Procuração) - Teste',
+        opcoes_json: {
+          tipos_documentos: ['contrato', 'procuracao'],
+          docs_selecionados: { contrato: true, procuracao: true, hipossuficiencia: false },
+        },
+      };
+
+      const tipos = extrairTiposDocumentoEmitido(doc);
+      expect(tipos).toEqual(['contrato', 'procuracao']);
+
+      const nomes = formatarNomesDocumentosEmitidos(doc);
+      expect(nomes).toEqual(['Contrato de honorários', 'Procuração']);
+    });
+
+    it('deve discriminar documentos em lote por inferência de html_content para documentos legados', () => {
+      const docLegadoSemOpcoes = {
+        tipo: 'lote',
+        titulo: 'Pacote (2 docs) - Teste Legado',
+        html_content: '<div class="contrato-body">CONTRATO DE PRESTAÇÃO DE SERVIÇOS</div><div class="proc">PROCURAÇÃO AD JUDICIA</div>',
+      };
+
+      const nomes = formatarNomesDocumentosEmitidos(docLegadoSemOpcoes);
+      expect(nomes).toContain('Contrato de honorários');
+      expect(nomes).toContain('Procuração');
+    });
+
+    it('deve discriminar documento único corretamente pelo tipo', () => {
+      const docUnico = {
+        tipo: 'recibo',
+        titulo: 'Recibo de Pagamento - Maria',
+      };
+
+      const nomes = formatarNomesDocumentosEmitidos(docUnico);
+      expect(nomes).toEqual(['Recibo de pagamento']);
+    });
+
+    it('deve persistir dados completos de múltiplos clientes e cláusulas em opcoes_json para retomada', async () => {
+      const clientePrincipal = {
+        id: 'cli-princ',
+        nome_razao_social: 'Cliente Titular',
+        cpf_cnpj: '111.111.111-11',
+      };
+
+      const clienteAdicional = {
+        id: 'cli-adic',
+        nome_razao_social: 'Cliente Co-contratante',
+        cpf_cnpj: '222.222.222-22',
+      };
+
+      const clausulasCustomizadas = [
+        { id: 'c1', titulo: 'CLÁUSULA PRIMEIRA - OBJETO', texto: 'Texto personalizado do contrato' },
+      ];
+
+      const docEmitido = await salvarHistoricoDocumento({
+        cliente_id: clientePrincipal.id,
+        cliente_nome: `${clientePrincipal.nome_razao_social} e ${clienteAdicional.nome_razao_social}`,
+        tipo: 'lote',
+        numero: 'ERF-0077/2026',
+        titulo: 'Pacote (2 docs: Contrato de honorários, Procuração) - Titular e Co-contratante',
+        html_content: '<div>HTML</div>',
+        opcoes_json: {
+          tipos_documentos: ['contrato', 'procuracao'],
+          docs_selecionados: { contrato: true, procuracao: true, hipossuficiencia: false, irpf: false, residencia: false, recibo: false },
+          cliente_principal: clientePrincipal,
+          clientes_adicionais: [clienteAdicional],
+          contrato: {
+            objeto: 'Defesa trabalhista específica',
+            valorFixo: '5.000,00',
+            clausulas: clausulasCustomizadas,
+          },
+        },
+      });
+
+      expect(docEmitido.opcoes_json).toBeDefined();
+      const opts = docEmitido.opcoes_json as any;
+      expect(opts.tipos_documentos).toEqual(['contrato', 'procuracao']);
+      expect(opts.cliente_principal.nome_razao_social).toBe('Cliente Titular');
+      expect(opts.clientes_adicionais).toHaveLength(1);
+      expect(opts.clientes_adicionais[0].nome_razao_social).toBe('Cliente Co-contratante');
+      expect(opts.contrato.clausulas[0].texto).toBe('Texto personalizado do contrato');
+    });
+  });
+});
+
 
 
 

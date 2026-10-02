@@ -194,9 +194,6 @@ export function validarDadosParaMinuta(
     }
 
     if (cliente.tipo_pessoa === 'PF') {
-      if (!cliente.rg_ie?.trim()) {
-        erros.push('RG é obrigatório para procuração e minutas de Pessoa Física');
-      }
       if (!cliente.nacionalidade?.trim()) {
         erros.push('Nacionalidade é obrigatória');
       }

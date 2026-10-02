@@ -114,9 +114,6 @@ export function validarQualificacaoJuridica(
     if (!cliente.cpf_cnpj?.trim()) {
       erros.push('CPF é obrigatório para qualificação de Pessoa Física');
     }
-    if (!cliente.rg_ie?.trim()) {
-      erros.push('RG é obrigatório para qualificação de Pessoa Física');
-    }
     if (!cliente.nacionalidade?.trim()) {
       erros.push('Nacionalidade é obrigatória para qualificação');
     }

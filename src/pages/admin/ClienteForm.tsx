@@ -378,7 +378,7 @@ export default function ClienteForm() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                {formData.tipo_pessoa === 'PF' ? 'RG / National ID' : 'Inscrição Estadual'}
+                {formData.tipo_pessoa === 'PF' ? 'RG / National ID (Opcional)' : 'Inscrição Estadual (Opcional)'}
               </label>
               <Input
                 value={formData.rg_ie || ''}
