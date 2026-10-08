@@ -23,6 +23,8 @@ import { podeTransicionarCiclo } from '@/domain/crm/cliente';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { sincronizarClienteAsaas } from '@/lib/asaas';
+import { validarCpfCnpj, mascaraCpfCnpj, mascaraTelefone, mascaraCep } from '@/domain/crm/asaas';
 
 export default function ClienteForm() {
   const { id } = useParams<{ id: string }>();
@@ -129,6 +131,7 @@ export default function ClienteForm() {
         rep_data_nascimento: formData.rep_data_nascimento?.trim() || null,
       };
 
+      let savedId = id;
       if (isEditing && id) {
         const { error } = await supabase
           .from('clientes')
@@ -139,8 +142,6 @@ export default function ClienteForm() {
           .eq('id', id);
 
         if (error) throw error;
-        toast.success('Cliente atualizado com sucesso!');
-        navigate(`/admin/crm/clientes/${id}`);
       } else {
         const { data, error } = await supabase
           .from('clientes')
@@ -152,9 +153,26 @@ export default function ClienteForm() {
           .single();
 
         if (error) throw error;
-        toast.success('Cliente/Lead cadastrado com sucesso!');
-        navigate(data?.id ? `/admin/crm/clientes/${data.id}` : '/admin/crm/clientes');
+        savedId = data?.id;
       }
+
+      // Sincronização automática com Asaas se houver CPF/CNPJ válido preenchido
+      if (savedId && payload.cpf_cnpj) {
+        const validacao = validarCpfCnpj(payload.cpf_cnpj);
+        if (validacao.valido) {
+          try {
+            const syncResult = await sincronizarClienteAsaas(savedId);
+            if (syncResult.success) {
+              toast.success('Cliente sincronizado no Asaas!');
+            }
+          } catch (e) {
+            console.warn('Aviso ao sincronizar cliente no Asaas:', e);
+          }
+        }
+      }
+
+      toast.success(isEditing ? 'Cliente atualizado com sucesso!' : 'Cliente/Lead cadastrado com sucesso!');
+      navigate(savedId ? `/admin/crm/clientes/${savedId}` : '/admin/crm/clientes');
     } catch (err: unknown) {
       console.error('Erro ao salvar cliente:', err);
       const mensagem = err instanceof Error ? err.message : 'Erro ao salvar no banco';
@@ -324,7 +342,7 @@ export default function ClienteForm() {
               <Input
                 required
                 value={formData.telefone_whatsapp || ''}
-                onChange={(e) => handleChange('telefone_whatsapp', e.target.value)}
+                onChange={(e) => handleChange('telefone_whatsapp', mascaraTelefone(e.target.value))}
                 placeholder="(11) 99999-9999"
                 className="bg-slate-900/50 border-white/10 text-white rounded-xl"
               />
@@ -334,7 +352,7 @@ export default function ClienteForm() {
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">Telefone Adicional / Phone</label>
               <Input
                 value={formData.telefone_secundario || ''}
-                onChange={(e) => handleChange('telefone_secundario', e.target.value)}
+                onChange={(e) => handleChange('telefone_secundario', mascaraTelefone(e.target.value))}
                 placeholder="(11) 3333-3333 / +1 555 555 5555"
                 className="bg-slate-900/50 border-white/10 text-white rounded-xl"
               />
@@ -365,14 +383,34 @@ export default function ClienteForm() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                {formData.tipo_pessoa === 'PF' ? 'CPF / Tax ID' : 'CNPJ / Tax ID'}
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-300">
+                  {formData.tipo_pessoa === 'PF' ? 'CPF / Tax ID' : 'CNPJ / Tax ID'}
+                </label>
+                {formData.cpf_cnpj && formData.cpf_cnpj.length >= 11 && (
+                  validarCpfCnpj(formData.cpf_cnpj).valido ? (
+                    <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Válido
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Inválido
+                    </span>
+                  )
+                )}
+              </div>
               <Input
                 value={formData.cpf_cnpj || ''}
-                onChange={(e) => handleChange('cpf_cnpj', e.target.value)}
+                onChange={(e) => handleChange('cpf_cnpj', mascaraCpfCnpj(e.target.value))}
                 placeholder={formData.tipo_pessoa === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'}
-                className="bg-slate-900/50 border-white/10 text-white rounded-xl"
+                className={cn(
+                  'bg-slate-900/50 border-white/10 text-white rounded-xl font-mono',
+                  formData.cpf_cnpj && formData.cpf_cnpj.length >= 11 && (
+                    validarCpfCnpj(formData.cpf_cnpj).valido
+                      ? 'border-emerald-500/40 focus:border-emerald-400'
+                      : 'border-rose-500/40 focus:border-rose-400'
+                  )
+                )}
               />
             </div>
 
@@ -489,9 +527,9 @@ export default function ClienteForm() {
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">CEP / Postal Code</label>
                 <Input
                   value={formData.endereco_cep || ''}
-                  onChange={(e) => handleChange('endereco_cep', e.target.value)}
+                  onChange={(e) => handleChange('endereco_cep', mascaraCep(e.target.value))}
                   placeholder="00000-000"
-                  className="bg-slate-900/50 border-white/10 text-white rounded-xl"
+                  className="bg-slate-900/50 border-white/10 text-white rounded-xl font-mono"
                 />
               </div>
 

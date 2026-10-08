@@ -20,8 +20,11 @@ import {
   ShieldCheck,
   FolderOpen,
   Info,
-  FileSignature
+  FileSignature,
+  RefreshCw,
+  CheckCircle2,
 } from 'lucide-react';
+import { sincronizarClienteAsaas } from '@/lib/asaas';
 import {
   supabase,
   Cliente,
@@ -38,6 +41,7 @@ import {
 import { ModalGerarMinuta } from '@/components/admin/ModalGerarMinuta';
 import { PainelDocumentosCliente } from '@/components/admin/PainelDocumentosCliente';
 import { PainelProcessosCliente } from '@/components/admin/PainelProcessosCliente';
+import { PainelFinanceiroAsaas } from '@/components/crm/PainelFinanceiroAsaas';
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -64,6 +68,20 @@ export default function ClienteDetalhe() {
   const [novaInteracaoDesc, setNovaInteracaoDesc] = useState('');
   const [enviandoInteracao, setEnviandoInteracao] = useState(false);
   const [modalMinutaOpen, setModalMinutaOpen] = useState(false);
+  const [sincronizandoAsaas, setSincronizandoAsaas] = useState(false);
+
+  const handleSincronizarAsaas = async () => {
+    if (!cliente) return;
+    setSincronizandoAsaas(true);
+    const res = await sincronizarClienteAsaas(cliente.id);
+    if (res.success && res.asaas_customer_id) {
+      toast.success('Cliente sincronizado no Asaas com sucesso!');
+      setCliente((prev) => (prev ? { ...prev, asaas_customer_id: res.asaas_customer_id } : null));
+    } else {
+      toast.error('Erro na sincronização: ' + (res.error || 'Verifique se as credenciais do Asaas estão configuradas'));
+    }
+    setSincronizandoAsaas(false);
+  };
 
   const fetchCliente = async () => {
     if (!id) return;
@@ -214,7 +232,7 @@ export default function ClienteDetalhe() {
             </Link>
           </Button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-serif text-2xl font-bold text-white">{cliente.nome_razao_social}</h1>
               <span
                 className={cn(
@@ -224,6 +242,28 @@ export default function ClienteDetalhe() {
               >
                 {STATUS_CICLO_BADGES[cliente.status_ciclo]?.label}
               </span>
+
+              {cliente.asaas_customer_id ? (
+                <span
+                  className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1"
+                  title="Identificador do cliente sincronizado no Asaas"
+                >
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  Asaas: {cliente.asaas_customer_id}
+                </span>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSincronizarAsaas}
+                  disabled={sincronizandoAsaas}
+                  className="h-6 text-[11px] border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 rounded-full px-2.5 py-0"
+                  title="Sincronizar cadastro do cliente com a API do Asaas"
+                >
+                  <RefreshCw className={cn('w-3 h-3 mr-1', sincronizandoAsaas && 'animate-spin')} />
+                  {sincronizandoAsaas ? 'Sincronizando...' : 'Sincronizar Asaas'}
+                </Button>
+              )}
             </div>
             <p className="text-slate-400 text-xs mt-0.5">
               Cadastrado em {cliente.created_at ? new Date(cliente.created_at).toLocaleDateString('pt-BR') : '—'}
@@ -424,6 +464,14 @@ export default function ClienteDetalhe() {
             clienteId={cliente.id}
             clienteNome={cliente.nome_razao_social}
           />
+
+          {/* Módulo Financeiro & Cobranças Asaas */}
+          <PermissionGuard modulo="financeiro" acao="visualizar">
+            <PainelFinanceiroAsaas
+              clienteId={cliente.id}
+              clienteNome={cliente.nome_razao_social}
+            />
+          </PermissionGuard>
 
           {/* Módulo de Documentos e Arquivos do Cliente */}
           <div className="space-y-2">

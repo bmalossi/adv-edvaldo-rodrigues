@@ -1,0 +1,256 @@
+import { describe, it, expect } from 'vitest';
+import {
+  validarCpfCnpj,
+  sanitizarDadosClienteAsaas,
+  gerarExternalReference,
+  validarDadosCobranca,
+  montarPayloadCobrancaAsaas,
+  montarPayloadAssinaturaAsaas,
+  processarEventoWebhookAsaas,
+  mascaraCpfCnpj,
+  mascaraTelefone,
+  mascaraCep,
+  traduzirErroAsaas,
+  ClienteAsaasPayload,
+} from '@/domain/crm/asaas';
+
+describe('Domínio Asaas: Validações, Sanitização e Idempotência', () => {
+  describe('Validação algorítmica de CPF e CNPJ', () => {
+    it('valida CPF correto com formatação e dígitos válidos', () => {
+      // CPF matematicamente válido conhecido
+      const cpfValido = '52998224725';
+      const formatado = '529.982.247-25';
+      expect(validarCpfCnpj(cpfValido).valido).toBe(true);
+      expect(validarCpfCnpj(formatado).valido).toBe(true);
+      expect(validarCpfCnpj(formatado).tipo).toBe('CPF');
+    });
+
+    it('rejeita CPF com todos os dígitos repetidos', () => {
+      expect(validarCpfCnpj('111.111.111-11').valido).toBe(false);
+      expect(validarCpfCnpj('00000000000').valido).toBe(false);
+    });
+
+    it('rejeita CPF com dígitos verificadores incorretos', () => {
+      expect(validarCpfCnpj('52998224726').valido).toBe(false);
+    });
+
+    it('valida CNPJ correto com dígitos válidos', () => {
+      // CNPJ matematicamente válido
+      const cnpjValido = '11222333000181';
+      const formatado = '11.222.333/0001-81';
+      expect(validarCpfCnpj(cnpjValido).valido).toBe(true);
+      expect(validarCpfCnpj(formatado).valido).toBe(true);
+      expect(validarCpfCnpj(formatado).tipo).toBe('CNPJ');
+    });
+
+    it('rejeita CNPJ com dígitos inválidos', () => {
+      expect(validarCpfCnpj('11.222.333/0001-99').valido).toBe(false);
+      expect(validarCpfCnpj('00000000000000').valido).toBe(false);
+    });
+  });
+
+  describe('Sanitização e Preparação de Dados para o Asaas', () => {
+    it('formata payload do cliente com telefones e documentos higienizados', () => {
+      const clienteOrigem = {
+        nome_razao_social: 'Dr. João da Silva Santos',
+        cpf_cnpj: '529.982.247-25',
+        email: 'joao.silva@exemplo.com.br',
+        telefone_whatsapp: '(11) 98765-4321',
+        endereco_cep: '01310-100',
+        endereco_logradouro: 'Avenida Paulista',
+        endereco_numero: '1000',
+        endereco_complemento: 'Apto 42',
+        endereco_bairro: 'Bela Vista',
+      };
+
+      const payload: ClienteAsaasPayload = sanitizarDadosClienteAsaas(clienteOrigem);
+
+      expect(payload.name).toBe('Dr. João da Silva Santos');
+      expect(payload.cpfCnpj).toBe('52998224725');
+      expect(payload.email).toBe('joao.silva@exemplo.com.br');
+      expect(payload.mobilePhone).toBe('11987654321');
+      expect(payload.postalCode).toBe('01310100');
+      expect(payload.address).toBe('Avenida Paulista');
+      expect(payload.addressNumber).toBe('1000');
+      expect(payload.province).toBe('Bela Vista');
+    });
+  });
+
+  describe('Geração de Chave de Idempotência (External Reference)', () => {
+    it('gera chave determinística para contrato e parcela', () => {
+      const ref = gerarExternalReference({
+        casoId: 'caso-uuid-1',
+        contratoId: 'contrato-uuid-2',
+        parcela: 1,
+      });
+
+      expect(ref).toBe('caso_caso-uuid-1_contrato_contrato-uuid-2_p1');
+    });
+  });
+
+  describe('Validação e Montagem de Cobrança no Asaas', () => {
+    it('rejeita cobrança com valor menor ou igual a zero', () => {
+      const res = validarDadosCobranca({
+        valor: 0,
+        data_vencimento: '2026-11-01',
+        tipo_cobranca: 'PIX',
+      });
+      expect(res.valido).toBe(false);
+      expect(res.erro).toContain('Valor');
+    });
+
+    it('rejeita cobrança sem data de vencimento', () => {
+      const res = validarDadosCobranca({
+        valor: 1500,
+        data_vencimento: '',
+        tipo_cobranca: 'BOLETO',
+      });
+      expect(res.valido).toBe(false);
+      expect(res.erro).toContain('vencimento');
+    });
+
+    it('monta payload de cobrança à vista no Pix', () => {
+      const payload = montarPayloadCobrancaAsaas({
+        customer: 'cus_12345',
+        tipo_cobranca: 'PIX',
+        forma: 'avista',
+        valor: 2500,
+        data_vencimento: '2026-11-10',
+        descricao: 'Honorários advocatícios - Consulta inicial',
+        externalReference: 'caso_123_contrato_456_p1',
+      });
+
+      expect(payload.customer).toBe('cus_12345');
+      expect(payload.billingType).toBe('PIX');
+      expect(payload.value).toBe(2500);
+      expect(payload.dueDate).toBe('2026-11-10');
+      expect(payload.description).toBe('Honorários advocatícios - Consulta inicial');
+      expect(payload.externalReference).toBe('caso_123_contrato_456_p1');
+    });
+
+    it('monta payload de cobrança parcelada com cálculo correto', () => {
+      const payload = montarPayloadCobrancaAsaas({
+        customer: 'cus_12345',
+        tipo_cobranca: 'BOLETO',
+        forma: 'parcelado',
+        valor: 3000,
+        data_vencimento: '2026-11-10',
+        numero_parcelas: 3,
+        descricao: 'Honorários parcelados',
+      });
+
+      expect(payload.billingType).toBe('BOLETO');
+      expect(payload.installmentCount).toBe(3);
+      expect(payload.totalValue).toBe(3000);
+    });
+
+    it('monta payload de assinatura de partido mensal com ciclo MONTHLY', () => {
+      const payload = montarPayloadAssinaturaAsaas({
+        customer: 'cus_12345',
+        tipo_cobranca: 'PIX',
+        valor: 1500,
+        nextDueDate: '2026-11-05',
+        descricao: 'Assessoria Jurídica Mensal',
+        externalReference: 'sub_caso_123',
+      });
+
+      expect(payload.cycle).toBe('MONTHLY');
+      expect(payload.value).toBe(1500);
+      expect(payload.nextDueDate).toBe('2026-11-05');
+      expect(payload.billingType).toBe('PIX');
+      expect(payload.externalReference).toBe('sub_caso_123');
+    });
+  });
+
+  describe('Reducer de Processamento de Webhook do Asaas', () => {
+    it('promove cliente para ativo e avança caso para Fechamento em PAYMENT_CONFIRMED', () => {
+      const evento = {
+        event: 'PAYMENT_CONFIRMED',
+        payment: {
+          id: 'pay_123',
+          customer: 'cus_123',
+          value: 2000,
+          netValue: 1950,
+          billingType: 'PIX',
+          status: 'CONFIRMED',
+          clientPaymentDate: '2026-10-08',
+        },
+        clienteAtual: {
+          id: 'cli_1',
+          status_ciclo: 'lead' as const,
+        },
+        casoAtual: {
+          id: 'caso_1',
+          fase_funil: 'negociacao',
+        },
+      };
+
+      const resultado = processarEventoWebhookAsaas(evento);
+
+      expect(resultado.novoStatusCobranca).toBe('CONFIRMED');
+      expect(resultado.devePromoverCliente).toBe(true);
+      expect(resultado.novoStatusCicloCliente).toBe('ativo');
+      expect(resultado.deveAvancarCaso).toBe(true);
+      expect(resultado.novaEtapaNomeCaso).toBe('Fechamento');
+      expect(resultado.descricaoInteracao).toContain('PIX');
+      expect(resultado.descricaoInteracao).toContain('2000');
+    });
+
+    it('gera alerta sem avançar caso nem regredir cliente em PAYMENT_OVERDUE', () => {
+      const evento = {
+        event: 'PAYMENT_OVERDUE',
+        payment: {
+          id: 'pay_123',
+          customer: 'cus_123',
+          value: 500,
+          billingType: 'BOLETO',
+          status: 'OVERDUE',
+        },
+        clienteAtual: {
+          id: 'cli_1',
+          status_ciclo: 'ativo' as const,
+        },
+      };
+
+      const resultado = processarEventoWebhookAsaas(evento);
+
+      expect(resultado.novoStatusCobranca).toBe('OVERDUE');
+      expect(resultado.devePromoverCliente).toBe(false);
+      expect(resultado.deveAvancarCaso).toBe(false);
+      expect(resultado.descricaoInteracao).toContain('vencida');
+    });
+  });
+
+  describe('Formatação de Máscaras e Hardening de Interface', () => {
+    it('formata CPF com máscara progressiva', () => {
+      expect(mascaraCpfCnpj('52998224725')).toBe('529.982.247-25');
+    });
+
+    it('formata CNPJ com máscara progressiva', () => {
+      expect(mascaraCpfCnpj('11222333000181')).toBe('11.222.333/0001-81');
+    });
+
+    it('formata celular brasileiro com DDD', () => {
+      expect(mascaraTelefone('11987654321')).toBe('(11) 98765-4321');
+      expect(mascaraTelefone('1133334444')).toBe('(11) 3333-4444');
+    });
+
+    it('formata CEP brasileiro', () => {
+      expect(mascaraCep('01310100')).toBe('01310-100');
+    });
+
+    it('traduz erros técnicos comuns da API Asaas para orientações claras', () => {
+      const erroCpf = {
+        errors: [{ code: 'invalid_cpf', description: 'O CPF informado é inválido' }],
+      };
+      expect(traduzirErroAsaas(erroCpf)).toContain('CPF');
+
+      const erroGenerico = 'Unauthorized';
+      expect(traduzirErroAsaas(erroGenerico)).toContain('Chave de API');
+    });
+  });
+});
+
+
+
+

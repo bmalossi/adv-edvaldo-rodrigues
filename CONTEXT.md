@@ -76,3 +76,32 @@ Função server-side/edge que gera o feed XML canônico (`/sitemap.xml`) sob dem
 ### LegalScholarlyArticle
 Subtipo especializado de `Article` da Schema.org aplicado aos artigos jurídicos do escritório. Sinaliza a motores de busca e modelos de linguagem generativa que o texto possui teor técnico-jurídico acadêmico ou doutrinário, incluindo campos semânticos estruturados como autoria (`Person/Attorney`), assunto principal (`about`), menções a teses e ramos do direito (`mentions`) e vínculo com o portal do escritório (`isPartOf`).
 
+## Integração Asaas & Cobranças Financeiras
+
+### Sincronização de Cliente Asaas
+Mapeamento e sincronização bidirecional do cadastro de cliente do escritório com a API de Clientes do Asaas (`/v3/customers`). O cliente qualificado (com nome, CPF/CNPJ, e-mail e celular) recebe um `asaas_customer_id` único armazenado no CRM, servindo como chave estrangeira externa para todas as operações financeiras.
+
+### Cobrança de Honorários (Pagamento Único vs Recorrência)
+Operação financeira gerada no Asaas vinculada a um Caso/Contrato de Honorários e ao `asaas_customer_id` do cliente. Pode assumir a modalidade de cobrança única/parcelada (`/v3/payments`) ou assinatura recorrente (`/v3/subscriptions` para partido mensal), suportando Pix, Boleto Bancário e Cartão de Crédito.
+
+### Webhook de Liquidação e Transição de Etapa
+Ponto de entrada seguro (`/api/webhooks/asaas` ou Supabase Edge Function `asaas-webhook`) que processa eventos assíncronos disparados pelo Asaas (`PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_OVERDUE`). A confirmação de liquidação financeira atualiza o status do pagamento e automatiza o avanço do caso no Funil Processual ou do cliente no Funil de Clientes.
+
+### Transição Automática por Confirmação de Pagamento
+Regra de negócio aplicada no recebimento dos eventos `PAYMENT_RECEIVED` ou `PAYMENT_CONFIRMED`:
+- **Cliente**: Promove `status_ciclo` de `lead`/`consulta` para `ativo`.
+- **Caso/Processo**: Se o caso associado estiver em fase de `negociacao` (etapas 'Cobrança inicial' ou 'Apresentação de proposta'), avança automaticamente para a etapa 'Fechamento' (ou para a fase de execução do serviço).
+- **Auditoria / Timeline**: Registra automaticamente uma `InteracaoCliente` indicando o valor liquidado, modalidade e transação Asaas.
+- **Inadimplência (`PAYMENT_OVERDUE`)**: Altera o status da cobrança para 'vencido' e registra alerta na timeline, preservando a etapa do caso para avaliação do advogado.
+
+### Fatura de Honorários (`cobrancas_asaas`)
+Entidade do banco de dados local que representa uma parcela individual ou ciclo de assinatura gerado no Asaas. Contém identificadores externos (`asaas_payment_id`, `asaas_subscription_id`), links diretos para pagamento (`invoice_url`, `bank_slip_url`), dados de pagamento instantâneo (QrCode Pix e código de barras) e histórico de liquidação.
+
+### Faturamento Seguro com Cartão de Crédito (Zero-PCI)
+Estratégia de processamento de cartão de crédito delegando a coleta de dados sensíveis (número do cartão, CVV e validade) à página segura e criptografada do Asaas (`invoice_url`), eliminando a custódia de dados bancários pelo CRM e garantindo conformidade com o padrão PCI-DSS.
+
+### Idempotência e Prevenção de Duplicidades (External Reference)
+Mecanismo que impede a duplicação de cadastros e cobranças:
+- **Clientes**: Verificação prévia por CPF/CNPJ via `GET /v3/customers?cpfCnpj=...` antes da criação. Caso já exista no Asaas, vincula o `asaas_customer_id` existente e atualiza os dados cadastrais via `POST /v3/customers/{id}`.
+- **Cobranças**: Vinculação de `externalReference` determinístico (`caso_{id}_contrato_{id}` ou `contrato_{id}_parc_{numero}`). Se uma cobrança com o mesmo identificador já estiver registrada ou pendente, a operação reaproveita a fatura existente em vez de emitir nova cobrança duplicada.
+

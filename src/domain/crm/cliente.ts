@@ -65,6 +65,7 @@ export interface Cliente {
   visibilidade: VisibilidadeRegistro;
   responsavel_id?: string | null;
   google_drive_folder_id?: string | null;
+  asaas_customer_id?: string | null;
   deleted_at?: string | null;
   created_at?: string;
   updated_at?: string;

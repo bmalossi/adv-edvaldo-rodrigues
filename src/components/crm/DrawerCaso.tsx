@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { PainelFinanceiroAsaas } from './PainelFinanceiroAsaas';
 
 interface Perfil {
   id: string;
@@ -503,6 +504,18 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
               )}
             </div>
           </div>
+
+          {/* Módulo de Honorários e Cobranças Asaas */}
+          {caso.cliente_id && (
+            <div className="pt-3 border-t border-white/10">
+              <PainelFinanceiroAsaas
+                clienteId={caso.cliente_id}
+                clienteNome={caso.cliente_nome || 'Cliente'}
+                casoId={caso.id}
+                casoTitulo={caso.titulo}
+              />
+            </div>
+          )}
 
           {/* Botão de Envio e Exclusão no Rodapé */}
           <div className="pt-4 flex items-center justify-between gap-3">

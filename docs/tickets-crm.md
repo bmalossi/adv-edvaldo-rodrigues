@@ -1,4 +1,4 @@
-﻿# Tickets: CRM Jurídico MVP
+# Tickets: CRM Jurídico MVP
 
 Quebra em fatias verticais (*tracer bullets*) com base na especificação [spec-crm-prd.md](./spec-crm-prd.md) e na issue principal [#1](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/1).
 
@@ -102,3 +102,22 @@ umero_processo\, etc.) sem envio de dados para servidores terceiros.
 - [ ] Upload de documentos jurídicos (\	ipo_documento\, metadados) vinculado ao caso e armazenado no Drive.
 - [ ] Listagem de arquivos do caso com link para abertura direta no Google Drive web.
 - [ ] Teste automatizado validando a lógica de montagem da árvore de pastas e registro de metadados em \documentos_casos\.
+
+---
+
+## [#9 - 8. Integração Asaas: Sincronização de Clientes, Cobrança de Honorários e Webhook](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/9)
+
+**What to build:** Implementar a integração completa com o Asaas (API v3) para sincronização automática de clientes com prevenção de duplicidades por CPF/CNPJ, emissão de cobranças de honorários (Pix, Boleto e Cartão com link seguro Zero-PCI) na ficha do cliente e no Drawer do caso, e recepção de webhooks autenticados para avanço automático de etapas no Funil Processual e promoção do cliente para Ativo.
+
+**Especificação detalhada:** [docs/spec-integracao-asaas-cobrancas.md](./spec-integracao-asaas-cobrancas.md)
+**Tracer bullets desmembrados:** [tickets.md](../tickets.md) (5 fatias verticais aprovadas)
+
+**Blocked by:** [#2](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/2), [#4](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/4), [#5](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/5)
+**Labels:** `ready-for-agent`
+
+- [ ] Ticket 1: Sincronização Bidirecional de Clientes com Asaas e Prevenção de Duplicidades
+- [ ] Ticket 2: Emissão e Visualização de Cobranças de Honorários (Pix, Boleto e Cartão Zero-PCI)
+- [ ] Ticket 3: Gestão de Assinaturas Recorrentes de Partido Mensal
+- [ ] Ticket 4: Webhook de Liquidação e Transição Automática de Etapas no Funil
+- [ ] Ticket 5: Hardening de Formulários, Máscaras e Gestão de Ambiente Sandbox
+
