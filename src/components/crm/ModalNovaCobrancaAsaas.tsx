@@ -13,19 +13,31 @@ import {
   QrCode,
   Barcode,
   CreditCard,
+  HelpCircle,
   Copy,
   ExternalLink,
   CheckCircle2,
   Calendar,
   Sparkles,
   DollarSign,
-  AlertCircle,
-  Clock,
+  Printer,
+  Truck,
   Check,
-  Layers
+  ChevronDown,
+  ChevronUp,
+  SlidersHorizontal,
+  Percent
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { TipoCobrancaAsaas, CobrancaAsaas, traduzirErroAsaas } from '@/domain/crm/asaas';
+import {
+  TipoCobrancaAsaas,
+  CobrancaAsaas,
+  traduzirErroAsaas,
+  mascaraDataBrasileira,
+  converterDataBrParaIso,
+  converterDataIsoParaBr,
+  validarDataBrasileira,
+} from '@/domain/crm/asaas';
 import { criarCobrancaAsaas } from '@/lib/asaas';
 import { cn } from '@/lib/utils';
 
@@ -53,15 +65,30 @@ export function ModalNovaCobrancaAsaas({
   const [tipoCobranca, setTipoCobranca] = useState<TipoCobrancaAsaas>('PIX');
   const [forma, setForma] = useState<'avista' | 'parcelado' | 'assinatura'>('avista');
   const [valorStr, setValorStr] = useState('');
-  const [dataVencimento, setDataVencimento] = useState(() => {
+  
+  // Data de vencimento no formato brasileiro DD/MM/AAAA
+  const [dataVencimentoBr, setDataVencimentoBr] = useState(() => {
     const data = new Date();
     data.setDate(data.getDate() + 5);
-    return data.toISOString().substring(0, 10);
+    return converterDataIsoParaBr(data.toISOString().substring(0, 10));
   });
+
   const [numeroParcelas, setNumeroParcelas] = useState(1);
   const [descricao, setDescricao] = useState(() =>
     casoTitulo ? `Honorários advocatícios - ${casoTitulo}` : 'Honorários advocatícios'
   );
+
+  // Opções avançadas (Juros, Multa, Desconto e Correios)
+  const [mostrarAvancado, setMostrarAvancado] = useState(false);
+  const [jurosTipo, setJurosTipo] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
+  const [jurosValor, setJurosValor] = useState('');
+  const [multaTipo, setMultaTipo] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
+  const [multaValor, setMultaValor] = useState('');
+  const [descontoTipo, setDescontoTipo] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
+  const [descontoValor, setDescontoValor] = useState('');
+  const [descontoPrazo, setDescontoPrazo] = useState<number>(0);
+  const [queroImprimir, setQueroImprimir] = useState(false);
+  const [queroEnviarCorreios, setQueroEnviarCorreios] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [cobrancaCriada, setCobrancaCriada] = useState<any | null>(null);
@@ -76,6 +103,11 @@ export function ModalNovaCobrancaAsaas({
     setCopiadoPix(false);
     setCopiadoLinha(false);
     setCopiadoLink(false);
+    setQueroImprimir(false);
+    setQueroEnviarCorreios(false);
+    setJurosValor('');
+    setMultaValor('');
+    setDescontoValor('');
   };
 
   const handleEmitir = async (e: React.FormEvent) => {
@@ -85,24 +117,62 @@ export function ModalNovaCobrancaAsaas({
       toast.error('Informe um valor válido maior que zero.');
       return;
     }
-    if (!dataVencimento) {
-      toast.error('Informe a data de vencimento.');
+
+    if (!validarDataBrasileira(dataVencimentoBr)) {
+      toast.error('Informe uma data de vencimento válida no formato DD/MM/AAAA.');
+      return;
+    }
+
+    const dataVencimentoIso = converterDataBrParaIso(dataVencimentoBr);
+    if (!dataVencimentoIso) {
+      toast.error('Data de vencimento inválida.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await criarCobrancaAsaas({
+      const payloadEnvio: any = {
         cliente_id: clienteId,
         caso_id: casoId || null,
         contrato_id: contratoId || null,
         tipo_cobranca: tipoCobranca,
         forma,
         valor: valorNumerico,
-        data_vencimento: dataVencimento,
+        data_vencimento: dataVencimentoIso,
         numero_parcelas: forma === 'parcelado' ? numeroParcelas : 1,
         descricao,
-      });
+        postal_service: queroEnviarCorreios,
+      };
+
+      // Juros
+      const jurosNum = parseFloat(jurosValor.replace(',', '.'));
+      if (jurosNum > 0) {
+        payloadEnvio.interest = {
+          value: jurosNum,
+          type: jurosTipo,
+        };
+      }
+
+      // Multa
+      const multaNum = parseFloat(multaValor.replace(',', '.'));
+      if (multaNum > 0) {
+        payloadEnvio.fine = {
+          value: multaNum,
+          type: multaTipo,
+        };
+      }
+
+      // Desconto
+      const descontoNum = parseFloat(descontoValor.replace(',', '.'));
+      if (descontoNum > 0) {
+        payloadEnvio.discount = {
+          value: descontoNum,
+          type: descontoTipo,
+          dueDateLimitDays: descontoPrazo,
+        };
+      }
+
+      const res = await criarCobrancaAsaas(payloadEnvio);
 
       if (!res.success) {
         toast.error(traduzirErroAsaas(res.error));
@@ -112,8 +182,14 @@ export function ModalNovaCobrancaAsaas({
 
       toast.success('Cobrança gerada com sucesso no Asaas!');
       setCobrancaCriada(res);
+
       if (onCobrancaCriada) {
         onCobrancaCriada(res as any);
+      }
+
+      // Se o usuário selecionou a opção de imprimir, abre o boleto ou fatura automaticamente
+      if (queroImprimir && (res.bank_slip_url || res.invoice_url)) {
+        window.open(res.bank_slip_url || res.invoice_url, '_blank');
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao processar cobrança';
@@ -180,6 +256,55 @@ export function ModalNovaCobrancaAsaas({
                 </p>
               </div>
             </div>
+
+            {/* Resultado "Pergunte ao Cliente" ou Link de Checkout */}
+            {cobrancaCriada.invoice_url && (
+              <div className="p-5 rounded-2xl bg-[#091322] border border-white/10 space-y-3.5 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-sky-400" /> Link de Pagamento (Fatura / Checkout Asaas)
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => copiarParaTransferencia(cobrancaCriada.invoice_url, 'link')}
+                    className="h-8 text-xs bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-lg shadow-sm"
+                  >
+                    {copiadoLink ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 mr-1" /> Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 mr-1" /> Copiar Link
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button
+                    asChild
+                    className="w-full h-10 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl text-xs shadow-md"
+                  >
+                    <a href={cobrancaCriada.invoice_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Abrir Checkout do Cliente
+                    </a>
+                  </Button>
+
+                  {cobrancaCriada.bank_slip_url && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="w-full h-10 border-white/15 hover:bg-white/5 text-slate-200 text-xs font-bold rounded-xl"
+                    >
+                      <a href={cobrancaCriada.bank_slip_url} target="_blank" rel="noopener noreferrer">
+                        <Printer className="w-3.5 h-3.5 mr-1.5 text-secondary" /> Imprimir Boleto (PDF)
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Resultado PIX */}
             {cobrancaCriada.pix_copia_cola && (
@@ -252,53 +377,6 @@ export function ModalNovaCobrancaAsaas({
                     {cobrancaCriada.linha_digitavel}
                   </p>
                 </div>
-
-                {cobrancaCriada.bank_slip_url && (
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="w-full h-10 border-white/15 hover:bg-white/5 text-slate-200 text-xs font-bold rounded-xl"
-                  >
-                    <a href={cobrancaCriada.bank_slip_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Abrir Boleto Bancário (PDF)
-                    </a>
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {/* Link de Cartão / Fatura Segura */}
-            {cobrancaCriada.invoice_url && (
-              <div className="p-5 rounded-2xl bg-[#091322] border border-white/10 space-y-3.5 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                    <CreditCard className="w-4 h-4 text-sky-400" /> Cartão / Checkout Seguro Asaas
-                  </span>
-                  <Button
-                    size="sm"
-                    onClick={() => copiarParaTransferencia(cobrancaCriada.invoice_url, 'link')}
-                    className="h-8 text-xs bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-lg shadow-sm"
-                  >
-                    {copiadoLink ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 mr-1" /> Copiado!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5 mr-1" /> Copiar Link
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                <Button
-                  asChild
-                  className="w-full h-10 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl text-xs shadow-md"
-                >
-                  <a href={cobrancaCriada.invoice_url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Abrir Tela de Pagamento do Cliente
-                  </a>
-                </Button>
               </div>
             )}
 
@@ -316,54 +394,77 @@ export function ModalNovaCobrancaAsaas({
           /* ─── Formulário de Emissão ─── */
           <form onSubmit={handleEmitir} className="flex flex-col flex-1 overflow-hidden">
             <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(92vh-140px)]">
-              {/* Seletor de Tipo de Cobrança */}
+              {/* Seletor de Tipo de Cobrança (Incluindo "Pergunte ao Cliente") */}
               <div className="space-y-2">
                 <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
                   Forma de Pagamento
                 </Label>
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {/* Pix */}
                   <button
                     type="button"
                     onClick={() => setTipoCobranca('PIX')}
                     className={cn(
-                      'flex flex-col items-center justify-center p-3.5 rounded-xl border text-xs font-semibold transition-all gap-2',
+                      'flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-semibold transition-all gap-1.5 text-center',
                       tipoCobranca === 'PIX'
                         ? 'border-emerald-500/80 bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40 shadow-lg shadow-emerald-950/40'
                         : 'border-white/10 bg-[#091322] text-slate-400 hover:border-white/20 hover:text-slate-200'
                     )}
                   >
                     <QrCode className="w-5 h-5 text-emerald-400" />
-                    Pix Instantâneo
+                    <span>Pix Instantâneo</span>
                   </button>
 
+                  {/* Boleto */}
                   <button
                     type="button"
                     onClick={() => setTipoCobranca('BOLETO')}
                     className={cn(
-                      'flex flex-col items-center justify-center p-3.5 rounded-xl border text-xs font-semibold transition-all gap-2',
+                      'flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-semibold transition-all gap-1.5 text-center',
                       tipoCobranca === 'BOLETO'
                         ? 'border-secondary bg-secondary/15 text-secondary ring-1 ring-secondary/40 shadow-lg shadow-amber-950/40'
                         : 'border-white/10 bg-[#091322] text-slate-400 hover:border-white/20 hover:text-slate-200'
                     )}
                   >
                     <Barcode className="w-5 h-5 text-secondary" />
-                    Boleto Bancário
+                    <span>Boleto Bancário</span>
                   </button>
 
+                  {/* Cartão */}
                   <button
                     type="button"
                     onClick={() => setTipoCobranca('CREDIT_CARD')}
                     className={cn(
-                      'flex flex-col items-center justify-center p-3.5 rounded-xl border text-xs font-semibold transition-all gap-2',
+                      'flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-semibold transition-all gap-1.5 text-center',
                       tipoCobranca === 'CREDIT_CARD'
                         ? 'border-sky-500/80 bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/40 shadow-lg shadow-sky-950/40'
                         : 'border-white/10 bg-[#091322] text-slate-400 hover:border-white/20 hover:text-slate-200'
                     )}
                   >
                     <CreditCard className="w-5 h-5 text-sky-400" />
-                    Cartão de Crédito
+                    <span>Cartão de Crédito</span>
+                  </button>
+
+                  {/* Pergunte ao Cliente (UNDEFINED) */}
+                  <button
+                    type="button"
+                    onClick={() => setTipoCobranca('UNDEFINED')}
+                    className={cn(
+                      'flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-semibold transition-all gap-1.5 text-center',
+                      tipoCobranca === 'UNDEFINED'
+                        ? 'border-purple-500/80 bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/40 shadow-lg shadow-purple-950/40'
+                        : 'border-white/10 bg-[#091322] text-slate-400 hover:border-white/20 hover:text-slate-200'
+                    )}
+                  >
+                    <HelpCircle className="w-5 h-5 text-purple-400" />
+                    <span>Pergunte ao Cliente</span>
                   </button>
                 </div>
+                {tipoCobranca === 'UNDEFINED' && (
+                  <p className="text-[11px] text-purple-300/80 italic mt-1">
+                    * O cliente receberá o checkout do Asaas e poderá escolher entre Pix, Boleto ou Cartão de Crédito na hora de pagar.
+                  </p>
+                )}
               </div>
 
               {/* Modalidade: Cobrança Única vs Parcelado vs Partido Mensal */}
@@ -422,7 +523,7 @@ export function ModalNovaCobrancaAsaas({
                 </div>
               </div>
 
-              {/* Grid Valor e Vencimento */}
+              {/* Grid Valor e Vencimento (em formato brasileiro DD/MM/AAAA) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
@@ -442,17 +543,27 @@ export function ModalNovaCobrancaAsaas({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-secondary" />
-                    {forma === 'assinatura' ? '1º Vencimento Recorrente' : 'Data de Vencimento'}
+                  <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-secondary" />
+                      {forma === 'assinatura' ? '1º Vencimento Recorrente' : 'Data de Vencimento'}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-mono">DD/MM/AAAA</span>
                   </Label>
-                  <Input
-                    type="date"
-                    required
-                    value={dataVencimento}
-                    onChange={(e) => setDataVencimento(e.target.value)}
-                    className="h-11 bg-[#091322] border-white/10 text-white rounded-xl text-sm focus:border-secondary focus:ring-1 focus:ring-secondary"
-                  />
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      required
+                      maxLength={10}
+                      placeholder="DD/MM/AAAA"
+                      value={dataVencimentoBr}
+                      onChange={(e) => setDataVencimentoBr(mascaraDataBrasileira(e.target.value))}
+                      className={cn(
+                        "h-11 bg-[#091322] border-white/10 text-white font-mono rounded-xl text-sm focus:border-secondary focus:ring-1 focus:ring-secondary",
+                        dataVencimentoBr.length === 10 && !validarDataBrasileira(dataVencimentoBr) && "border-rose-500/60 text-rose-300"
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -479,18 +590,225 @@ export function ModalNovaCobrancaAsaas({
                 </div>
               )}
 
-              {/* Descrição na Fatura */}
+              {/* Descrição na Fatura e Boleto */}
               <div className="space-y-1.5">
                 <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Descrição Exibida na Fatura
+                  Descrição na Fatura / Boleto
                 </Label>
                 <Input
                   type="text"
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
-                  placeholder="Ex: Honorários advocatícios"
+                  placeholder="Ex: Honorários advocatícios contratuais"
                   className="h-11 bg-[#091322] border-white/10 text-white placeholder:text-slate-500 rounded-xl text-sm focus:border-secondary focus:ring-1 focus:ring-secondary"
                 />
+                <p className="text-[11px] text-slate-500">
+                  * A descrição informada será impressa no boleto bancário e na fatura digital do cliente.
+                </p>
+              </div>
+
+              {/* ─── Seção Avançada: Juros, Multa, Desconto e Correios ─── */}
+              <div className="border border-white/10 rounded-2xl bg-[#091322]/80 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setMostrarAvancado(!mostrarAvancado)}
+                  className="w-full p-4 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <SlidersHorizontal className="w-4 h-4 text-secondary" />
+                    <div>
+                      <span className="text-xs font-bold text-white uppercase tracking-wider block">
+                        Juros, Multa, Desconto e Impressão
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        {mostrarAvancado ? 'Clique para recolher configurações adicionais' : 'Configurar regras de atraso, pontualidade e envio postal'}
+                      </span>
+                    </div>
+                  </div>
+                  {mostrarAvancado ? (
+                    <ChevronUp className="w-4 h-4 text-secondary" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                  )}
+                </button>
+
+                {mostrarAvancado && (
+                  <div className="p-4 pt-2 border-t border-white/10 space-y-4 text-xs animate-in fade-in duration-200">
+                    {/* Bloco 1: Juros e Multa */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-2 border-b border-white/5">
+                      {/* Juros ao Mês */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[11px] font-bold text-slate-300">Juros ao mês</Label>
+                          <div className="flex items-center bg-[#060D17] rounded-md p-0.5 border border-white/10">
+                            <button
+                              type="button"
+                              onClick={() => setJurosTipo('PERCENTAGE')}
+                              className={cn(
+                                "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
+                                jurosTipo === 'PERCENTAGE' ? "bg-secondary text-primary" : "text-slate-400"
+                              )}
+                            >
+                              % Mês
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setJurosTipo('FIXED')}
+                              className={cn(
+                                "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
+                                jurosTipo === 'FIXED' ? "bg-secondary text-primary" : "text-slate-400"
+                              )}
+                            >
+                              R$ Fixo
+                            </button>
+                          </div>
+                        </div>
+                        <Input
+                          type="text"
+                          placeholder="0,00"
+                          value={jurosValor}
+                          onChange={(e) => setJurosValor(e.target.value)}
+                          className="h-9 bg-[#060D17] border-white/10 text-white font-mono rounded-lg text-xs"
+                        />
+                        <span className="text-[10px] text-slate-500">
+                          {jurosTipo === 'PERCENTAGE' ? 'Percentual cobrado proporcionalmente ao mês' : 'Valor fixo cobrado por mês de atraso'}
+                        </span>
+                      </div>
+
+                      {/* Multa por Atraso */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[11px] font-bold text-slate-300">Multa por atraso</Label>
+                          <div className="flex items-center bg-[#060D17] rounded-md p-0.5 border border-white/10">
+                            <button
+                              type="button"
+                              onClick={() => setMultaTipo('PERCENTAGE')}
+                              className={cn(
+                                "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
+                                multaTipo === 'PERCENTAGE' ? "bg-secondary text-primary" : "text-slate-400"
+                              )}
+                            >
+                              % Multa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setMultaTipo('FIXED')}
+                              className={cn(
+                                "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
+                                multaTipo === 'FIXED' ? "bg-secondary text-primary" : "text-slate-400"
+                              )}
+                            >
+                              R$ Fixo
+                            </button>
+                          </div>
+                        </div>
+                        <Input
+                          type="text"
+                          placeholder="0,00"
+                          value={multaValor}
+                          onChange={(e) => setMultaValor(e.target.value)}
+                          className="h-9 bg-[#060D17] border-white/10 text-white font-mono rounded-lg text-xs"
+                        />
+                        <span className="text-[10px] text-slate-500">
+                          {multaTipo === 'PERCENTAGE' ? 'Percentual único aplicado após o vencimento' : 'Valor fixo único por atraso'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bloco 2: Desconto */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-2 border-b border-white/5">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[11px] font-bold text-slate-300">Desconto</Label>
+                          <div className="flex items-center bg-[#060D17] rounded-md p-0.5 border border-white/10">
+                            <button
+                              type="button"
+                              onClick={() => setDescontoTipo('PERCENTAGE')}
+                              className={cn(
+                                "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
+                                descontoTipo === 'PERCENTAGE' ? "bg-secondary text-primary" : "text-slate-400"
+                              )}
+                            >
+                              % Desconto
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDescontoTipo('FIXED')}
+                              className={cn(
+                                "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
+                                descontoTipo === 'FIXED' ? "bg-secondary text-primary" : "text-slate-400"
+                              )}
+                            >
+                              R$ Fixo
+                            </button>
+                          </div>
+                        </div>
+                        <Input
+                          type="text"
+                          placeholder="0,00"
+                          value={descontoValor}
+                          onChange={(e) => setDescontoValor(e.target.value)}
+                          className="h-9 bg-[#060D17] border-white/10 text-white font-mono rounded-lg text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-bold text-slate-300 block">
+                          Prazo máximo do desconto
+                        </Label>
+                        <select
+                          value={descontoPrazo}
+                          onChange={(e) => setDescontoPrazo(Number(e.target.value))}
+                          className="w-full h-9 bg-[#060D17] border border-white/10 text-white rounded-lg px-2.5 text-xs focus:border-secondary"
+                        >
+                          <option value={0}>Até o dia do vencimento</option>
+                          <option value={1}>Até 1 dia antes do vencimento</option>
+                          <option value={2}>Até 2 dias antes do vencimento</option>
+                          <option value={5}>Até 5 dias antes do vencimento</option>
+                          <option value={10}>Até 10 dias antes do vencimento</option>
+                          <option value={15}>Até 15 dias antes do vencimento</option>
+                          <option value={30}>Até 30 dias antes do vencimento</option>
+                        </select>
+                        <span className="text-[10px] text-slate-500">
+                          Regra de pontualidade antes do vencimento
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bloco 3: Opções de Impressão e Envio Postal */}
+                    <div className="space-y-2 pt-1">
+                      <Label className="text-[11px] font-bold text-slate-300 block uppercase tracking-wider">
+                        Opções de Impressão e Envio
+                      </Label>
+
+                      <label className="flex items-center gap-2.5 p-2 rounded-lg bg-[#060D17] border border-white/5 cursor-pointer hover:border-white/15 transition-all">
+                        <input
+                          type="checkbox"
+                          checked={queroImprimir}
+                          onChange={(e) => setQueroImprimir(e.target.checked)}
+                          className="w-4 h-4 rounded text-secondary bg-slate-900 border-white/20 focus:ring-secondary"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Printer className="w-3.5 h-3.5 text-secondary" />
+                          <span className="text-xs text-white font-medium">Quero imprimir esta cobrança</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-2.5 p-2 rounded-lg bg-[#060D17] border border-white/5 cursor-pointer hover:border-white/15 transition-all">
+                        <input
+                          type="checkbox"
+                          checked={queroEnviarCorreios}
+                          onChange={(e) => setQueroEnviarCorreios(e.target.checked)}
+                          className="w-4 h-4 rounded text-secondary bg-slate-900 border-white/20 focus:ring-secondary"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-3.5 h-3.5 text-secondary" />
+                          <span className="text-xs text-white font-medium">Quero enviar esta cobrança via Correios</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Informações da Automação */}

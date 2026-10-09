@@ -11,6 +11,10 @@ import {
   mascaraTelefone,
   mascaraCep,
   traduzirErroAsaas,
+  mascaraDataBrasileira,
+  converterDataBrParaIso,
+  converterDataIsoParaBr,
+  validarDataBrasileira,
   ClienteAsaasPayload,
 } from '@/domain/crm/asaas';
 
@@ -321,6 +325,43 @@ describe('Domínio Asaas: Validações, Sanitização e Idempotência', () => {
 
       const erroGenerico = 'Unauthorized';
       expect(traduzirErroAsaas(erroGenerico)).toContain('Chave de API');
+    });
+
+    it('aplica máscara de data brasileira progressiva DD/MM/AAAA', () => {
+      expect(mascaraDataBrasileira('14')).toBe('14');
+      expect(mascaraDataBrasileira('1410')).toBe('14/10');
+      expect(mascaraDataBrasileira('14102026')).toBe('14/10/2026');
+      expect(mascaraDataBrasileira('14/10/2026')).toBe('14/10/2026');
+    });
+
+    it('converte corretamente entre DD/MM/AAAA e ISO YYYY-MM-DD', () => {
+      expect(converterDataBrParaIso('14/10/2026')).toBe('2026-10-14');
+      expect(converterDataIsoParaBr('2026-10-14')).toBe('14/10/2026');
+      expect(validarDataBrasileira('14/10/2026')).toBe(true);
+      expect(validarDataBrasileira('31/02/2026')).toBe(false);
+      expect(validarDataBrasileira('99/99/9999')).toBe(false);
+    });
+
+    it('monta payload com Pergunte ao Cliente (UNDEFINED), juros, multa, desconto e correios', () => {
+      const payload = montarPayloadCobrancaAsaas({
+        customer: 'cus_1',
+        tipo_cobranca: 'UNDEFINED',
+        forma: 'avista',
+        valor: 1500,
+        data_vencimento: '2026-10-25',
+        descricao: 'Honorários com juros e desconto',
+        postalService: true,
+        interest: { value: 1, type: 'PERCENTAGE' },
+        fine: { value: 2, type: 'PERCENTAGE' },
+        discount: { value: 50, type: 'FIXED', dueDateLimitDays: 5 },
+      });
+
+      expect(payload.billingType).toBe('UNDEFINED');
+      expect(payload.postalService).toBe(true);
+      expect(payload.interest?.value).toBe(1);
+      expect(payload.fine?.value).toBe(2);
+      expect(payload.discount?.value).toBe(50);
+      expect(payload.discount?.dueDateLimitDays).toBe(5);
     });
   });
 });

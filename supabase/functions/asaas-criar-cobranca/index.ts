@@ -66,6 +66,11 @@ serve(async (req) => {
       data_vencimento,
       numero_parcelas = 1,
       descricao,
+      postal_service,
+      postalService,
+      discount,
+      fine,
+      interest,
     } = body;
 
     if (!cliente_id || !valor || valor <= 0 || !data_vencimento) {
@@ -195,7 +200,7 @@ serve(async (req) => {
 
     if (isAssinatura) {
       // POST /v3/subscriptions
-      const subPayload = {
+      const subPayload: any = {
         customer: asaasCustomerId,
         billingType: tipo_cobranca,
         value: valor,
@@ -204,6 +209,28 @@ serve(async (req) => {
         description: descricao || "Honorários de Assessoria Jurídica Recorrente (Partido Mensal)",
         externalReference: externalRef,
       };
+
+      if (discount && Number(discount.value) > 0) {
+        subPayload.discount = {
+          value: Number(discount.value),
+          dueDateLimitDays: Number(discount.dueDateLimitDays ?? 0),
+          type: discount.type || "PERCENTAGE",
+        };
+      }
+
+      if (fine && Number(fine.value) > 0) {
+        subPayload.fine = {
+          value: Number(fine.value),
+          type: fine.type || "PERCENTAGE",
+        };
+      }
+
+      if (interest && Number(interest.value) > 0) {
+        subPayload.interest = {
+          value: Number(interest.value),
+          type: interest.type || "PERCENTAGE",
+        };
+      }
 
       const subRes = await fetch(`${asaasBaseUrl}/subscriptions`, {
         method: "POST",
@@ -244,7 +271,7 @@ serve(async (req) => {
         dueDate: data_vencimento,
         description: descricao || "Honorários Advocatícios",
         externalReference: externalRef,
-        postalService: false,
+        postalService: Boolean(postal_service || postalService),
       };
 
       if (isParcelado) {
@@ -252,6 +279,28 @@ serve(async (req) => {
         payPayload.totalValue = valor;
       } else {
         payPayload.value = valor;
+      }
+
+      if (discount && Number(discount.value) > 0) {
+        payPayload.discount = {
+          value: Number(discount.value),
+          dueDateLimitDays: Number(discount.dueDateLimitDays ?? 0),
+          type: discount.type || "PERCENTAGE",
+        };
+      }
+
+      if (fine && Number(fine.value) > 0) {
+        payPayload.fine = {
+          value: Number(fine.value),
+          type: fine.type || "PERCENTAGE",
+        };
+      }
+
+      if (interest && Number(interest.value) > 0) {
+        payPayload.interest = {
+          value: Number(interest.value),
+          type: interest.type || "PERCENTAGE",
+        };
       }
 
       const payRes = await fetch(`${asaasBaseUrl}/payments`, {

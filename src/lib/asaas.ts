@@ -18,6 +18,21 @@ export interface CriarCobrancaPayload {
   data_vencimento: string;
   numero_parcelas?: number;
   descricao?: string;
+  postal_service?: boolean;
+  postalService?: boolean;
+  discount?: {
+    value: number;
+    dueDateLimitDays?: number;
+    type?: 'PERCENTAGE' | 'FIXED';
+  };
+  fine?: {
+    value: number;
+    type?: 'PERCENTAGE' | 'FIXED';
+  };
+  interest?: {
+    value: number;
+    type?: 'PERCENTAGE' | 'FIXED';
+  };
 }
 
 export interface CriarCobrancaResult {

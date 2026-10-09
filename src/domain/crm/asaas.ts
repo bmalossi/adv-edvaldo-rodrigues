@@ -206,6 +206,22 @@ export function validarDadosCobranca(input: ValidarCobrancaInput): { valido: boo
   return { valido: true };
 }
 
+export interface RegraDescontoAsaas {
+  value: number;
+  dueDateLimitDays?: number;
+  type?: 'PERCENTAGE' | 'FIXED';
+}
+
+export interface RegraJurosAsaas {
+  value: number;
+  type?: 'PERCENTAGE' | 'FIXED';
+}
+
+export interface RegraMultaAsaas {
+  value: number;
+  type?: 'PERCENTAGE' | 'FIXED';
+}
+
 export interface MontarCobrancaParams {
   customer: string;
   tipo_cobranca: TipoCobrancaAsaas;
@@ -215,6 +231,10 @@ export interface MontarCobrancaParams {
   descricao?: string;
   numero_parcelas?: number;
   externalReference?: string;
+  postalService?: boolean;
+  discount?: RegraDescontoAsaas;
+  fine?: RegraMultaAsaas;
+  interest?: RegraJurosAsaas;
 }
 
 export interface AsaasPaymentPayload {
@@ -228,6 +248,9 @@ export interface AsaasPaymentPayload {
   description?: string;
   externalReference?: string;
   postalService?: boolean;
+  discount?: RegraDescontoAsaas;
+  fine?: RegraMultaAsaas;
+  interest?: RegraJurosAsaas;
 }
 
 export function montarPayloadCobrancaAsaas(params: MontarCobrancaParams): AsaasPaymentPayload {
@@ -239,7 +262,7 @@ export function montarPayloadCobrancaAsaas(params: MontarCobrancaParams): AsaasP
     dueDate: params.data_vencimento,
     description: params.descricao,
     externalReference: params.externalReference,
-    postalService: false,
+    postalService: Boolean(params.postalService),
   };
 
   if (isParcelado) {
@@ -247,6 +270,28 @@ export function montarPayloadCobrancaAsaas(params: MontarCobrancaParams): AsaasP
     payload.totalValue = params.valor;
   } else {
     payload.value = params.valor;
+  }
+
+  if (params.discount && params.discount.value > 0) {
+    payload.discount = {
+      value: params.discount.value,
+      dueDateLimitDays: params.discount.dueDateLimitDays ?? 0,
+      type: params.discount.type || 'PERCENTAGE',
+    };
+  }
+
+  if (params.fine && params.fine.value > 0) {
+    payload.fine = {
+      value: params.fine.value,
+      type: params.fine.type || 'PERCENTAGE',
+    };
+  }
+
+  if (params.interest && params.interest.value > 0) {
+    payload.interest = {
+      value: params.interest.value,
+      type: params.interest.type || 'PERCENTAGE',
+    };
   }
 
   return payload;
@@ -501,6 +546,59 @@ export function traduzirErroAsaas(err: any): string {
 
   return 'Ocorreu um erro no processamento junto ao Asaas.';
 }
+
+/**
+ * Aplica máscara de Data Brasileira: DD/MM/AAAA
+ */
+export function mascaraDataBrasileira(valor?: string | null): string {
+  const limpo = apenasNumeros(valor);
+  if (!limpo) return '';
+  return limpo
+    .slice(0, 8)
+    .replace(/^(\d{2})(\d)/, '$1/$2')
+    .replace(/^(\d{2})\/(\d{2})(\d)/, '$1/$2/$3');
+}
+
+/**
+ * Converte data DD/MM/AAAA para formato ISO YYYY-MM-DD
+ */
+export function converterDataBrParaIso(dataBr?: string | null): string | null {
+  if (!dataBr) return null;
+  const partes = dataBr.trim().split('/');
+  if (partes.length !== 3) return null;
+  const [dia, mes, ano] = partes;
+  if (!dia || !mes || !ano || dia.length !== 2 || mes.length !== 2 || ano.length !== 4) return null;
+  return `${ano}-${mes}-${dia}`;
+}
+
+/**
+ * Converte data ISO YYYY-MM-DD para formato brasileiro DD/MM/AAAA
+ */
+export function converterDataIsoParaBr(dataIso?: string | null): string {
+  if (!dataIso) return '';
+  const partes = dataIso.substring(0, 10).split('-');
+  if (partes.length !== 3) return dataIso;
+  const [ano, mes, dia] = partes;
+  return `${dia}/${mes}/${ano}`;
+}
+
+/**
+ * Valida se uma string DD/MM/AAAA é uma data de calendário válida
+ */
+export function validarDataBrasileira(dataBr?: string | null): boolean {
+  if (!dataBr) return false;
+  const iso = converterDataBrParaIso(dataBr);
+  if (!iso) return false;
+  const data = new Date(iso + 'T12:00:00Z');
+  if (isNaN(data.getTime())) return false;
+  const [ano, mes, dia] = iso.split('-').map(Number);
+  return (
+    data.getUTCFullYear() === ano &&
+    data.getUTCMonth() + 1 === mes &&
+    data.getUTCDate() === dia
+  );
+}
+
 
 
 
