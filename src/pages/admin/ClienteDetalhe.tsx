@@ -193,7 +193,8 @@ export default function ClienteDetalhe() {
       .eq('id', cliente.id);
 
     if (error) {
-      toast.error('Erro ao excluir cliente');
+      console.error('Erro ao excluir cliente:', error);
+      toast.error(`Erro ao excluir cliente: ${error.message || 'Sem permissão'}`);
     } else {
       toast.success('Registro excluído com sucesso');
       navigate('/admin/crm/clientes');
