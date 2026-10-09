@@ -37,6 +37,9 @@ import {
   converterDataBrParaIso,
   converterDataIsoParaBr,
   validarDataBrasileira,
+  mascaraMoeda,
+  converterMoedaParaNumero,
+  formatarMoedaBrl,
 } from '@/domain/crm/asaas';
 import { criarCobrancaAsaas } from '@/lib/asaas';
 import { cn } from '@/lib/utils';
@@ -112,7 +115,7 @@ export function ModalNovaCobrancaAsaas({
 
   const handleEmitir = async (e: React.FormEvent) => {
     e.preventDefault();
-    const valorNumerico = parseFloat(valorStr.replace(',', '.'));
+    const valorNumerico = converterMoedaParaNumero(valorStr);
     if (!valorNumerico || valorNumerico <= 0) {
       toast.error('Informe um valor válido maior que zero.');
       return;
@@ -145,7 +148,9 @@ export function ModalNovaCobrancaAsaas({
       };
 
       // Juros
-      const jurosNum = parseFloat(jurosValor.replace(',', '.'));
+      const jurosNum = jurosTipo === 'FIXED'
+        ? converterMoedaParaNumero(jurosValor)
+        : parseFloat(jurosValor.replace(',', '.'));
       if (jurosNum > 0) {
         payloadEnvio.interest = {
           value: jurosNum,
@@ -154,7 +159,9 @@ export function ModalNovaCobrancaAsaas({
       }
 
       // Multa
-      const multaNum = parseFloat(multaValor.replace(',', '.'));
+      const multaNum = multaTipo === 'FIXED'
+        ? converterMoedaParaNumero(multaValor)
+        : parseFloat(multaValor.replace(',', '.'));
       if (multaNum > 0) {
         payloadEnvio.fine = {
           value: multaNum,
@@ -163,7 +170,9 @@ export function ModalNovaCobrancaAsaas({
       }
 
       // Desconto
-      const descontoNum = parseFloat(descontoValor.replace(',', '.'));
+      const descontoNum = descontoTipo === 'FIXED'
+        ? converterMoedaParaNumero(descontoValor)
+        : parseFloat(descontoValor.replace(',', '.'));
       if (descontoNum > 0) {
         payloadEnvio.discount = {
           value: descontoNum,
@@ -536,7 +545,7 @@ export function ModalNovaCobrancaAsaas({
                       required
                       placeholder="0,00"
                       value={valorStr}
-                      onChange={(e) => setValorStr(e.target.value)}
+                      onChange={(e) => setValorStr(mascaraMoeda(e.target.value))}
                       className="h-11 pl-10 bg-[#091322] border-white/10 text-white placeholder:text-slate-500 focus:border-secondary focus:ring-1 focus:ring-secondary rounded-xl text-sm font-mono font-medium"
                     />
                   </div>
@@ -578,14 +587,15 @@ export function ModalNovaCobrancaAsaas({
                     onChange={(e) => setNumeroParcelas(parseInt(e.target.value, 10))}
                     className="w-full h-11 bg-[#091322] border border-white/10 text-white rounded-xl px-3 text-sm focus:border-secondary focus:ring-1 focus:ring-secondary"
                   >
-                    {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
-                      <option key={n} value={n}>
-                        {n} parcelas de R${' '}
-                        {valorStr && parseFloat(valorStr.replace(',', '.')) > 0
-                          ? (parseFloat(valorStr.replace(',', '.')) / n).toFixed(2).replace('.', ',')
-                          : '0,00'}
-                      </option>
-                    ))}
+                    {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => {
+                      const total = converterMoedaParaNumero(valorStr);
+                      const valorParcela = total > 0 ? total / n : 0;
+                      return (
+                        <option key={n} value={n}>
+                          {n} parcelas de {formatarMoedaBrl(valorParcela)}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               )}
@@ -643,7 +653,10 @@ export function ModalNovaCobrancaAsaas({
                           <div className="flex items-center bg-[#060D17] rounded-md p-0.5 border border-white/10">
                             <button
                               type="button"
-                              onClick={() => setJurosTipo('PERCENTAGE')}
+                              onClick={() => {
+                                setJurosTipo('PERCENTAGE');
+                                setJurosValor('');
+                              }}
                               className={cn(
                                 "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
                                 jurosTipo === 'PERCENTAGE' ? "bg-secondary text-primary" : "text-slate-400"
@@ -653,7 +666,10 @@ export function ModalNovaCobrancaAsaas({
                             </button>
                             <button
                               type="button"
-                              onClick={() => setJurosTipo('FIXED')}
+                              onClick={() => {
+                                setJurosTipo('FIXED');
+                                setJurosValor('');
+                              }}
                               className={cn(
                                 "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
                                 jurosTipo === 'FIXED' ? "bg-secondary text-primary" : "text-slate-400"
@@ -663,13 +679,24 @@ export function ModalNovaCobrancaAsaas({
                             </button>
                           </div>
                         </div>
-                        <Input
-                          type="text"
-                          placeholder="0,00"
-                          value={jurosValor}
-                          onChange={(e) => setJurosValor(e.target.value)}
-                          className="h-9 bg-[#060D17] border-white/10 text-white font-mono rounded-lg text-xs"
-                        />
+                        <div className="relative">
+                          {jurosTipo === 'FIXED' && (
+                            <span className="absolute left-2.5 top-2.5 text-[11px] text-secondary font-mono font-bold">R$</span>
+                          )}
+                          <Input
+                            type="text"
+                            placeholder="0,00"
+                            value={jurosValor}
+                            onChange={(e) => {
+                              const val = jurosTipo === 'FIXED' ? mascaraMoeda(e.target.value) : e.target.value;
+                              setJurosValor(val);
+                            }}
+                            className={cn(
+                              "h-9 bg-[#060D17] border-white/10 text-white font-mono rounded-lg text-xs",
+                              jurosTipo === 'FIXED' && "pl-8"
+                            )}
+                          />
+                        </div>
                         <span className="text-[10px] text-slate-500">
                           {jurosTipo === 'PERCENTAGE' ? 'Percentual cobrado proporcionalmente ao mês' : 'Valor fixo cobrado por mês de atraso'}
                         </span>
@@ -682,7 +709,10 @@ export function ModalNovaCobrancaAsaas({
                           <div className="flex items-center bg-[#060D17] rounded-md p-0.5 border border-white/10">
                             <button
                               type="button"
-                              onClick={() => setMultaTipo('PERCENTAGE')}
+                              onClick={() => {
+                                setMultaTipo('PERCENTAGE');
+                                setMultaValor('');
+                              }}
                               className={cn(
                                 "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
                                 multaTipo === 'PERCENTAGE' ? "bg-secondary text-primary" : "text-slate-400"
@@ -692,7 +722,10 @@ export function ModalNovaCobrancaAsaas({
                             </button>
                             <button
                               type="button"
-                              onClick={() => setMultaTipo('FIXED')}
+                              onClick={() => {
+                                setMultaTipo('FIXED');
+                                setMultaValor('');
+                              }}
                               className={cn(
                                 "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
                                 multaTipo === 'FIXED' ? "bg-secondary text-primary" : "text-slate-400"
@@ -702,13 +735,24 @@ export function ModalNovaCobrancaAsaas({
                             </button>
                           </div>
                         </div>
-                        <Input
-                          type="text"
-                          placeholder="0,00"
-                          value={multaValor}
-                          onChange={(e) => setMultaValor(e.target.value)}
-                          className="h-9 bg-[#060D17] border-white/10 text-white font-mono rounded-lg text-xs"
-                        />
+                        <div className="relative">
+                          {multaTipo === 'FIXED' && (
+                            <span className="absolute left-2.5 top-2.5 text-[11px] text-secondary font-mono font-bold">R$</span>
+                          )}
+                          <Input
+                            type="text"
+                            placeholder="0,00"
+                            value={multaValor}
+                            onChange={(e) => {
+                              const val = multaTipo === 'FIXED' ? mascaraMoeda(e.target.value) : e.target.value;
+                              setMultaValor(val);
+                            }}
+                            className={cn(
+                              "h-9 bg-[#060D17] border-white/10 text-white font-mono rounded-lg text-xs",
+                              multaTipo === 'FIXED' && "pl-8"
+                            )}
+                          />
+                        </div>
                         <span className="text-[10px] text-slate-500">
                           {multaTipo === 'PERCENTAGE' ? 'Percentual único aplicado após o vencimento' : 'Valor fixo único por atraso'}
                         </span>
@@ -723,7 +767,10 @@ export function ModalNovaCobrancaAsaas({
                           <div className="flex items-center bg-[#060D17] rounded-md p-0.5 border border-white/10">
                             <button
                               type="button"
-                              onClick={() => setDescontoTipo('PERCENTAGE')}
+                              onClick={() => {
+                                setDescontoTipo('PERCENTAGE');
+                                setDescontoValor('');
+                              }}
                               className={cn(
                                 "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
                                 descontoTipo === 'PERCENTAGE' ? "bg-secondary text-primary" : "text-slate-400"
@@ -733,7 +780,10 @@ export function ModalNovaCobrancaAsaas({
                             </button>
                             <button
                               type="button"
-                              onClick={() => setDescontoTipo('FIXED')}
+                              onClick={() => {
+                                setDescontoTipo('FIXED');
+                                setDescontoValor('');
+                              }}
                               className={cn(
                                 "px-1.5 py-0.5 text-[10px] rounded font-bold transition-all",
                                 descontoTipo === 'FIXED' ? "bg-secondary text-primary" : "text-slate-400"
@@ -743,13 +793,24 @@ export function ModalNovaCobrancaAsaas({
                             </button>
                           </div>
                         </div>
-                        <Input
-                          type="text"
-                          placeholder="0,00"
-                          value={descontoValor}
-                          onChange={(e) => setDescontoValor(e.target.value)}
-                          className="h-9 bg-[#060D17] border-white/10 text-white font-mono rounded-lg text-xs"
-                        />
+                        <div className="relative">
+                          {descontoTipo === 'FIXED' && (
+                            <span className="absolute left-2.5 top-2.5 text-[11px] text-secondary font-mono font-bold">R$</span>
+                          )}
+                          <Input
+                            type="text"
+                            placeholder="0,00"
+                            value={descontoValor}
+                            onChange={(e) => {
+                              const val = descontoTipo === 'FIXED' ? mascaraMoeda(e.target.value) : e.target.value;
+                              setDescontoValor(val);
+                            }}
+                            className={cn(
+                              "h-9 bg-[#060D17] border-white/10 text-white font-mono rounded-lg text-xs",
+                              descontoTipo === 'FIXED' && "pl-8"
+                            )}
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-1.5">

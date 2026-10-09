@@ -15,6 +15,9 @@ import {
   converterDataBrParaIso,
   converterDataIsoParaBr,
   validarDataBrasileira,
+  mascaraMoeda,
+  converterMoedaParaNumero,
+  formatarMoedaBrl,
   ClienteAsaasPayload,
 } from '@/domain/crm/asaas';
 
@@ -362,6 +365,37 @@ describe('Domínio Asaas: Validações, Sanitização e Idempotência', () => {
       expect(payload.fine?.value).toBe(2);
       expect(payload.discount?.value).toBe(50);
       expect(payload.discount?.dueDateLimitDays).toBe(5);
+    });
+
+    it('aplica máscara monetária brasileira progressiva com ponto e vírgula', () => {
+      expect(mascaraMoeda('')).toBe('');
+      expect(mascaraMoeda('1')).toBe('0,01');
+      expect(mascaraMoeda('15')).toBe('0,15');
+      expect(mascaraMoeda('150')).toBe('1,50');
+      expect(mascaraMoeda('1500')).toBe('15,00');
+      expect(mascaraMoeda('15000')).toBe('150,00');
+      expect(mascaraMoeda('150000')).toBe('1.500,00');
+      expect(mascaraMoeda('100000000')).toBe('1.000.000,00');
+      // Aceita também número já existente
+      expect(mascaraMoeda(1500)).toBe('1.500,00');
+      expect(mascaraMoeda(250.5)).toBe('250,50');
+    });
+
+    it('converte string de moeda brasileira formatada para número float', () => {
+      expect(converterMoedaParaNumero('')).toBe(0);
+      expect(converterMoedaParaNumero(undefined)).toBe(0);
+      expect(converterMoedaParaNumero('0,01')).toBe(0.01);
+      expect(converterMoedaParaNumero('15,00')).toBe(15);
+      expect(converterMoedaParaNumero('1.500,00')).toBe(1500);
+      expect(converterMoedaParaNumero('1.000.000,50')).toBe(1000000.5);
+      expect(converterMoedaParaNumero(1500)).toBe(1500);
+    });
+
+    it('formata número float para padrão de moeda brasileira BRL', () => {
+      const formatado = formatarMoedaBrl(1500);
+      // Contém 1.500,00 e o símbolo R$ (podendo ter non-breaking space)
+      expect(formatado).toMatch(/1\.500,00/);
+      expect(formatado).toMatch(/R\$/);
     });
   });
 });

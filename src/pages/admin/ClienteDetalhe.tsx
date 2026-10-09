@@ -187,14 +187,26 @@ export default function ClienteDetalhe() {
     const confirmar = window.confirm('Deseja realmente mover este cliente para a lixeira?');
     if (!confirmar) return;
 
-    const { error } = await supabase
-      .from('clientes')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', cliente.id);
+    let erroExclusao: any = null;
 
-    if (error) {
-      console.error('Erro ao excluir cliente:', error);
-      toast.error(`Erro ao excluir cliente: ${error.message || 'Sem permissão'}`);
+    // 1. Tenta exclusão segura via RPC dedicada (imune a travas de RLS de UPDATE)
+    const { error: rpcError } = await supabase.rpc('soft_delete_cliente', {
+      p_cliente_id: cliente.id,
+    });
+
+    if (rpcError) {
+      console.warn('RPC soft_delete_cliente falhou ou não existe, tentando update direto:', rpcError);
+      // 2. Fallback para update direto caso a RPC ainda não tenha sido criada
+      const { error: updateError } = await supabase
+        .from('clientes')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', cliente.id);
+      erroExclusao = updateError;
+    }
+
+    if (erroExclusao) {
+      console.error('Erro ao excluir cliente:', erroExclusao);
+      toast.error(`Erro ao excluir cliente: ${erroExclusao.message || 'Sem permissão'}`);
     } else {
       toast.success('Registro excluído com sucesso');
       navigate('/admin/crm/clientes');

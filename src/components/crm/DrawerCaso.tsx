@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { mascaraMoeda, converterMoedaParaNumero } from '@/domain/crm/asaas';
 import { PainelFinanceiroAsaas } from './PainelFinanceiroAsaas';
 
 interface Perfil {
@@ -74,7 +75,7 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
     setProcessoOriginario(caso.processo_originario || '');
     setIdentificacaoPasta(caso.identificacao_pasta || '');
     setDataRequerimento(caso.data_requerimento ? caso.data_requerimento.substring(0, 10) : '');
-    setValorCausa(caso.valor_causa != null ? String(caso.valor_causa) : '');
+    setValorCausa(caso.valor_causa != null ? mascaraMoeda(caso.valor_causa) : '');
     setDataFechamento(caso.data_fechamento ? caso.data_fechamento.substring(0, 10) : '');
     setDataTransitoJulgado(caso.data_transito_julgado ? caso.data_transito_julgado.substring(0, 10) : '');
     setResultadoFinal(caso.resultado_final || '');
@@ -112,7 +113,7 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
         processo_originario: processoOriginario.trim() || null,
         identificacao_pasta: identificacaoPasta.trim() || null,
         data_requerimento: dataRequerimento ? new Date(dataRequerimento + 'T12:00:00Z').toISOString() : null,
-        valor_causa: valorCausa ? parseFloat(valorCausa) : null,
+        valor_causa: valorCausa ? converterMoedaParaNumero(valorCausa) : null,
         data_fechamento: dataFechamento ? new Date(dataFechamento + 'T12:00:00Z').toISOString() : null,
         data_transito_julgado: dataTransitoJulgado ? new Date(dataTransitoJulgado + 'T12:00:00Z').toISOString() : null,
         resultado_final: resultadoFinal || null,
@@ -323,16 +324,18 @@ export function DrawerCaso({ caso, onFechar, onAtualizado }: DrawerCasoProps) {
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                Valor da causa (R$)
+                Valor da causa
               </label>
-              <Input
-                type="number"
-                step="0.01"
-                value={valorCausa}
-                onChange={(e) => setValorCausa(e.target.value)}
-                placeholder="R$ 0,00"
-                className="h-9 text-xs bg-[#15203b] border-white/10 text-white placeholder:text-slate-500 focus:border-secondary rounded-lg"
-              />
+              <div className="relative">
+                <span className="absolute left-2.5 top-2.5 text-[11px] text-secondary font-mono font-bold">R$</span>
+                <Input
+                  type="text"
+                  value={valorCausa}
+                  onChange={(e) => setValorCausa(mascaraMoeda(e.target.value))}
+                  placeholder="0,00"
+                  className="h-9 pl-8 text-xs bg-[#15203b] border-white/10 text-white placeholder:text-slate-500 focus:border-secondary rounded-lg font-mono"
+                />
+              </div>
             </div>
           </div>
 

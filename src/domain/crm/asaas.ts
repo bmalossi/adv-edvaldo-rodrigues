@@ -599,6 +599,53 @@ export function validarDataBrasileira(dataBr?: string | null): boolean {
   );
 }
 
+/**
+ * Aplica máscara de moeda brasileira (BRL) com ponto e vírgula em tempo real:
+ * Digitação progressiva de centavos: "1" -> "0,01", "1500" -> "15,00", "150000" -> "1.500,00"
+ */
+export function mascaraMoeda(valor?: string | number | null): string {
+  if (valor === undefined || valor === null || valor === '') return '';
+
+  if (typeof valor === 'number') {
+    return new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(valor);
+  }
+
+  const apenasDigitos = String(valor).replace(/\D/g, '');
+  if (!apenasDigitos) return '';
+
+  const numero = Number(apenasDigitos) / 100;
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numero);
+}
+
+/**
+ * Converte string formatada em moeda brasileira (ex: "1.500,00" ou "250,50") para número float (1500.00)
+ */
+export function converterMoedaParaNumero(valor?: string | number | null): number {
+  if (valor === undefined || valor === null) return 0;
+  if (typeof valor === 'number') return valor;
+  const limpo = String(valor).replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+  const num = parseFloat(limpo);
+  return isNaN(num) ? 0 : num;
+}
+
+/**
+ * Formata um número float para exibição padrão de moeda brasileira (R$ 1.500,00)
+ */
+export function formatarMoedaBrl(valor?: number | null): string {
+  if (valor === undefined || valor === null || isNaN(valor)) return 'R$ 0,00';
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(valor);
+}
+
+
 
 
 
