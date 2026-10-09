@@ -35,7 +35,6 @@ import {
   traduzirErroAsaas,
   mascaraDataBrasileira,
   converterDataBrParaIso,
-  converterDataIsoParaBr,
   validarDataBrasileira,
   mascaraMoeda,
   converterMoedaParaNumero,
@@ -69,12 +68,8 @@ export function ModalNovaCobrancaAsaas({
   const [forma, setForma] = useState<'avista' | 'parcelado' | 'assinatura'>('avista');
   const [valorStr, setValorStr] = useState('');
   
-  // Data de vencimento no formato brasileiro DD/MM/AAAA
-  const [dataVencimentoBr, setDataVencimentoBr] = useState(() => {
-    const data = new Date();
-    data.setDate(data.getDate() + 5);
-    return converterDataIsoParaBr(data.toISOString().substring(0, 10));
-  });
+  // Data de vencimento no formato brasileiro DD/MM/YYYY (sem pré-preenchimento)
+  const [dataVencimentoBr, setDataVencimentoBr] = useState('');
 
   const [numeroParcelas, setNumeroParcelas] = useState(1);
   const [descricao, setDescricao] = useState(() =>
@@ -103,6 +98,7 @@ export function ModalNovaCobrancaAsaas({
     setCobrancaCriada(null);
     setLoading(false);
     setValorStr('');
+    setDataVencimentoBr('');
     setCopiadoPix(false);
     setCopiadoLinha(false);
     setCopiadoLink(false);
@@ -579,14 +575,14 @@ export function ModalNovaCobrancaAsaas({
                       <Calendar className="w-3.5 h-3.5 text-secondary" />
                       {forma === 'assinatura' ? '1º Vencimento Recorrente' : 'Data de Vencimento'}
                     </span>
-                    <span className="text-[10px] text-slate-500 font-mono">DD/MM/AAAA</span>
+                    <span className="text-[10px] text-slate-500 font-mono">DD/MM/YYYY</span>
                   </Label>
                   <div className="relative">
                     <Input
                       type="text"
                       required
                       maxLength={10}
-                      placeholder="DD/MM/AAAA"
+                      placeholder="DD/MM/YYYY"
                       value={dataVencimentoBr}
                       onChange={(e) => setDataVencimentoBr(mascaraDataBrasileira(e.target.value))}
                       className={cn(
