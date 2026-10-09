@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { sincronizarClienteAsaas } from '@/lib/asaas';
 import { validarCpfCnpj, mascaraCpfCnpj, mascaraTelefone, mascaraCep } from '@/domain/crm/asaas';
+import { cn } from '@/lib/utils';
 
 export default function ClienteForm() {
   const { id } = useParams<{ id: string }>();
