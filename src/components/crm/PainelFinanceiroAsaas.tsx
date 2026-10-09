@@ -62,6 +62,11 @@ const STATUS_COBRANCA_CONFIG: Record<
     badge: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
     icon: AlertCircle,
   },
+  CHARGEBACK: {
+    label: 'Chargeback / Disputa',
+    badge: 'bg-rose-600/20 text-rose-400 border-rose-500/40 font-bold',
+    icon: AlertCircle,
+  },
 };
 
 export function PainelFinanceiroAsaas({

@@ -6,7 +6,8 @@ export type StatusCobrancaAsaas =
   | 'CONFIRMED'
   | 'OVERDUE'
   | 'REFUNDED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'CHARGEBACK';
 
 export interface ClienteAsaasPayload {
   name: string;
@@ -291,8 +292,10 @@ export interface WebhookEventoInput {
     netValue?: number;
     billingType: string;
     status: string;
+    dueDate?: string;
     paymentDate?: string;
     clientPaymentDate?: string;
+    description?: string;
   };
   clienteAtual: {
     id: string;
@@ -320,6 +323,11 @@ export interface ResultadoProcessamentoWebhook {
 export function processarEventoWebhookAsaas(input: WebhookEventoInput): ResultadoProcessamentoWebhook {
   const isConfirmado = input.event === 'PAYMENT_RECEIVED' || input.event === 'PAYMENT_CONFIRMED';
   const isVencido = input.event === 'PAYMENT_OVERDUE';
+  const isAtualizado = input.event === 'PAYMENT_UPDATED';
+  const isCancelado = input.event === 'PAYMENT_DELETED';
+  const isRestaurado = input.event === 'PAYMENT_RESTORED';
+  const isEstornado = input.event === 'PAYMENT_REFUNDED' || input.event === 'PAYMENT_PARTIALLY_REFUNDED';
+  const isChargeback = input.event === 'PAYMENT_CHARGEBACK_REQUESTED' || input.event === 'PAYMENT_CHARGEBACK_DISPUTE';
   const dataPgto = input.payment.clientPaymentDate || input.payment.paymentDate || new Date().toISOString();
 
   if (isConfirmado) {
@@ -344,6 +352,56 @@ export function processarEventoWebhookAsaas(input: WebhookEventoInput): Resultad
       devePromoverCliente: false,
       deveAvancarCaso: false,
       descricaoInteracao: `Alerta financeiro Asaas: Fatura de honorários de R$ ${input.payment.value.toFixed(2)} (${input.payment.billingType}) vencida sem liquidação. Ref: ${input.payment.id}.`,
+      tipoInteracao: 'nota_interna',
+    };
+  }
+
+  if (isAtualizado) {
+    return {
+      novoStatusCobranca: (input.payment.status as StatusCobrancaAsaas) || 'PENDING',
+      devePromoverCliente: false,
+      deveAvancarCaso: false,
+      descricaoInteracao: `Atualização de fatura Asaas: Fatura ref: ${input.payment.id} atualizada para R$ ${input.payment.value.toFixed(2)}${input.payment.dueDate ? ` (novo vencimento: ${input.payment.dueDate})` : ''}.`,
+      tipoInteracao: 'nota_interna',
+    };
+  }
+
+  if (isCancelado) {
+    return {
+      novoStatusCobranca: 'CANCELLED',
+      devePromoverCliente: false,
+      deveAvancarCaso: false,
+      descricaoInteracao: `Fatura de honorários cancelada/removida no Asaas: R$ ${input.payment.value.toFixed(2)}. Ref: ${input.payment.id}.`,
+      tipoInteracao: 'nota_interna',
+    };
+  }
+
+  if (isRestaurado) {
+    return {
+      novoStatusCobranca: 'PENDING',
+      devePromoverCliente: false,
+      deveAvancarCaso: false,
+      descricaoInteracao: `Fatura de honorários restaurada no Asaas: R$ ${input.payment.value.toFixed(2)}. Ref: ${input.payment.id}.`,
+      tipoInteracao: 'nota_interna',
+    };
+  }
+
+  if (isEstornado) {
+    return {
+      novoStatusCobranca: 'REFUNDED',
+      devePromoverCliente: false,
+      deveAvancarCaso: false,
+      descricaoInteracao: `[ALERTA ESTORNO] Fatura de honorários de R$ ${input.payment.value.toFixed(2)} foi estornada/reembolsada no Asaas. Ref: ${input.payment.id}.`,
+      tipoInteracao: 'nota_interna',
+    };
+  }
+
+  if (isChargeback) {
+    return {
+      novoStatusCobranca: 'CHARGEBACK',
+      devePromoverCliente: false,
+      deveAvancarCaso: false,
+      descricaoInteracao: `[ALERTA CRÍTICO CHARGEBACK] Notificação de contestação/chargeback recebida para a fatura ref: ${input.payment.id} no valor de R$ ${input.payment.value.toFixed(2)}.`,
       tipoInteracao: 'nota_interna',
     };
   }

@@ -219,6 +219,80 @@ describe('Domínio Asaas: Validações, Sanitização e Idempotência', () => {
       expect(resultado.deveAvancarCaso).toBe(false);
       expect(resultado.descricaoInteracao).toContain('vencida');
     });
+
+    it('processa PAYMENT_UPDATED registrando novo valor e vencimento', () => {
+      const evento = {
+        event: 'PAYMENT_UPDATED',
+        payment: {
+          id: 'pay_upd',
+          customer: 'cus_1',
+          value: 750,
+          dueDate: '2026-11-20',
+          billingType: 'BOLETO',
+          status: 'PENDING',
+        },
+        clienteAtual: { id: 'cli_1', status_ciclo: 'ativo' as const },
+      };
+
+      const resultado = processarEventoWebhookAsaas(evento);
+      expect(resultado.novoStatusCobranca).toBe('PENDING');
+      expect(resultado.descricaoInteracao).toContain('750.00');
+      expect(resultado.descricaoInteracao).toContain('2026-11-20');
+    });
+
+    it('processa PAYMENT_DELETED alterando status para CANCELLED', () => {
+      const evento = {
+        event: 'PAYMENT_DELETED',
+        payment: {
+          id: 'pay_del',
+          customer: 'cus_1',
+          value: 300,
+          billingType: 'PIX',
+          status: 'DELETED',
+        },
+        clienteAtual: { id: 'cli_1', status_ciclo: 'ativo' as const },
+      };
+
+      const resultado = processarEventoWebhookAsaas(evento);
+      expect(resultado.novoStatusCobranca).toBe('CANCELLED');
+      expect(resultado.descricaoInteracao).toContain('cancelada');
+    });
+
+    it('processa PAYMENT_REFUNDED alterando status para REFUNDED com alerta', () => {
+      const evento = {
+        event: 'PAYMENT_REFUNDED',
+        payment: {
+          id: 'pay_ref',
+          customer: 'cus_1',
+          value: 1200,
+          billingType: 'CREDIT_CARD',
+          status: 'REFUNDED',
+        },
+        clienteAtual: { id: 'cli_1', status_ciclo: 'ativo' as const },
+      };
+
+      const resultado = processarEventoWebhookAsaas(evento);
+      expect(resultado.novoStatusCobranca).toBe('REFUNDED');
+      expect(resultado.descricaoInteracao).toContain('ESTORNO');
+    });
+
+    it('processa PAYMENT_CHARGEBACK_REQUESTED com status CHARGEBACK e alerta crítico', () => {
+      const evento = {
+        event: 'PAYMENT_CHARGEBACK_REQUESTED',
+        payment: {
+          id: 'pay_chg',
+          customer: 'cus_1',
+          value: 2500,
+          billingType: 'CREDIT_CARD',
+          status: 'CHARGEBACK_REQUESTED',
+        },
+        clienteAtual: { id: 'cli_1', status_ciclo: 'ativo' as const },
+      };
+
+      const resultado = processarEventoWebhookAsaas(evento);
+      expect(resultado.novoStatusCobranca).toBe('CHARGEBACK');
+      expect(resultado.descricaoInteracao).toContain('CRÍTICO CHARGEBACK');
+    });
   });
 
   describe('Formatação de Máscaras e Hardening de Interface', () => {
