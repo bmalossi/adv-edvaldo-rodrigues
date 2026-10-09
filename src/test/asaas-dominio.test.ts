@@ -106,6 +106,16 @@ describe('Domínio Asaas: Validações, Sanitização e Idempotência', () => {
       expect(res.erro).toContain('Valor');
     });
 
+    it('rejeita cobrança com valor menor que R$ 5,00 (mínimo do Asaas)', () => {
+      const res = validarDadosCobranca({
+        valor: 1.0,
+        data_vencimento: '2026-11-01',
+        tipo_cobranca: 'PIX',
+      });
+      expect(res.valido).toBe(false);
+      expect(res.erro).toContain('5,00');
+    });
+
     it('rejeita cobrança sem data de vencimento', () => {
       const res = validarDadosCobranca({
         valor: 1500,
@@ -326,8 +336,16 @@ describe('Domínio Asaas: Validações, Sanitização e Idempotência', () => {
       };
       expect(traduzirErroAsaas(erroCpf)).toContain('CPF');
 
+      const erroArray = [
+        { code: 'invalid_object', description: 'O valor da cobrança (R$ 1,00) menos o valor do desconto (R$ 0,00) não pode ser menor que R$ 5,00.' }
+      ];
+      expect(traduzirErroAsaas(erroArray)).toContain('não pode ser menor que R$ 5,00');
+
       const erroGenerico = 'Unauthorized';
       expect(traduzirErroAsaas(erroGenerico)).toContain('Chave de API');
+
+      const erroEdgeHttp = 'FunctionsHttpError: Edge Function returned a non-2xx status code';
+      expect(traduzirErroAsaas(erroEdgeHttp)).toContain('comunicação com a API do Asaas');
     });
 
     it('aplica máscara de data brasileira progressiva DD/MM/AAAA', () => {

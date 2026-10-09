@@ -116,9 +116,28 @@ export function ModalNovaCobrancaAsaas({
   const handleEmitir = async (e: React.FormEvent) => {
     e.preventDefault();
     const valorNumerico = converterMoedaParaNumero(valorStr);
-    if (!valorNumerico || valorNumerico <= 0) {
-      toast.error('Informe um valor válido maior que zero.');
+    if (!valorNumerico || valorNumerico < 5) {
+      toast.error('O valor da cobrança não pode ser inferior a R$ 5,00 (requisito mínimo exigido pelo Asaas).');
       return;
+    }
+
+    if (forma === 'parcelado') {
+      const valorPorParcela = valorNumerico / (numeroParcelas || 1);
+      if (valorPorParcela < 5) {
+        toast.error(`Cada parcela deve ser de no mínimo R$ 5,00 (atualmente R$ ${valorPorParcela.toFixed(2).replace('.', ',')} por parcela). Reduza a quantidade de parcelas ou aumente o valor.`);
+        return;
+      }
+    }
+
+    // Valida se o desconto não reduz o valor líquido abaixo do limite de R$ 5,00
+    if (descontoValor) {
+      const descVal = descontoTipo === 'FIXED'
+        ? converterMoedaParaNumero(descontoValor)
+        : (valorNumerico * (parseFloat(descontoValor.replace(',', '.')) || 0)) / 100;
+      if (descVal > 0 && valorNumerico - descVal < 5) {
+        toast.error('O valor da cobrança menos o desconto não pode ser inferior a R$ 5,00.');
+        return;
+      }
     }
 
     if (!validarDataBrasileira(dataVencimentoBr)) {
@@ -549,6 +568,9 @@ export function ModalNovaCobrancaAsaas({
                       className="h-11 pl-10 bg-[#091322] border-white/10 text-white placeholder:text-slate-500 focus:border-secondary focus:ring-1 focus:ring-secondary rounded-xl text-sm font-mono font-medium"
                     />
                   </div>
+                  <span className="text-[10px] text-slate-500 block">
+                    * Mínimo de R$ 5,00 por cobrança ou parcela (regra Asaas).
+                  </span>
                 </div>
 
                 <div className="space-y-1.5">

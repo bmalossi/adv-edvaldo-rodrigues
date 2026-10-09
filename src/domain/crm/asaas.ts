@@ -197,8 +197,8 @@ export interface ValidarCobrancaInput {
 }
 
 export function validarDadosCobranca(input: ValidarCobrancaInput): { valido: boolean; erro?: string } {
-  if (!input.valor || input.valor <= 0) {
-    return { valido: false, erro: 'Valor da cobrança deve ser maior que zero (R$ 0,00).' };
+  if (!input.valor || input.valor < 5) {
+    return { valido: false, erro: 'Valor da cobrança não pode ser inferior a R$ 5,00 (exigência mínima do Asaas).' };
   }
   if (!input.data_vencimento || !input.data_vencimento.trim()) {
     return { valido: false, erro: 'Data de vencimento é obrigatória.' };
@@ -520,7 +520,18 @@ export function traduzirErroAsaas(err: any): string {
     if (err.includes('Unauthorized') || err.includes('401')) {
       return 'Chave de API do Asaas não autorizada ou token expirado. Verifique a ASAAS_API_KEY.';
     }
+    if (err.includes('non-2xx status code') || err.includes('FunctionsHttpError')) {
+      return 'Falha na comunicação com a API do Asaas. Verifique os dados da cobrança.';
+    }
     return err;
+  }
+
+  if (Array.isArray(err)) {
+    const msgs = err.map((e: any) => {
+      if (typeof e === 'string') return e;
+      return e.description || e.code || JSON.stringify(e);
+    }).filter(Boolean);
+    return msgs.length > 0 ? msgs.join(' ') : 'Erro retornado pela API Asaas.';
   }
 
   if (err.errors && Array.isArray(err.errors) && err.errors.length > 0) {
@@ -537,11 +548,15 @@ export function traduzirErroAsaas(err: any): string {
       }
       return desc;
     });
-    return mensagens.join(' ');
+    return mensagens.filter(Boolean).join(' ');
   }
 
   if (err.error) {
-    return typeof err.error === 'string' ? err.error : JSON.stringify(err.error);
+    return typeof err.error === 'string' ? err.error : traduzirErroAsaas(err.error);
+  }
+
+  if (err.message) {
+    return traduzirErroAsaas(err.message);
   }
 
   return 'Ocorreu um erro no processamento junto ao Asaas.';

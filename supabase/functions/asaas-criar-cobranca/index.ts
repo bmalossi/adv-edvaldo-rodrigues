@@ -73,10 +73,20 @@ serve(async (req) => {
       interest,
     } = body;
 
-    if (!cliente_id || !valor || valor <= 0 || !data_vencimento) {
+    if (!cliente_id || !valor || valor < 5 || !data_vencimento) {
       return new Response(
         JSON.stringify({
-          error: "Campos obrigatórios inválidos: cliente_id, valor (> 0) e data_vencimento são necessários.",
+          error: "O valor da cobrança não pode ser inferior a R$ 5,00 (requisito obrigatório do Asaas).",
+        }),
+        { status: 400, headers: { ...corsHeaders, "content-type": "application/json" } }
+      );
+    }
+
+    if (forma === "parcelado" && valor / (numero_parcelas || 1) < 5) {
+      const vParc = (valor / (numero_parcelas || 1)).toFixed(2).replace(".", ",");
+      return new Response(
+        JSON.stringify({
+          error: `O valor de cada parcela não pode ser inferior a R$ 5,00 (atualmente R$ ${vParc} por parcela).`,
         }),
         { status: 400, headers: { ...corsHeaders, "content-type": "application/json" } }
       );
@@ -240,9 +250,12 @@ serve(async (req) => {
 
       if (!subRes.ok) {
         const errJson = await subRes.json().catch(() => null);
+        console.error("Erro Asaas /subscriptions:", errJson);
+        const descAsaas = errJson?.errors?.[0]?.description;
+        const msgFinal = descAsaas || "Falha ao criar assinatura no Asaas.";
         return new Response(
           JSON.stringify({
-            error: "Falha ao criar assinatura no Asaas.",
+            error: msgFinal,
             details: errJson?.errors || errJson,
           }),
           { status: subRes.status, headers: { ...corsHeaders, "content-type": "application/json" } }
@@ -312,9 +325,11 @@ serve(async (req) => {
       if (!payRes.ok) {
         const errJson = await payRes.json().catch(() => null);
         console.error("Erro Asaas /payments:", errJson);
+        const descAsaas = errJson?.errors?.[0]?.description;
+        const msgFinal = descAsaas || "Falha ao gerar cobrança no Asaas.";
         return new Response(
           JSON.stringify({
-            error: "Falha ao gerar cobrança no Asaas.",
+            error: msgFinal,
             details: errJson?.errors || errJson,
           }),
           { status: payRes.status, headers: { ...corsHeaders, "content-type": "application/json" } }

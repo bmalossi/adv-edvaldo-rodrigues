@@ -1,5 +1,32 @@
 import { supabase } from '@/lib/supabase';
-import { TipoCobrancaAsaas } from '@/domain/crm/asaas';
+import { TipoCobrancaAsaas, traduzirErroAsaas } from '@/domain/crm/asaas';
+
+async function extrairErroEdgeFunction(error: any, fallback: string): Promise<string> {
+  if (!error) return fallback;
+
+  // Supabase FunctionsHttpError armazena o objeto Response original em error.context
+  if (error && typeof error === 'object' && 'context' in error && error.context) {
+    try {
+      const response = error.context as Response;
+      const clone = typeof response.clone === 'function' ? response.clone() : response;
+      const json = await clone.json();
+      if (json?.error) {
+        return traduzirErroAsaas(json.error);
+      }
+      if (json?.details) {
+        return traduzirErroAsaas(json.details);
+      }
+    } catch {
+      // Ignora falha de parse
+    }
+  }
+
+  if (error.message && !error.message.includes('non-2xx status code')) {
+    return traduzirErroAsaas(error.message);
+  }
+
+  return fallback;
+}
 
 export interface SincronizacaoClienteResult {
   success: boolean;
@@ -60,11 +87,12 @@ export async function sincronizarClienteAsaas(clienteId: string): Promise<Sincro
 
     if (error) {
       console.error('Erro na chamada da Edge Function asaas-sync-customer:', error);
-      return { success: false, error: error.message || 'Falha na comunicação com o servidor' };
+      const msg = await extrairErroEdgeFunction(error, 'Falha na comunicação com o servidor Asaas');
+      return { success: false, error: msg };
     }
 
     if (data?.error) {
-      return { success: false, error: data.error };
+      return { success: false, error: traduzirErroAsaas(data.error) };
     }
 
     return {
@@ -74,7 +102,7 @@ export async function sincronizarClienteAsaas(clienteId: string): Promise<Sincro
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Erro ao sincronizar com Asaas';
-    return { success: false, error: msg };
+    return { success: false, error: traduzirErroAsaas(msg) };
   }
 }
 
@@ -89,11 +117,12 @@ export async function criarCobrancaAsaas(payload: CriarCobrancaPayload): Promise
 
     if (error) {
       console.error('Erro na chamada da Edge Function asaas-criar-cobranca:', error);
-      return { success: false, error: error.message || 'Falha na criação de cobrança' };
+      const msg = await extrairErroEdgeFunction(error, 'Falha na criação de cobrança no Asaas');
+      return { success: false, error: msg };
     }
 
     if (data?.error) {
-      return { success: false, error: data.error };
+      return { success: false, error: traduzirErroAsaas(data.error) };
     }
 
     return {
@@ -109,6 +138,6 @@ export async function criarCobrancaAsaas(payload: CriarCobrancaPayload): Promise
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Erro ao emitir cobrança no Asaas';
-    return { success: false, error: msg };
+    return { success: false, error: traduzirErroAsaas(msg) };
   }
 }
