@@ -30,41 +30,48 @@ interface PainelFinanceiroAsaasProps {
 
 const STATUS_COBRANCA_CONFIG: Record<
   string,
-  { label: string; badge: string; icon: React.ComponentType<{ className?: string }> }
+  { label: string; container: string; dot: string; icon: React.ComponentType<{ className?: string }> }
 > = {
   CONFIRMED: {
     label: 'Pago / Confirmado',
-    badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    container: 'bg-emerald-950/40 text-emerald-300 border-emerald-500/25',
+    dot: 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]',
     icon: CheckCircle2,
   },
   RECEIVED: {
     label: 'Recebido',
-    badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    container: 'bg-emerald-950/40 text-emerald-300 border-emerald-500/25',
+    dot: 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]',
     icon: CheckCircle2,
   },
   PENDING: {
     label: 'Aguardando Pagamento',
-    badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    container: 'bg-amber-950/40 text-amber-300 border-amber-500/25',
+    dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]',
     icon: Clock,
   },
   OVERDUE: {
     label: 'Vencido',
-    badge: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+    container: 'bg-rose-950/40 text-rose-300 border-rose-500/25',
+    dot: 'bg-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.6)]',
     icon: AlertCircle,
   },
   REFUNDED: {
     label: 'Estornado',
-    badge: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+    container: 'bg-purple-950/40 text-purple-300 border-purple-500/25',
+    dot: 'bg-purple-400 shadow-[0_0_6px_rgba(192,132,252,0.6)]',
     icon: AlertCircle,
   },
   CANCELLED: {
     label: 'Cancelado',
-    badge: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+    container: 'bg-slate-800/40 text-slate-400 border-white/10',
+    dot: 'bg-slate-500',
     icon: AlertCircle,
   },
   CHARGEBACK: {
     label: 'Chargeback / Disputa',
-    badge: 'bg-rose-600/20 text-rose-400 border-rose-500/40 font-bold',
+    container: 'bg-rose-950/50 text-rose-300 border-rose-500/35 font-semibold',
+    dot: 'bg-rose-400',
     icon: AlertCircle,
   },
 };
@@ -134,9 +141,10 @@ export function PainelFinanceiroAsaas({
                 Honorários & Cobranças Asaas
               </h2>
               <span
-                className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider bg-amber-500/10 text-amber-300/90 border border-amber-500/25 select-none"
                 title="Ambiente de Testes / Sandbox do Asaas ativo"
               >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)] shrink-0" />
                 Sandbox
               </span>
             </div>
@@ -194,7 +202,6 @@ export function PainelFinanceiroAsaas({
         <div className="space-y-3">
           {cobrancas.map((cob) => {
             const statusConfig = STATUS_COBRANCA_CONFIG[cob.status] || STATUS_COBRANCA_CONFIG.PENDING;
-            const IconeStatus = statusConfig.icon;
 
             return (
               <div
@@ -209,15 +216,15 @@ export function PainelFinanceiroAsaas({
 
                     <span
                       className={cn(
-                        'px-2 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1',
-                        statusConfig.badge
+                        'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-medium border tracking-tight select-none',
+                        statusConfig.container
                       )}
                     >
-                      <IconeStatus className="w-3 h-3" />
+                      <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', statusConfig.dot)} />
                       {statusConfig.label}
                     </span>
 
-                    <span className="px-2 py-0.5 rounded-md text-[10px] bg-slate-800 text-slate-300 border border-white/5 uppercase font-mono">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] bg-white/[0.04] text-slate-300 border border-white/10 uppercase font-mono">
                       {cob.tipo_cobranca}
                     </span>
 
@@ -228,7 +235,7 @@ export function PainelFinanceiroAsaas({
                     )}
 
                     {cob.forma === 'assinatura' && (
-                      <span className="text-[10px] text-cyan-400 font-medium bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded">
+                      <span className="text-[10px] text-cyan-300 font-medium bg-cyan-950/40 border border-cyan-500/25 px-2 py-0.5 rounded-md">
                         Partido Mensal
                       </span>
                     )}

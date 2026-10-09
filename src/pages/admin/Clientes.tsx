@@ -10,13 +10,7 @@ import { ModalImportarClientes } from '@/components/admin/ModalImportarClientes'
 import { ModalSincronizarDrive } from '@/components/crm/ModalSincronizarDrive';
 
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
-
-const STATUS_CICLO_BADGES: Record<StatusCicloCliente, { label: string; color: string }> = {
-  lead: { label: 'Lead / Prospecção', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
-  consulta: { label: 'Consulta / Reunião', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  ativo: { label: 'Cliente Ativo', color: 'bg-green-500/20 text-green-400 border-green-500/30' },
-  encerrado: { label: 'Encerrado / Arquivado', color: 'bg-slate-500/20 text-slate-400 border-slate-500/30' },
-};
+import { StatusCicloBadge } from '@/components/crm/StatusCicloBadge';
 
 export default function Clientes() {
   const { papel } = useAuth();
@@ -69,7 +63,7 @@ export default function Clientes() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="font-serif text-3xl font-bold text-white tracking-tight">Clientes & CRM</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/10 text-slate-300 border border-white/10 uppercase">
+            <span className="px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-white/[0.04] text-slate-300 border border-white/10 uppercase tracking-wider">
               {papel}
             </span>
           </div>
@@ -198,7 +192,7 @@ export default function Clientes() {
                     </td>
 
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-white/10">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-slate-800/80 text-slate-300 border border-white/10">
                         {cliente.tipo_pessoa === 'PF' ? (
                           <><UserCheck className="w-3 h-3 text-secondary" /> Física</>
                         ) : (
@@ -220,14 +214,7 @@ export default function Clientes() {
                     </td>
 
                     <td className="px-6 py-4">
-                      <span
-                        className={cn(
-                          'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border',
-                          STATUS_CICLO_BADGES[cliente.status_ciclo]?.color
-                        )}
-                      >
-                        {STATUS_CICLO_BADGES[cliente.status_ciclo]?.label}
-                      </span>
+                      <StatusCicloBadge status={cliente.status_ciclo} size="sm" />
                     </td>
 
                     <td className="px-6 py-4 text-xs font-medium text-slate-400">
