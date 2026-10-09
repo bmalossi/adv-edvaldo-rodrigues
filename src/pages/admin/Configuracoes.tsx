@@ -274,7 +274,7 @@ export default function Configuracoes() {
     }
 
     return (
-        <div className="space-y-6 max-w-5xl">
+        <div className="space-y-6 w-full">
             {/* Header da Página */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10">
                 <div>

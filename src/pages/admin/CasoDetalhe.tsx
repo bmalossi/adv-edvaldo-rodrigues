@@ -270,7 +270,7 @@ export default function CasoDetalhe() {
   const IconTipo = TipoConfig.icon;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+    <div className="w-full space-y-6 pb-12">
       {/* Barra Superior */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -333,9 +333,9 @@ export default function CasoDetalhe() {
       </div>
 
       {/* Grid Principal */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
         {/* Coluna 1 & 2: Detalhes, Processos Conexos e Honorários */}
-        <div className="md:col-span-2 space-y-6">
+        <div className="lg:col-span-2 2xl:col-span-3 space-y-6">
           {/* Informações da Causa */}
           <div className="bg-card border border-white/10 rounded-2xl p-6 shadow-sm space-y-4">
             <h2 className="text-sm font-bold text-white uppercase tracking-wider border-b border-white/10 pb-3 flex items-center gap-2">

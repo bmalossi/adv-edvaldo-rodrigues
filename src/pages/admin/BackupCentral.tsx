@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Cloud,
   CloudDownload,
@@ -344,7 +344,7 @@ export default function BackupCentral() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-16">
+    <div className="w-full space-y-8 pb-16">
       {/* Cabeçalho */}
       <div>
         <div className="flex items-center gap-2 mb-1">

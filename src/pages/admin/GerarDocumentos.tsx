@@ -1371,7 +1371,7 @@ export default function GerarDocumentos() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-20">
+    <div className="w-full space-y-8 pb-20">
       {/* Cabeçalho da Página */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
