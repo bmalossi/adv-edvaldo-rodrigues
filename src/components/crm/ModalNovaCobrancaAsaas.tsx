@@ -20,7 +20,9 @@ import {
   Sparkles,
   DollarSign,
   AlertCircle,
-  Clock
+  Clock,
+  Check,
+  Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { TipoCobrancaAsaas, CobrancaAsaas, traduzirErroAsaas } from '@/domain/crm/asaas';
@@ -63,11 +65,17 @@ export function ModalNovaCobrancaAsaas({
 
   const [loading, setLoading] = useState(false);
   const [cobrancaCriada, setCobrancaCriada] = useState<any | null>(null);
+  const [copiadoPix, setCopiadoPix] = useState(false);
+  const [copiadoLinha, setCopiadoLinha] = useState(false);
+  const [copiadoLink, setCopiadoLink] = useState(false);
 
   const resetForm = () => {
     setCobrancaCriada(null);
     setLoading(false);
     setValorStr('');
+    setCopiadoPix(false);
+    setCopiadoLinha(false);
+    setCopiadoLink(false);
   };
 
   const handleEmitir = async (e: React.FormEvent) => {
@@ -115,9 +123,19 @@ export function ModalNovaCobrancaAsaas({
     }
   };
 
-  const copiarParaTransferencia = (texto: string, label: string) => {
+  const copiarParaTransferencia = (texto: string, tipo: 'pix' | 'linha' | 'link') => {
     navigator.clipboard.writeText(texto);
-    toast.success(`${label} copiado para a área de transferência!`);
+    if (tipo === 'pix') {
+      setCopiadoPix(true);
+      setTimeout(() => setCopiadoPix(false), 2500);
+    } else if (tipo === 'linha') {
+      setCopiadoLinha(true);
+      setTimeout(() => setCopiadoLinha(false), 2500);
+    } else {
+      setCopiadoLink(true);
+      setTimeout(() => setCopiadoLink(false), 2500);
+    }
+    toast.success('Copiado para a área de transferência!');
   };
 
   return (
@@ -128,60 +146,77 @@ export function ModalNovaCobrancaAsaas({
         onOpenChange(v);
       }}
     >
-      <DialogContent className="sm:max-w-xl bg-card border-white/10 text-white rounded-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-serif text-xl flex items-center gap-2 text-white">
-            <DollarSign className="w-5 h-5 text-secondary" />
-            {cobrancaCriada ? 'Cobrança Gerada com Sucesso' : 'Emitir Cobrança de Honorários (Asaas)'}
-          </DialogTitle>
-          <DialogDescription className="text-slate-400 text-xs">
-            {cobrancaCriada
-              ? 'Dados de pagamento e faturas geradas disponíveis para compartilhamento.'
-              : `Geração automática de cobrança vinculada a ${clienteNome}.`}
-          </DialogDescription>
+      <DialogContent className="dark sm:max-w-xl !bg-[#0D1B30] text-slate-100 border border-white/10 shadow-2xl rounded-2xl max-h-[92vh] overflow-hidden flex flex-col p-0">
+        {/* Header Elegante */}
+        <DialogHeader className="p-6 pb-4 border-b border-white/10 bg-[#091322] flex flex-row items-center justify-between text-left space-y-0">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-secondary/15 border border-secondary/30 flex items-center justify-center text-secondary shrink-0 shadow-inner">
+              <DollarSign className="w-5 h-5 text-secondary" />
+            </div>
+            <div>
+              <DialogTitle className="font-serif text-lg font-bold text-white tracking-wide">
+                {cobrancaCriada ? 'Cobrança Gerada no Asaas' : 'Emitir Cobrança de Honorários'}
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 text-xs mt-0.5">
+                {cobrancaCriada
+                  ? 'Fatura pronta para envio e compartilhamento com o cliente.'
+                  : `Geração automática vinculada a ${clienteNome}.`}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         {cobrancaCriada ? (
-          <div className="space-y-5 pt-2">
+          /* ─── Resultado da Emissão ─── */
+          <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(92vh-130px)]">
             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3">
-              <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
+              <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
               <div>
                 <p className="text-sm font-bold text-emerald-300">Fatura emitida com sucesso!</p>
                 <p className="text-xs text-slate-300">
-                  ID Asaas: <span className="font-mono text-white">{cobrancaCriada.asaas_payment_id || cobrancaCriada.cobranca_id}</span>
+                  Identificador Asaas: <span className="font-mono text-white font-bold">{cobrancaCriada.asaas_payment_id || cobrancaCriada.cobranca_id}</span>
                 </p>
               </div>
             </div>
 
             {/* Resultado PIX */}
             {cobrancaCriada.pix_copia_cola && (
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3">
+              <div className="p-5 rounded-2xl bg-[#091322] border border-white/10 space-y-4 shadow-lg">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                     <QrCode className="w-4 h-4 text-emerald-400" /> Pix Instantâneo
                   </span>
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={() => copiarParaTransferencia(cobrancaCriada.pix_copia_cola, 'Código Pix Copia e Cola')}
-                    className="h-7 text-xs border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10"
+                    onClick={() => copiarParaTransferencia(cobrancaCriada.pix_copia_cola, 'pix')}
+                    className="h-8 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg shadow-sm"
                   >
-                    <Copy className="w-3.5 h-3.5 mr-1" /> Copiar Código Pix
+                    {copiadoPix ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 mr-1" /> Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 mr-1" /> Copiar Código Pix
+                      </>
+                    )}
                   </Button>
                 </div>
 
                 {cobrancaCriada.pix_qrcode_image && (
-                  <div className="flex justify-center p-3 bg-white rounded-lg w-fit mx-auto shadow-inner">
+                  <div className="flex justify-center p-3.5 bg-white rounded-xl w-fit mx-auto shadow-2xl ring-4 ring-emerald-500/20">
                     <img
                       src={cobrancaCriada.pix_qrcode_image}
                       alt="QR Code Pix"
-                      className="w-48 h-48 object-contain"
+                      className="w-44 h-44 object-contain"
                     />
                   </div>
                 )}
 
-                <div className="bg-slate-950 p-2.5 rounded-lg border border-white/5">
-                  <p className="text-[11px] font-mono text-slate-400 break-all select-all">
+                <div className="bg-[#060D17] p-3 rounded-xl border border-white/10">
+                  <p className="text-[11px] font-mono text-slate-300 break-all select-all leading-relaxed">
                     {cobrancaCriada.pix_copia_cola}
                   </p>
                 </div>
@@ -190,22 +225,29 @@ export function ModalNovaCobrancaAsaas({
 
             {/* Resultado Boleto */}
             {cobrancaCriada.linha_digitavel && (
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3">
+              <div className="p-5 rounded-2xl bg-[#091322] border border-white/10 space-y-3.5 shadow-lg">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                     <Barcode className="w-4 h-4 text-secondary" /> Boleto Bancário
                   </span>
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={() => copiarParaTransferencia(cobrancaCriada.linha_digitavel, 'Linha digitável')}
-                    className="h-7 text-xs border-white/20 text-slate-200 hover:bg-white/10"
+                    onClick={() => copiarParaTransferencia(cobrancaCriada.linha_digitavel, 'linha')}
+                    className="h-8 text-xs bg-secondary hover:bg-secondary/90 text-primary font-bold rounded-lg shadow-sm"
                   >
-                    <Copy className="w-3.5 h-3.5 mr-1" /> Copiar Linha Digitável
+                    {copiadoLinha ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 mr-1" /> Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 mr-1" /> Copiar Linha Digitável
+                      </>
+                    )}
                   </Button>
                 </div>
 
-                <div className="bg-slate-950 p-2.5 rounded-lg border border-white/5">
+                <div className="bg-[#060D17] p-3 rounded-xl border border-white/10">
                   <p className="text-xs font-mono text-white tracking-wider select-all">
                     {cobrancaCriada.linha_digitavel}
                   </p>
@@ -214,11 +256,11 @@ export function ModalNovaCobrancaAsaas({
                 {cobrancaCriada.bank_slip_url && (
                   <Button
                     asChild
-                    variant="secondary"
-                    className="w-full text-xs font-bold rounded-xl"
+                    variant="outline"
+                    className="w-full h-10 border-white/15 hover:bg-white/5 text-slate-200 text-xs font-bold rounded-xl"
                   >
                     <a href={cobrancaCriada.bank_slip_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Abrir Boleto em PDF
+                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Abrir Boleto Bancário (PDF)
                     </a>
                   </Button>
                 )}
@@ -227,27 +269,34 @@ export function ModalNovaCobrancaAsaas({
 
             {/* Link de Cartão / Fatura Segura */}
             {cobrancaCriada.invoice_url && (
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3">
+              <div className="p-5 rounded-2xl bg-[#091322] border border-white/10 space-y-3.5 shadow-lg">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <CreditCard className="w-4 h-4 text-cyan-400" /> Link de Pagamento (Cartão / Checkout)
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-sky-400" /> Cartão / Checkout Seguro Asaas
                   </span>
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={() => copiarParaTransferencia(cobrancaCriada.invoice_url, 'Link da Fatura')}
-                    className="h-7 text-xs border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+                    onClick={() => copiarParaTransferencia(cobrancaCriada.invoice_url, 'link')}
+                    className="h-8 text-xs bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-lg shadow-sm"
                   >
-                    <Copy className="w-3.5 h-3.5 mr-1" /> Copiar Link
+                    {copiadoLink ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 mr-1" /> Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 mr-1" /> Copiar Link
+                      </>
+                    )}
                   </Button>
                 </div>
 
                 <Button
                   asChild
-                  className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-xs"
+                  className="w-full h-10 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl text-xs shadow-md"
                 >
                   <a href={cobrancaCriada.invoice_url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Abrir Fatura Segura do Asaas
+                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Abrir Tela de Pagamento do Cliente
                   </a>
                 </Button>
               </div>
@@ -257,197 +306,212 @@ export function ModalNovaCobrancaAsaas({
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="border-white/10 text-white rounded-xl text-xs"
+                className="border-white/15 bg-transparent text-white hover:bg-white/10 rounded-xl text-xs px-5 h-9"
               >
                 Concluir e Fechar
               </Button>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleEmitir} className="space-y-4 pt-2">
-            {/* Seletor de Tipo de Cobrança */}
-            <div className="space-y-2">
-              <Label className="text-xs text-slate-300 font-medium">Forma de Pagamento</Label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTipoCobranca('PIX')}
-                  className={cn(
-                    'flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-semibold transition-all gap-1.5',
-                    tipoCobranca === 'PIX'
-                      ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300 shadow-sm'
-                      : 'border-white/10 bg-slate-900/50 text-slate-400 hover:border-white/20'
-                  )}
-                >
-                  <QrCode className="w-5 h-5 text-emerald-400" />
-                  Pix Instantâneo
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setTipoCobranca('BOLETO')}
-                  className={cn(
-                    'flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-semibold transition-all gap-1.5',
-                    tipoCobranca === 'BOLETO'
-                      ? 'border-secondary bg-secondary/15 text-secondary shadow-sm'
-                      : 'border-white/10 bg-slate-900/50 text-slate-400 hover:border-white/20'
-                  )}
-                >
-                  <Barcode className="w-5 h-5 text-secondary" />
-                  Boleto Bancário
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setTipoCobranca('CREDIT_CARD')}
-                  className={cn(
-                    'flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-semibold transition-all gap-1.5',
-                    tipoCobranca === 'CREDIT_CARD'
-                      ? 'border-cyan-500/60 bg-cyan-500/15 text-cyan-300 shadow-sm'
-                      : 'border-white/10 bg-slate-900/50 text-slate-400 hover:border-white/20'
-                  )}
-                >
-                  <CreditCard className="w-5 h-5 text-cyan-400" />
-                  Cartão de Crédito
-                </button>
-              </div>
-            </div>
-
-            {/* Modalidade: À Vista vs Parcelado vs Assinatura */}
-            <div className="space-y-2">
-              <Label className="text-xs text-slate-300 font-medium">Modalidade</Label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForma('avista');
-                    setNumeroParcelas(1);
-                  }}
-                  className={cn(
-                    'py-2 px-3 rounded-xl border text-xs font-medium transition-all text-center',
-                    forma === 'avista'
-                      ? 'border-white/30 bg-white/10 text-white'
-                      : 'border-white/10 bg-slate-900/40 text-slate-400 hover:text-slate-200'
-                  )}
-                >
-                  Cobrança Única
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForma('parcelado');
-                    if (numeroParcelas <= 1) setNumeroParcelas(2);
-                  }}
-                  className={cn(
-                    'py-2 px-3 rounded-xl border text-xs font-medium transition-all text-center',
-                    forma === 'parcelado'
-                      ? 'border-white/30 bg-white/10 text-white'
-                      : 'border-white/10 bg-slate-900/40 text-slate-400 hover:text-slate-200'
-                  )}
-                >
-                  Parcelado
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForma('assinatura');
-                    setNumeroParcelas(1);
-                  }}
-                  className={cn(
-                    'py-2 px-3 rounded-xl border text-xs font-medium transition-all text-center',
-                    forma === 'assinatura'
-                      ? 'border-white/30 bg-white/10 text-white'
-                      : 'border-white/10 bg-slate-900/40 text-slate-400 hover:text-slate-200'
-                  )}
-                >
-                  Partido Mensal
-                </button>
-              </div>
-            </div>
-
-            {/* Grid Valor e Vencimento */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-slate-300 font-medium">
-                  {forma === 'parcelado' ? 'Valor Total (R$)' : 'Valor (R$)'}
+          /* ─── Formulário de Emissão ─── */
+          <form onSubmit={handleEmitir} className="flex flex-col flex-1 overflow-hidden">
+            <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(92vh-140px)]">
+              {/* Seletor de Tipo de Cobrança */}
+              <div className="space-y-2">
+                <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Forma de Pagamento
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-mono">R$</span>
+                <div className="grid grid-cols-3 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setTipoCobranca('PIX')}
+                    className={cn(
+                      'flex flex-col items-center justify-center p-3.5 rounded-xl border text-xs font-semibold transition-all gap-2',
+                      tipoCobranca === 'PIX'
+                        ? 'border-emerald-500/80 bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40 shadow-lg shadow-emerald-950/40'
+                        : 'border-white/10 bg-[#091322] text-slate-400 hover:border-white/20 hover:text-slate-200'
+                    )}
+                  >
+                    <QrCode className="w-5 h-5 text-emerald-400" />
+                    Pix Instantâneo
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTipoCobranca('BOLETO')}
+                    className={cn(
+                      'flex flex-col items-center justify-center p-3.5 rounded-xl border text-xs font-semibold transition-all gap-2',
+                      tipoCobranca === 'BOLETO'
+                        ? 'border-secondary bg-secondary/15 text-secondary ring-1 ring-secondary/40 shadow-lg shadow-amber-950/40'
+                        : 'border-white/10 bg-[#091322] text-slate-400 hover:border-white/20 hover:text-slate-200'
+                    )}
+                  >
+                    <Barcode className="w-5 h-5 text-secondary" />
+                    Boleto Bancário
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTipoCobranca('CREDIT_CARD')}
+                    className={cn(
+                      'flex flex-col items-center justify-center p-3.5 rounded-xl border text-xs font-semibold transition-all gap-2',
+                      tipoCobranca === 'CREDIT_CARD'
+                        ? 'border-sky-500/80 bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/40 shadow-lg shadow-sky-950/40'
+                        : 'border-white/10 bg-[#091322] text-slate-400 hover:border-white/20 hover:text-slate-200'
+                    )}
+                  >
+                    <CreditCard className="w-5 h-5 text-sky-400" />
+                    Cartão de Crédito
+                  </button>
+                </div>
+              </div>
+
+              {/* Modalidade: Cobrança Única vs Parcelado vs Partido Mensal */}
+              <div className="space-y-2">
+                <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Modalidade do Faturamento
+                </Label>
+                <div className="grid grid-cols-3 gap-1.5 bg-[#091322] p-1.5 rounded-xl border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForma('avista');
+                      setNumeroParcelas(1);
+                    }}
+                    className={cn(
+                      'py-2 px-3 rounded-lg text-xs font-bold transition-all text-center',
+                      forma === 'avista'
+                        ? 'bg-secondary text-primary shadow-md'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    )}
+                  >
+                    Cobrança Única
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForma('parcelado');
+                      if (numeroParcelas <= 1) setNumeroParcelas(2);
+                    }}
+                    className={cn(
+                      'py-2 px-3 rounded-lg text-xs font-bold transition-all text-center',
+                      forma === 'parcelado'
+                        ? 'bg-secondary text-primary shadow-md'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    )}
+                  >
+                    Parcelado
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForma('assinatura');
+                      setNumeroParcelas(1);
+                    }}
+                    className={cn(
+                      'py-2 px-3 rounded-lg text-xs font-bold transition-all text-center',
+                      forma === 'assinatura'
+                        ? 'bg-secondary text-primary shadow-md'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    )}
+                  >
+                    Partido Mensal
+                  </button>
+                </div>
+              </div>
+
+              {/* Grid Valor e Vencimento */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                    {forma === 'parcelado' ? 'Valor Total dos Honorários' : forma === 'assinatura' ? 'Mensalidade Recorrente' : 'Valor dos Honorários'}
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-3 text-xs text-secondary font-mono font-bold">R$</span>
+                    <Input
+                      type="text"
+                      required
+                      placeholder="0,00"
+                      value={valorStr}
+                      onChange={(e) => setValorStr(e.target.value)}
+                      className="h-11 pl-10 bg-[#091322] border-white/10 text-white placeholder:text-slate-500 focus:border-secondary focus:ring-1 focus:ring-secondary rounded-xl text-sm font-mono font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-secondary" />
+                    {forma === 'assinatura' ? '1º Vencimento Recorrente' : 'Data de Vencimento'}
+                  </Label>
                   <Input
-                    type="text"
+                    type="date"
                     required
-                    placeholder="0,00"
-                    value={valorStr}
-                    onChange={(e) => setValorStr(e.target.value)}
-                    className="pl-9 bg-slate-900 border-white/10 text-white rounded-xl text-sm font-mono"
+                    value={dataVencimento}
+                    onChange={(e) => setDataVencimento(e.target.value)}
+                    className="h-11 bg-[#091322] border-white/10 text-white rounded-xl text-sm focus:border-secondary focus:ring-1 focus:ring-secondary"
                   />
                 </div>
               </div>
 
+              {/* Parcelamento */}
+              {forma === 'parcelado' && (
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Número de Parcelas
+                  </Label>
+                  <select
+                    value={numeroParcelas}
+                    onChange={(e) => setNumeroParcelas(parseInt(e.target.value, 10))}
+                    className="w-full h-11 bg-[#091322] border border-white/10 text-white rounded-xl px-3 text-sm focus:border-secondary focus:ring-1 focus:ring-secondary"
+                  >
+                    {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+                      <option key={n} value={n}>
+                        {n} parcelas de R${' '}
+                        {valorStr && parseFloat(valorStr.replace(',', '.')) > 0
+                          ? (parseFloat(valorStr.replace(',', '.')) / n).toFixed(2).replace('.', ',')
+                          : '0,00'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Descrição na Fatura */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-slate-300 font-medium flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-secondary" />
-                  {forma === 'assinatura' ? '1º Vencimento' : 'Data de Vencimento'}
+                <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Descrição Exibida na Fatura
                 </Label>
                 <Input
-                  type="date"
-                  required
-                  value={dataVencimento}
-                  onChange={(e) => setDataVencimento(e.target.value)}
-                  className="bg-slate-900 border-white/10 text-white rounded-xl text-sm"
+                  type="text"
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                  placeholder="Ex: Honorários advocatícios"
+                  className="h-11 bg-[#091322] border-white/10 text-white placeholder:text-slate-500 rounded-xl text-sm focus:border-secondary focus:ring-1 focus:ring-secondary"
                 />
               </div>
-            </div>
 
-            {forma === 'parcelado' && (
-              <div className="space-y-1.5">
-                <Label className="text-xs text-slate-300 font-medium">Número de Parcelas</Label>
-                <select
-                  value={numeroParcelas}
-                  onChange={(e) => setNumeroParcelas(parseInt(e.target.value, 10))}
-                  className="w-full bg-slate-900 border border-white/10 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-secondary"
-                >
-                  {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
-                    <option key={n} value={n}>
-                      {n} parcelas de R${' '}
-                      {valorStr && parseFloat(valorStr.replace(',', '.')) > 0
-                        ? (parseFloat(valorStr.replace(',', '.')) / n).toFixed(2).replace('.', ',')
-                        : '0,00'}
-                    </option>
-                  ))}
-                </select>
+              {/* Informações da Automação */}
+              <div className="p-4 rounded-xl bg-secondary/10 border border-secondary/20 flex items-start gap-3 text-xs text-slate-300">
+                <Sparkles className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-bold text-secondary">Automação de Funil & Webhook</p>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    Assim que a fatura for quitada pelo cliente via Asaas, o pagamento é conciliado instantaneamente, o cliente é promovido a <strong>Ativo</strong> e o processo avança para a etapa <strong>Fechamento</strong>.
+                  </p>
+                </div>
               </div>
-            )}
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-slate-300 font-medium">Descrição na Fatura</Label>
-              <Input
-                type="text"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Ex: Honorários advocatícios"
-                className="bg-slate-900 border-white/10 text-white rounded-xl text-sm"
-              />
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-900/60 border border-white/5 text-xs text-slate-400 space-y-1">
-              <p className="flex items-center gap-1.5 text-slate-300 font-medium">
-                <Sparkles className="w-3.5 h-3.5 text-secondary" />
-                Automação Integrada
-              </p>
-              <p>
-                Assim que a fatura for quitada pelo cliente, o status será atualizado via Webhook e o cliente avançará automaticamente no Funil do CRM.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+            {/* Footer Fixo */}
+            <div className="p-4 px-6 border-t border-white/10 bg-[#091322] flex items-center justify-end gap-3 shrink-0">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
-                className="rounded-xl text-slate-300 hover:text-white text-xs"
+                className="h-10 border border-white/10 bg-transparent text-slate-300 hover:text-white hover:bg-white/5 rounded-xl text-xs font-semibold px-4"
               >
                 Cancelar
               </Button>
@@ -455,7 +519,7 @@ export function ModalNovaCobrancaAsaas({
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-cta-gold hover:opacity-90 text-primary font-bold rounded-xl text-xs shadow-md"
+                className="h-10 bg-cta-gold hover:opacity-90 text-primary font-bold rounded-xl text-xs shadow-lg shadow-cta-gold/15 px-6 flex items-center gap-2"
               >
                 {loading ? 'Emitindo cobrança...' : 'Gerar Cobrança Asaas'}
               </Button>

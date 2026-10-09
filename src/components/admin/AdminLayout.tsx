@@ -21,7 +21,7 @@ import {
     Lock,
     AlertTriangle,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
@@ -48,6 +48,13 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     const navigate = useNavigate()
     const location = useLocation()
     const [sidebarOpen, setSidebarOpen] = useState(false)
+
+    useEffect(() => {
+        document.documentElement.classList.add('dark')
+        return () => {
+            document.documentElement.classList.remove('dark')
+        }
+    }, [])
 
     const handleLogout = async () => {
         await signOut()
