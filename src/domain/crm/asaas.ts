@@ -483,6 +483,84 @@ export function mascaraCpfCnpj(valor?: string | null): string {
 }
 
 /**
+ * Normaliza os campos de CPF/CNPJ de um registro de cliente (titular e representante legal),
+ * corrigindo pontuações incorretas (ex: "469.560.318 76" -> "469.560.318-76") e indicando
+ * se o registro precisa de atualização no banco de dados.
+ */
+export function normalizarDocumentosCliente<
+  T extends { cpf_cnpj?: string | null; rep_cpf_cnpj?: string | null }
+>(cliente: T): {
+  cliente: T;
+  alterado: boolean;
+  updates: { cpf_cnpj?: string; rep_cpf_cnpj?: string };
+} {
+  const updates: { cpf_cnpj?: string; rep_cpf_cnpj?: string } = {};
+  let alterado = false;
+
+  const cpfOriginal = cliente.cpf_cnpj;
+  let cpfNovo = cpfOriginal;
+  if (cpfOriginal && cpfOriginal.trim()) {
+    const formatado = mascaraCpfCnpj(cpfOriginal);
+    if (formatado && formatado !== cpfOriginal) {
+      cpfNovo = formatado;
+      updates.cpf_cnpj = formatado;
+      alterado = true;
+    }
+  }
+
+  const repCpfOriginal = cliente.rep_cpf_cnpj;
+  let repCpfNovo = repCpfOriginal;
+  if (repCpfOriginal && repCpfOriginal.trim()) {
+    const formatadoRep = mascaraCpfCnpj(repCpfOriginal);
+    if (formatadoRep && formatadoRep !== repCpfOriginal) {
+      repCpfNovo = formatadoRep;
+      updates.rep_cpf_cnpj = formatadoRep;
+      alterado = true;
+    }
+  }
+
+  if (!alterado) {
+    return { cliente, alterado: false, updates };
+  }
+
+  return {
+    cliente: {
+      ...cliente,
+      ...(updates.cpf_cnpj !== undefined ? { cpf_cnpj: cpfNovo } : {}),
+      ...(updates.rep_cpf_cnpj !== undefined ? { rep_cpf_cnpj: repCpfNovo } : {}),
+    },
+    alterado: true,
+    updates,
+  };
+}
+
+/**
+ * Verifica se o CPF/CNPJ de um cliente corresponde a um termo de busca,
+ * funcionando independentemente de o usuário ou o cadastro ter pontuação ou não.
+ */
+export function correspondeBuscaDocumento(
+  cpfCnpjCliente?: string | null,
+  termoBusca?: string | null
+): boolean {
+  if (!cpfCnpjCliente || !termoBusca) return false;
+  const termoLimpo = termoBusca.trim().toLowerCase();
+  if (!termoLimpo) return false;
+
+  const docFormatado = mascaraCpfCnpj(cpfCnpjCliente).toLowerCase();
+  if (docFormatado.includes(termoLimpo) || cpfCnpjCliente.toLowerCase().includes(termoLimpo)) {
+    return true;
+  }
+
+  const digitosBusca = apenasNumeros(termoBusca);
+  const digitosCliente = apenasNumeros(cpfCnpjCliente);
+  if (digitosBusca.length > 0 && digitosCliente.includes(digitosBusca)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Aplica máscara de telefone fixo ou celular com DDD: (00) 00000-0000 ou (00) 0000-0000
  */
 export function mascaraTelefone(valor?: string | null): string {

@@ -1,4 +1,5 @@
 import { Cliente } from '@/domain/crm/cliente'
+import { mascaraCpfCnpj } from '@/domain/crm/asaas'
 
 export function esc(v: string | number | null | undefined = ''): string {
   return String(v ?? '').replace(/[&<>'"]/g, c => ({
@@ -77,7 +78,8 @@ export function clienteEndereco(c: Partial<Cliente>): string {
 
 export function clienteQualificacao(c: Partial<Cliente>): string {
   const nome = c.nome_razao_social || ''
-  const doc = c.cpf_cnpj ? (c.tipo_pessoa === 'PJ' ? 'inscrita no CNPJ nº ' + c.cpf_cnpj : 'inscrito(a) no CPF nº ' + c.cpf_cnpj) : ''
+  const docFormatado = c.cpf_cnpj ? (mascaraCpfCnpj(c.cpf_cnpj) || c.cpf_cnpj) : ''
+  const doc = docFormatado ? (c.tipo_pessoa === 'PJ' ? 'inscrita no CNPJ nº ' + docFormatado : 'inscrito(a) no CPF nº ' + docFormatado) : ''
   const rg = c.rg_ie ? `portador(a) do RG nº ${c.rg_ie}` : ''
   const end = clienteEndereco(c)
 
@@ -110,22 +112,27 @@ export function extrairClientes(
   c: Partial<Cliente> | Partial<Cliente>[] | null | undefined,
   adicionais?: Partial<Cliente>[]
 ): Partial<Cliente>[] {
+  const normalizar = (item: Partial<Cliente>): Partial<Cliente> => ({
+    ...item,
+    ...(item.cpf_cnpj ? { cpf_cnpj: mascaraCpfCnpj(item.cpf_cnpj) || item.cpf_cnpj } : {})
+  })
   const lista: Partial<Cliente>[] = []
   if (Array.isArray(c)) {
-    lista.push(...c.filter(item => item && (item.nome_razao_social || item.cpf_cnpj || item.id)))
+    lista.push(...c.filter(item => item && (item.nome_razao_social || item.cpf_cnpj || item.id)).map(normalizar))
   } else if (c && typeof c === 'object' && (c.nome_razao_social || c.cpf_cnpj || c.id)) {
-    lista.push(c)
+    lista.push(normalizar(c))
   }
   if (adicionais && Array.isArray(adicionais)) {
     for (const ad of adicionais) {
       if (ad && (ad.nome_razao_social || ad.cpf_cnpj || ad.id)) {
-        if (!lista.some(existing => (existing.id && existing.id === ad.id) || (existing.cpf_cnpj && existing.cpf_cnpj === ad.cpf_cnpj))) {
-          lista.push(ad)
+        const adNorm = normalizar(ad)
+        if (!lista.some(existing => (existing.id && existing.id === adNorm.id) || (existing.cpf_cnpj && existing.cpf_cnpj === adNorm.cpf_cnpj))) {
+          lista.push(adNorm)
         }
       }
     }
   }
-  return lista.length > 0 ? lista : (c ? (Array.isArray(c) ? c : [c]) : [{}])
+  return lista.length > 0 ? lista : (c ? (Array.isArray(c) ? c.map(normalizar) : [normalizar(c)]) : [{}])
 }
 
 export function clientesNomesFormatados(clientes: Partial<Cliente>[]): string {
@@ -137,7 +144,9 @@ export function clientesNomesFormatados(clientes: Partial<Cliente>[]): string {
 }
 
 export function clientesCpfsFormatados(clientes: Partial<Cliente>[]): string {
-  const cpfs = clientes.map(c => c.cpf_cnpj?.trim()).filter(Boolean) as string[]
+  const cpfs = clientes
+    .map(c => (c.cpf_cnpj ? mascaraCpfCnpj(c.cpf_cnpj) || c.cpf_cnpj.trim() : ''))
+    .filter(Boolean) as string[]
   if (cpfs.length === 0) return ''
   if (cpfs.length === 1) return cpfs[0]
   if (cpfs.length === 2) return `${cpfs[0]} e ${cpfs[1]}`

@@ -123,15 +123,25 @@ serve(async (req) => {
         );
       }
 
-      // Consulta se já existe por CPF/CNPJ
-      const searchRes = await fetch(`${asaasBaseUrl}/customers?cpfCnpj=${docLimpo}`, {
-        headers: { "access_token": asaasApiKey, "Content-Type": "application/json" },
-      });
+      const docFormatado = docLimpo.length === 11
+        ? docLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+        : docLimpo.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
 
-      if (searchRes.ok) {
-        const searchJson = await searchRes.json();
-        if (searchJson.data && searchJson.data.length > 0) {
-          asaasCustomerId = searchJson.data[0].id;
+      // Consulta se já existe por CPF/CNPJ (sem ou com pontuação)
+      for (const queryDoc of [docLimpo, docFormatado]) {
+        const searchRes = await fetch(
+          `${asaasBaseUrl}/customers?cpfCnpj=${encodeURIComponent(queryDoc)}`,
+          {
+            headers: { "access_token": asaasApiKey, "Content-Type": "application/json" },
+          }
+        );
+
+        if (searchRes.ok) {
+          const searchJson = await searchRes.json();
+          if (searchJson.data && searchJson.data.length > 0) {
+            asaasCustomerId = searchJson.data[0].id;
+            break;
+          }
         }
       }
 
@@ -166,10 +176,14 @@ serve(async (req) => {
         asaasCustomerId = newCustomer.id;
       }
 
-      // Salva no banco local
+      // Salva no banco local com CPF/CNPJ padronizado
       await adminClient
         .from("clientes")
-        .update({ asaas_customer_id: asaasCustomerId, updated_at: new Date().toISOString() })
+        .update({
+          asaas_customer_id: asaasCustomerId,
+          cpf_cnpj: docFormatado,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", cliente_id);
     }
 

@@ -40,6 +40,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { mascaraCpfCnpj } from '@/domain/crm/asaas';
 
 const STATUS_CASO_BADGES: Record<StatusCaso, { label: string; color: string }> = {
   analise: { label: 'Em Análise Inicial', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
@@ -638,7 +639,9 @@ export default function CasoDetalhe() {
 
                 <div>
                   <span className="text-slate-400 block">CPF / CNPJ</span>
-                  <span className="text-slate-200 font-mono">{cliente.cpf_cnpj || 'Não informado'}</span>
+                  <span className="text-slate-200 font-mono">
+                    {cliente.cpf_cnpj ? mascaraCpfCnpj(cliente.cpf_cnpj) : 'Não informado'}
+                  </span>
                 </div>
 
                 <div>

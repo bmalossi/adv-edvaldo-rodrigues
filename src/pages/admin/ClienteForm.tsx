@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { sincronizarClienteAsaas } from '@/lib/asaas';
-import { validarCpfCnpj, mascaraCpfCnpj, mascaraTelefone, mascaraCep } from '@/domain/crm/asaas';
+import { validarCpfCnpj, mascaraCpfCnpj, mascaraTelefone, mascaraCep, normalizarDocumentosCliente } from '@/domain/crm/asaas';
 import { cn } from '@/lib/utils';
 
 export default function ClienteForm() {
@@ -92,7 +92,8 @@ export default function ClienteForm() {
           toast.error('Erro ao carregar dados do cliente.');
           navigate('/admin/crm/clientes');
         } else {
-          setFormData(data as Cliente);
+          const { cliente: normalizado } = normalizarDocumentosCliente(data as Cliente);
+          setFormData(normalizado);
           if (data.tem_representante || data.rep_nome) {
             setMostrarRepresentante(true);
           }
@@ -124,8 +125,13 @@ export default function ClienteForm() {
     setLoading(true);
 
     try {
+      const cpfFormatado = formData.cpf_cnpj?.trim() ? mascaraCpfCnpj(formData.cpf_cnpj) : null;
+      const repCpfFormatado = formData.rep_cpf_cnpj?.trim() ? mascaraCpfCnpj(formData.rep_cpf_cnpj) : null;
+
       const payload = {
         ...formData,
+        cpf_cnpj: cpfFormatado,
+        rep_cpf_cnpj: repCpfFormatado,
         tem_representante: mostrarRepresentante,
         // Campos tipo DATE: string vazia causa erro no PostgreSQL (22007)
         data_nascimento: formData.data_nascimento?.trim() || null,
@@ -403,6 +409,7 @@ export default function ClienteForm() {
               <Input
                 value={formData.cpf_cnpj || ''}
                 onChange={(e) => handleChange('cpf_cnpj', mascaraCpfCnpj(e.target.value))}
+                maxLength={18}
                 placeholder={formData.tipo_pessoa === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'}
                 className={cn(
                   'bg-slate-900/50 border-white/10 text-white rounded-xl font-mono',
@@ -648,9 +655,10 @@ export default function ClienteForm() {
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">CPF / CNPJ</label>
                   <Input
                     value={formData.rep_cpf_cnpj || ''}
-                    onChange={(e) => handleChange('rep_cpf_cnpj', e.target.value)}
+                    onChange={(e) => handleChange('rep_cpf_cnpj', mascaraCpfCnpj(e.target.value))}
+                    maxLength={18}
                     placeholder="000.000.000-00"
-                    className="bg-slate-900/50 border-white/10 text-white rounded-xl"
+                    className="bg-slate-900/50 border-white/10 text-white rounded-xl font-mono"
                   />
                 </div>
               </div>
@@ -690,9 +698,10 @@ export default function ClienteForm() {
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">CEP</label>
                   <Input
                     value={formData.rep_cep || ''}
-                    onChange={(e) => handleChange('rep_cep', e.target.value)}
+                    onChange={(e) => handleChange('rep_cep', mascaraCep(e.target.value))}
+                    maxLength={9}
                     placeholder="00000-000"
-                    className="bg-slate-900/50 border-white/10 text-white rounded-xl"
+                    className="bg-slate-900/50 border-white/10 text-white rounded-xl font-mono"
                   />
                 </div>
                 <div className="md:col-span-2">

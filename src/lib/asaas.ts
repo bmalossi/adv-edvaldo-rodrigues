@@ -1,5 +1,31 @@
 import { supabase } from '@/lib/supabase';
-import { TipoCobrancaAsaas, traduzirErroAsaas } from '@/domain/crm/asaas';
+import { TipoCobrancaAsaas, traduzirErroAsaas, normalizarDocumentosCliente } from '@/domain/crm/asaas';
+
+async function garantirCpfCnpjPadronizadoNoBanco(clienteId: string): Promise<void> {
+  if (!clienteId) return;
+  try {
+    const { data } = await supabase
+      .from('clientes')
+      .select('id, cpf_cnpj, rep_cpf_cnpj')
+      .eq('id', clienteId)
+      .maybeSingle();
+
+    if (data) {
+      const { alterado, updates } = normalizarDocumentosCliente(data);
+      if (alterado) {
+        await supabase
+          .from('clientes')
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', clienteId);
+      }
+    }
+  } catch {
+    // Falha silenciosa para não bloquear o fluxo principal
+  }
+}
 
 async function extrairErroEdgeFunction(error: any, fallback: string): Promise<string> {
   if (!error) return fallback;
@@ -81,6 +107,8 @@ export interface CriarCobrancaResult {
  */
 export async function sincronizarClienteAsaas(clienteId: string): Promise<SincronizacaoClienteResult> {
   try {
+    await garantirCpfCnpjPadronizadoNoBanco(clienteId);
+
     const { data, error } = await supabase.functions.invoke('asaas-sync-customer', {
       body: { cliente_id: clienteId },
     });
@@ -111,6 +139,8 @@ export async function sincronizarClienteAsaas(clienteId: string): Promise<Sincro
  */
 export async function criarCobrancaAsaas(payload: CriarCobrancaPayload): Promise<CriarCobrancaResult> {
   try {
+    await garantirCpfCnpjPadronizadoNoBanco(payload.cliente_id);
+
     const { data, error } = await supabase.functions.invoke('asaas-criar-cobranca', {
       body: payload,
     });

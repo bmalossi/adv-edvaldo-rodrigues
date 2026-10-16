@@ -45,6 +45,7 @@ import { PainelFinanceiroAsaas } from '@/components/crm/PainelFinanceiroAsaas';
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
 import { StatusCicloBadge } from '@/components/crm/StatusCicloBadge';
 import { AsaasSyncBadge } from '@/components/crm/AsaasSyncBadge';
+import { mascaraCpfCnpj, normalizarDocumentosCliente } from '@/domain/crm/asaas';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -92,7 +93,23 @@ export default function ClienteDetalhe() {
       toast.error('Cliente não encontrado');
       navigate('/admin/crm/clientes');
     } else {
-      setCliente(data as Cliente);
+      const { cliente: normalizado, alterado, updates } = normalizarDocumentosCliente(data as Cliente);
+      setCliente(normalizado);
+
+      if (alterado) {
+        supabase
+          .from('clientes')
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', normalizado.id)
+          .then(({ error: updateErr }) => {
+            if (updateErr) {
+              console.warn('Aviso ao auto-normalizar CPF/CNPJ no banco:', updateErr);
+            }
+          });
+      }
     }
     setLoading(false);
   };
@@ -317,7 +334,9 @@ export default function ClienteDetalhe() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 text-sm">
               <div>
                 <span className="text-slate-400 text-xs block">Documento (CPF / CNPJ)</span>
-                <span className="text-white font-mono font-medium">{cliente.cpf_cnpj || 'Não informado'}</span>
+                <span className="text-white font-mono font-medium">
+                  {cliente.cpf_cnpj ? mascaraCpfCnpj(cliente.cpf_cnpj) : 'Não informado'}
+                </span>
               </div>
 
               <div>
@@ -404,7 +423,9 @@ export default function ClienteDetalhe() {
 
                 <div>
                   <span className="text-slate-400 text-xs block">CPF / CNPJ</span>
-                  <span className="text-white font-mono font-medium">{cliente.rep_cpf_cnpj || 'Não informado'}</span>
+                  <span className="text-white font-mono font-medium">
+                    {cliente.rep_cpf_cnpj ? mascaraCpfCnpj(cliente.rep_cpf_cnpj) : 'Não informado'}
+                  </span>
                 </div>
 
                 <div>

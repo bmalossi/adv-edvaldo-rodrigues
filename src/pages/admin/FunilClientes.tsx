@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { mascaraCpfCnpj, correspondeBuscaDocumento } from '@/domain/crm/asaas';
 
 interface ColunaConfig {
   id: StatusCicloCliente;
@@ -116,7 +117,7 @@ export default function FunilClientes() {
     const termo = busca.toLowerCase();
     return (
       c.nome_razao_social.toLowerCase().includes(termo) ||
-      (c.cpf_cnpj && c.cpf_cnpj.toLowerCase().includes(termo)) ||
+      correspondeBuscaDocumento(c.cpf_cnpj, busca) ||
       c.telefone_whatsapp.toLowerCase().includes(termo)
     );
   });
@@ -241,7 +242,7 @@ export default function FunilClientes() {
                           </div>
                           {cliente.cpf_cnpj && (
                             <div className="text-[11px] text-slate-400 font-mono">
-                              {cliente.cpf_cnpj}
+                              {mascaraCpfCnpj(cliente.cpf_cnpj)}
                             </div>
                           )}
                         </div>

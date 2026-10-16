@@ -90,6 +90,10 @@ serve(async (req) => {
       );
     }
 
+    const docFormatado = docLimpo.length === 11
+      ? docLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+      : docLimpo.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+
     const telLimpo = (cliente.telefone_whatsapp || "").replace(/\D/g, "");
     const cepLimpo = (cliente.endereco_cep || "").replace(/\D/g, "");
 
@@ -135,31 +139,53 @@ serve(async (req) => {
       }
 
       customerData = await updateRes.json();
-    } else {
-      // 5. Prevenção de duplicidade: busca primeiro se cliente já existe por CPF/CNPJ
-      const searchRes = await fetch(`${asaasBaseUrl}/customers?cpfCnpj=${docLimpo}`, {
-        method: "GET",
-        headers: {
-          "access_token": asaasApiKey,
-          "Content-Type": "application/json",
-        },
-      });
 
-      if (searchRes.ok) {
-        const searchJson = await searchRes.json();
-        if (searchJson.data && searchJson.data.length > 0) {
-          // Cliente já existente no Asaas: reaproveita ID e atualiza dados
-          asaasCustomerId = searchJson.data[0].id;
-          const updateExistingRes = await fetch(`${asaasBaseUrl}/customers/${asaasCustomerId}`, {
-            method: "POST",
+      // Garante que o CPF/CNPJ local esteja salvo com a pontuação oficial correta
+      if (cliente.cpf_cnpj !== docFormatado) {
+        await adminClient
+          .from("clientes")
+          .update({
+            cpf_cnpj: docFormatado,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", clienteId);
+      }
+    } else {
+      // 5. Prevenção de duplicidade: busca primeiro se cliente já existe por CPF/CNPJ (sem ou com pontuação)
+      let existingCustomer = null;
+      for (const queryDoc of [docLimpo, docFormatado]) {
+        const searchRes = await fetch(
+          `${asaasBaseUrl}/customers?cpfCnpj=${encodeURIComponent(queryDoc)}`,
+          {
+            method: "GET",
             headers: {
               "access_token": asaasApiKey,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(customerPayload),
-          });
-          customerData = updateExistingRes.ok ? await updateExistingRes.json() : searchJson.data[0];
+          }
+        );
+
+        if (searchRes.ok) {
+          const searchJson = await searchRes.json();
+          if (searchJson.data && searchJson.data.length > 0) {
+            existingCustomer = searchJson.data[0];
+            break;
+          }
         }
+      }
+
+      if (existingCustomer) {
+        // Cliente já existente no Asaas: reaproveita ID e atualiza dados
+        asaasCustomerId = existingCustomer.id;
+        const updateExistingRes = await fetch(`${asaasBaseUrl}/customers/${asaasCustomerId}`, {
+          method: "POST",
+          headers: {
+            "access_token": asaasApiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(customerPayload),
+        });
+        customerData = updateExistingRes.ok ? await updateExistingRes.json() : existingCustomer;
       }
 
       // Se ainda não tem ID, cria um novo
@@ -189,11 +215,12 @@ serve(async (req) => {
         asaasCustomerId = customerData.id;
       }
 
-      // 6. Persiste asaas_customer_id na tabela clientes local
+      // 6. Persiste asaas_customer_id e CPF/CNPJ padronizado na tabela clientes local
       await adminClient
         .from("clientes")
         .update({
           asaas_customer_id: asaasCustomerId,
+          cpf_cnpj: docFormatado,
           updated_at: new Date().toISOString(),
         })
         .eq("id", clienteId);

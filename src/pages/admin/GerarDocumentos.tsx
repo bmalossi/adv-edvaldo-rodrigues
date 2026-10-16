@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { normalizarDocumentosCliente, correspondeBuscaDocumento } from '@/domain/crm/asaas'
 import {
   TipoDocumento,
   ConfigDocumentos,
@@ -522,7 +523,7 @@ export default function GerarDocumentos() {
       .order('nome_razao_social')
 
     if (!error && data) {
-      setClientes(data)
+      setClientes(data.map(item => normalizarDocumentosCliente(item).cliente))
     }
     setLoadingClientes(false)
   }
@@ -553,7 +554,7 @@ export default function GerarDocumentos() {
     const q = buscaCliente.toLowerCase()
     return clientes.filter(c =>
       c.nome_razao_social.toLowerCase().includes(q) ||
-      (c.cpf_cnpj && c.cpf_cnpj.includes(q)) ||
+      correspondeBuscaDocumento(c.cpf_cnpj, buscaCliente) ||
       (c.telefone_whatsapp && c.telefone_whatsapp.includes(q))
     )
   }, [clientes, buscaCliente])
@@ -566,7 +567,7 @@ export default function GerarDocumentos() {
     const q = buscaClienteAdicional.toLowerCase()
     return disponiveis.filter(c =>
       c.nome_razao_social.toLowerCase().includes(q) ||
-      (c.cpf_cnpj && c.cpf_cnpj.includes(q)) ||
+      correspondeBuscaDocumento(c.cpf_cnpj, buscaClienteAdicional) ||
       (c.telefone_whatsapp && c.telefone_whatsapp.includes(q))
     )
   }, [clientes, todosClientesSelecionados, buscaClienteAdicional])

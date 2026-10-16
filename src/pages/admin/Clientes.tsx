@@ -11,6 +11,12 @@ import { ModalSincronizarDrive } from '@/components/crm/ModalSincronizarDrive';
 
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
 import { StatusCicloBadge } from '@/components/crm/StatusCicloBadge';
+import {
+  mascaraCpfCnpj,
+  normalizarDocumentosCliente,
+  correspondeBuscaDocumento,
+  apenasNumeros,
+} from '@/domain/crm/asaas';
 
 export default function Clientes() {
   const { papel } = useAuth();
@@ -39,7 +45,18 @@ export default function Clientes() {
 
     const { data, error } = await query;
     if (!error && data) {
-      setClientes(data as Cliente[]);
+      const listaNormalizada = (data as Cliente[]).map((item) => {
+        const { cliente: norm, alterado, updates } = normalizarDocumentosCliente(item);
+        if (alterado) {
+          supabase
+            .from('clientes')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', norm.id)
+            .then(() => {});
+        }
+        return norm;
+      });
+      setClientes(listaNormalizada);
     }
     setLoading(false);
   };
@@ -49,10 +66,15 @@ export default function Clientes() {
   }, [filtroStatus, filtroTipo]);
 
   const clientesFiltrados = clientes.filter((c) => {
+    if (!busca.trim()) return true;
     const termo = busca.toLowerCase();
+    const termoDigitos = apenasNumeros(busca);
     const nomeOk = c.nome_razao_social.toLowerCase().includes(termo);
-    const docOk = c.cpf_cnpj ? c.cpf_cnpj.toLowerCase().includes(termo) : false;
-    const telOk = c.telefone_whatsapp ? c.telefone_whatsapp.toLowerCase().includes(termo) : false;
+    const docOk = correspondeBuscaDocumento(c.cpf_cnpj, busca);
+    const telOk = c.telefone_whatsapp
+      ? c.telefone_whatsapp.toLowerCase().includes(termo) ||
+        (termoDigitos.length > 0 && apenasNumeros(c.telefone_whatsapp).includes(termoDigitos))
+      : false;
     return nomeOk || docOk || telOk;
   });
 
@@ -186,7 +208,7 @@ export default function Clientes() {
                           {cliente.nome_razao_social}
                         </span>
                         <span className="text-slate-400 text-xs font-mono mt-0.5">
-                          {cliente.cpf_cnpj || 'Documento não informado'}
+                          {cliente.cpf_cnpj ? mascaraCpfCnpj(cliente.cpf_cnpj) : 'Documento não informado'}
                         </span>
                       </div>
                     </td>

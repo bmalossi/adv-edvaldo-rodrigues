@@ -2,6 +2,7 @@ import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import type { Cliente } from './cliente';
 import type { Caso } from './caso';
+import { mascaraCpfCnpj } from './asaas';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -129,7 +130,7 @@ export function prepararVariaveisDocumento(ctx: ContextoMinutaInput): VariaveisM
   const base: VariaveisMinuta = {
     nome_cliente: c.nome_razao_social || '',
     tipo_pessoa: c.tipo_pessoa || 'PF',
-    cpf_cnpj: c.cpf_cnpj || '',
+    cpf_cnpj: c.cpf_cnpj ? mascaraCpfCnpj(c.cpf_cnpj) : '',
     rg_ie: c.rg_ie || '',
     nacionalidade: c.nacionalidade || '',
     estado_civil: c.estado_civil || '',
@@ -151,7 +152,7 @@ export function prepararVariaveisDocumento(ctx: ContextoMinutaInput): VariaveisM
     endereco_cep: c.endereco_cep || '',
     tem_representante: c.tem_representante ? 'Sim' : 'Não',
     representante_nome: c.rep_nome || '',
-    representante_cpf_cnpj: c.rep_cpf_cnpj || '',
+    representante_cpf_cnpj: c.rep_cpf_cnpj ? mascaraCpfCnpj(c.rep_cpf_cnpj) : '',
     representante_rg: c.rep_rg || '',
     representante_data_nascimento: c.rep_data_nascimento ? new Date(c.rep_data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '',
     representante_pais: c.rep_pais || 'Brasil',

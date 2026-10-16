@@ -18,6 +18,8 @@ import {
   mascaraMoeda,
   converterMoedaParaNumero,
   formatarMoedaBrl,
+  normalizarDocumentosCliente,
+  correspondeBuscaDocumento,
   ClienteAsaasPayload,
 } from '@/domain/crm/asaas';
 
@@ -414,6 +416,41 @@ describe('Domínio Asaas: Validações, Sanitização e Idempotência', () => {
       // Contém 1.500,00 e o símbolo R$ (podendo ter non-breaking space)
       expect(formatado).toMatch(/1\.500,00/);
       expect(formatado).toMatch(/R\$/);
+    });
+
+    it('corrige CPF digitado com espaço ou pontuação incorreta (ex: 469.560.318 76 -> 469.560.318-76)', () => {
+      expect(mascaraCpfCnpj('469.560.318 76')).toBe('469.560.318-76');
+      expect(mascaraCpfCnpj('469 560 318 76')).toBe('469.560.318-76');
+      expect(mascaraCpfCnpj('469560318-76')).toBe('469.560.318-76');
+    });
+
+    it('normaliza documentos do cliente (cpf_cnpj e rep_cpf_cnpj) e identifica alterações para correção no banco', () => {
+      const clienteComErro = {
+        id: 'cli-1',
+        cpf_cnpj: '469.560.318 76',
+        rep_cpf_cnpj: '12345678909',
+      };
+
+      const { cliente, alterado, updates } = normalizarDocumentosCliente(clienteComErro);
+      expect(alterado).toBe(true);
+      expect(cliente.cpf_cnpj).toBe('469.560.318-76');
+      expect(cliente.rep_cpf_cnpj).toBe('123.456.789-09');
+      expect(updates).toEqual({
+        cpf_cnpj: '469.560.318-76',
+        rep_cpf_cnpj: '123.456.789-09',
+      });
+
+      const segundaVerificacao = normalizarDocumentosCliente(cliente);
+      expect(segundaVerificacao.alterado).toBe(false);
+      expect(segundaVerificacao.updates).toEqual({});
+    });
+
+    it('permite buscar CPF/CNPJ com ou sem pontuação independentemente do formato salvo', () => {
+      expect(correspondeBuscaDocumento('469.560.318 76', '469.560.318-76')).toBe(true);
+      expect(correspondeBuscaDocumento('469.560.318 76', '46956031876')).toBe(true);
+      expect(correspondeBuscaDocumento('469.560.318-76', '318-76')).toBe(true);
+      expect(correspondeBuscaDocumento('469.560.318-76', '31876')).toBe(true);
+      expect(correspondeBuscaDocumento('469.560.318-76', '999999')).toBe(false);
     });
   });
 });
