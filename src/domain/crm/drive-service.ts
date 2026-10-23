@@ -193,46 +193,91 @@ export async function obterPastaRaizProcessosDrive(): Promise<string> {
 }
 
 /**
+ * Verifica se uma pasta do Google Drive ainda existe e é acessível pela conta configurada.
+ * Retorna true se acessível, false se o Drive retornar 404/403.
+ */
+async function verificarPastaExisteDrive(folderId: string): Promise<boolean> {
+  try {
+    await buscarConteudoPastaDrive(folderId);
+    return true;
+  } catch (err: any) {
+    const msg: string = err?.message ?? "";
+    // 404 = pasta deletada; 403 = sem acesso — ambos devem forçar recriação
+    if (msg.includes("404") || msg.includes("notFound") || msg.includes("403")) {
+      return false;
+    }
+    // Outros erros (rede, auth) propagam para cima
+    throw err;
+  }
+}
+
+/**
  * Obtém a pasta existente do cliente ou cria uma nova na raiz de processos do Google Drive,
  * persistindo o vínculo na tabela clientes do Supabase.
+ * Se o folder_id gravado no banco não for mais acessível no Drive (404/403),
+ * limpa o vínculo e cria uma nova pasta automaticamente.
  */
 export async function obterOuCriarPastaClienteDrive(
   clienteId: string,
   nomeCliente: string,
   googleDriveFolderIdExistente?: string | null
 ): Promise<string> {
-  // Se já tiver pasta informada no estado
-  if (googleDriveFolderIdExistente && googleDriveFolderIdExistente.trim()) {
-    return googleDriveFolderIdExistente.trim();
+  // 1. Candidato a partir do parâmetro ou do banco
+  let candidatoId = googleDriveFolderIdExistente?.trim() || null;
+
+  if (!candidatoId) {
+    // Consulta banco se não veio pelo parâmetro
+    const { data: cliente, error: cliError } = await supabase
+      .from("clientes")
+      .select("id, nome_razao_social, google_drive_folder_id")
+      .eq("id", clienteId)
+      .single();
+
+    if (cliError) {
+      throw new Error(`Erro ao consultar dados do cliente: ${cliError.message}`);
+    }
+
+    candidatoId = cliente?.google_drive_folder_id?.trim() || null;
+
+    if (!candidatoId) {
+      // Não tem pasta cadastrada: cria uma nova
+      const nomePasta = (nomeCliente || cliente?.nome_razao_social || "Cliente Sem Nome").trim();
+      const rootFolderId = await obterPastaRaizProcessosDrive();
+      const pastaCriada = await criarSubpastaDrive(rootFolderId, nomePasta);
+      if (!pastaCriada?.id) {
+        throw new Error(`Falha ao obter ID da pasta criada para o cliente "${nomePasta}".`);
+      }
+      await vincularPastaClienteCRM(clienteId, pastaCriada.id);
+      return pastaCriada.id;
+    }
   }
 
-  // Consulta se o cliente já possui pasta gravada no banco
-  const { data: cliente, error: cliError } = await supabase
+  // 2. Verifica se o candidato ainda existe no Drive
+  const existe = await verificarPastaExisteDrive(candidatoId);
+  if (existe) {
+    return candidatoId;
+  }
+
+  // 3. Pasta não encontrada: limpa o vínculo antigo e recria
+  console.warn(
+    `[obterOuCriarPastaClienteDrive] Pasta "${candidatoId}" não encontrada no Drive (404/403). Recriando e atualizando vínculo no CRM.`
+  );
+
+  // Busca nome do cliente para nomear a pasta
+  const { data: clienteDb } = await supabase
     .from("clientes")
-    .select("id, nome_razao_social, google_drive_folder_id")
+    .select("nome_razao_social")
     .eq("id", clienteId)
     .single();
 
-  if (cliError) {
-    throw new Error(`Erro ao consultar dados do cliente: ${cliError.message}`);
-  }
-
-  if (cliente?.google_drive_folder_id && cliente.google_drive_folder_id.trim()) {
-    return cliente.google_drive_folder_id.trim();
-  }
-
-  const nomePasta = (nomeCliente || cliente?.nome_razao_social || "Cliente Sem Nome").trim();
+  const nomePasta = (nomeCliente || clienteDb?.nome_razao_social || "Cliente Sem Nome").trim();
   const rootFolderId = await obterPastaRaizProcessosDrive();
-
-  // Cria a nova pasta no Google Drive
   const pastaCriada = await criarSubpastaDrive(rootFolderId, nomePasta);
   if (!pastaCriada?.id) {
-    throw new Error(`Falha ao obter ID da pasta criada para o cliente "${nomePasta}".`);
+    throw new Error(`Falha ao recriar pasta para o cliente "${nomePasta}".`);
   }
 
-  // Persiste o vínculo no CRM
   await vincularPastaClienteCRM(clienteId, pastaCriada.id);
-
   return pastaCriada.id;
 }
 
