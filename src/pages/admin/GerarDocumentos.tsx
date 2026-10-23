@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import {
   FileText,
+  FileDown,
   FileSignature,
   Download,
   Printer,
@@ -3619,29 +3620,36 @@ export default function GerarDocumentos() {
 
 
             {/* Configuração de Arquivamento no Google Drive */}
-            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-secondary/30 space-y-2.5">
+            <div
+              className="p-3.5 rounded-xl bg-slate-900/90 border border-secondary/30 space-y-2.5 shadow-sm transition-all"
+              aria-busy={salvandoNoDrive}
+              aria-live="polite"
+            >
               <div className="flex items-center justify-between">
-                <label htmlFor="chk-salvar-drive" className="flex items-center gap-2 cursor-pointer py-1 min-h-[44px] sm:min-h-0">
+                <label htmlFor="chk-salvar-drive" className="flex items-center gap-2 cursor-pointer">
                   <Checkbox
                     id="chk-salvar-drive"
-                    aria-label="Salvar cópia do documento no Google Drive"
+                    aria-label="Salvar cópia do PDF gerado no Google Drive"
                     checked={salvarNoDrive}
                     onCheckedChange={(chk) => setSalvarNoDrive(Boolean(chk))}
                   />
-                  <span className="text-xs font-semibold text-slate-200 select-none flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-100 select-none flex items-center gap-2">
                     <HardDrive className="w-3.5 h-3.5 text-secondary" />
                     Salvar cópia no Google Drive
                   </span>
                 </label>
                 {salvandoNoDrive && (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-secondary" aria-hidden="true" />
+                  <div className="flex items-center gap-1.5 text-secondary" aria-live="polite">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-secondary" aria-hidden="true" />
+                    <span className="text-[11px] font-medium hidden sm:inline">Sincronizando...</span>
+                  </div>
                 )}
               </div>
 
               {salvarNoDrive && (
-                <div className="space-y-2.5 pt-1.5 border-t border-white/5">
+                <div className="space-y-2.5 pt-2 border-t border-white/5">
                   <div>
-                    <label htmlFor="select-categoria-drive" className="text-xs text-slate-300 block mb-1 font-medium">
+                    <label htmlFor="select-categoria-drive" className="text-xs text-slate-300 block mb-1.5 font-medium">
                       Subpasta da Categoria:
                     </label>
                     <select
@@ -3649,7 +3657,7 @@ export default function GerarDocumentos() {
                       aria-label="Selecione a subpasta temática da categoria no Google Drive"
                       value={categoriaDrive}
                       onChange={(e) => setCategoriaDrive(e.target.value)}
-                      className="w-full h-11 sm:h-9 bg-slate-950 border border-white/10 rounded-lg text-xs text-white px-2.5 focus:ring-1 focus:ring-secondary focus:border-secondary transition-colors"
+                      className="w-full h-11 sm:h-9 bg-slate-950 border border-white/15 rounded-lg text-xs text-slate-100 px-2.5 focus:ring-1 focus:ring-secondary focus:border-secondary transition-colors"
                     >
                       {CATEGORIAS_DRIVE_PADRAO.map((cat) => (
                         <option key={cat} value={cat}>
@@ -3659,9 +3667,9 @@ export default function GerarDocumentos() {
                     </select>
                   </div>
 
-                  {categoriaDrive === 'Outra' && (
+                  {categoriaDrive === "Outra" && (
                     <div>
-                      <label htmlFor="input-categoria-personalizada" className="text-[11px] text-slate-400 block mb-1">
+                      <label htmlFor="input-categoria-personalizada" className="text-xs text-slate-300 block mb-1.5 font-medium">
                         Nome da Categoria Personalizada:
                       </label>
                       <Input
@@ -3670,61 +3678,77 @@ export default function GerarDocumentos() {
                         value={categoriaPersonalizada}
                         onChange={(e) => setCategoriaPersonalizada(e.target.value)}
                         placeholder="Ex: Inventário Extrajudicial"
-                        className="h-11 sm:h-9 bg-slate-950 border-white/10 text-white rounded-lg text-xs focus-visible:ring-secondary"
+                        className="h-11 sm:h-9 bg-slate-950 border-white/15 text-slate-100 rounded-lg text-xs focus-visible:ring-secondary"
                       />
                     </div>
                   )}
 
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    O PDF será arquivado automaticamente em: <strong className="text-secondary font-mono">/{categoriaDrive === 'Outra' ? (categoriaPersonalizada.trim() || 'Nome_da_Pasta') : categoriaDrive}/</strong>
+                  <p className="text-xs text-slate-300 leading-relaxed flex items-center flex-wrap gap-1.5 pt-0.5">
+                    <span>O PDF será arquivado automaticamente em:</span>
+                    <span className="inline-flex items-center text-secondary font-mono font-semibold bg-secondary/10 px-2 py-0.5 rounded border border-secondary/25 text-[11px]">
+                      /{categoriaDrive === "Outra" ? (categoriaPersonalizada.trim() || "Nome_da_Pasta") : categoriaDrive}/
+                    </span>
                   </p>
                 </div>
               )}
             </div>
 
-
-
-
             {/* Botões de Ação */}
-            <div className="space-y-3 pt-2">
+            <div className="space-y-2.5 pt-2">
+              <PermissionGuard modulo="documentos" acao="criar">
+                {/* 1. Botão Principal com Proeminência Visual: Baixar PDF */}
+                <Button
+                  onClick={handleImprimir}
+                  disabled={!clienteSelecionado || tiposMarcados.length === 0}
+                  aria-busy={salvandoNoDrive}
+                  aria-label="Baixar documento em formato PDF e salvar no Google Drive"
+                  className="w-full h-12 bg-cta-gold hover:brightness-105 active:scale-[0.99] text-primary font-bold rounded-xl shadow-lg shadow-secondary/20 transition-all duration-150 flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                >
+                  {salvandoNoDrive ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" aria-hidden="true" />
+                      <span>Processando PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="w-4 h-4" aria-hidden="true" />
+                      <span>Baixar PDF</span>
+                    </>
+                  )}
+                </Button>
+
+                {/* 2. Botão Secundário: Baixar no Word */}
+                <Button
+                  onClick={handleGerarWord}
+                  disabled={!clienteSelecionado || tiposMarcados.length === 0}
+                  variant="outline"
+                  aria-label="Baixar documento em formato Word (.doc)"
+                  className="w-full h-11 border-secondary/40 text-secondary hover:bg-secondary/10 hover:text-secondary active:scale-[0.99] font-semibold rounded-xl transition-all duration-150 flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                >
+                  <Download className="w-4 h-4" aria-hidden="true" />
+                  <span>Baixar no Word (.doc)</span>
+                </Button>
+              </PermissionGuard>
+
+              {/* 3. Botão Terciário: Visualizar */}
               <PermissionGuard modulo="documentos" acao="visualizar">
                 <Button
                   onClick={handleVisualizar}
                   disabled={!clienteSelecionado || tiposMarcados.length === 0}
                   variant="outline"
-                  className="w-full h-11 border-secondary/40 text-secondary hover:bg-secondary/10 rounded-xl font-bold"
+                  aria-label="Visualizar prévia dos documentos selecionados"
+                  className="w-full h-11 border-white/10 text-slate-300 hover:text-white hover:bg-white/5 active:scale-[0.99] font-medium rounded-xl transition-all duration-150 flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                 >
-                  <Eye className="w-4 h-4 mr-2" />
-                  Visualizar Documento(s)
-                </Button>
-              </PermissionGuard>
-
-              <PermissionGuard modulo="documentos" acao="criar">
-                <Button
-                  onClick={handleGerarWord}
-                  disabled={!clienteSelecionado || tiposMarcados.length === 0}
-                  className="w-full h-12 bg-cta-gold hover:opacity-90 text-primary font-bold rounded-xl shadow-lg shadow-secondary/10"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Baixar no Word (.doc)
-                </Button>
-
-                <Button
-                  onClick={handleImprimir}
-                  disabled={!clienteSelecionado || tiposMarcados.length === 0}
-                  variant="outline"
-                  className="w-full h-11 border-border/60 text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl"
-                >
-                  <Printer className="w-4 h-4 mr-2" />
-                  Imprimir ou Salvar em PDF
+                  <Eye className="w-4 h-4" aria-hidden="true" />
+                  <span>Visualizar Documento(s)</span>
                 </Button>
               </PermissionGuard>
             </div>
 
             {!clienteSelecionado && (
-              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2 text-xs text-amber-300">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>Selecione um cliente no passo 1 para habilitar os botões de emissão.</span>
+              <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-2.5 text-xs text-amber-200 font-medium shadow-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-400" aria-hidden="true" />
+                <span className="leading-relaxed">Selecione um cliente no passo 1 para habilitar os botões de emissão.</span>
               </div>
             )}
           </div>
@@ -3871,17 +3895,25 @@ export default function GerarDocumentos() {
                 size="sm"
                 variant="outline"
                 onClick={handleWordDoPreview}
-                className="h-8 border-secondary/40 text-secondary hover:bg-secondary/10 text-xs"
+                aria-label="Baixar documento em formato Word (.doc)"
+                className="h-8 border-secondary/40 text-secondary hover:bg-secondary/10 text-xs active:scale-[0.98] transition-all"
               >
-                <Download className="w-3.5 h-3.5 mr-1" /> Baixar Word
+                <Download className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" /> Baixar Word
               </Button>
               <Button
                 type="button"
                 size="sm"
                 onClick={handleImprimirDoPreview}
-                className="h-8 bg-cta-gold hover:opacity-90 text-primary font-bold text-xs"
+                aria-busy={salvandoNoDrive}
+                aria-label="Baixar documento em formato PDF e salvar no Google Drive"
+                className="h-8 bg-cta-gold hover:brightness-105 active:scale-[0.98] text-primary font-bold text-xs shadow-sm transition-all flex items-center gap-1.5"
               >
-                <Printer className="w-3.5 h-3.5 mr-1" /> Imprimir / PDF
+                {salvandoNoDrive ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <FileDown className="w-3.5 h-3.5" aria-hidden="true" />
+                )}
+                Baixar PDF
               </Button>
             </div>
           </DialogHeader>

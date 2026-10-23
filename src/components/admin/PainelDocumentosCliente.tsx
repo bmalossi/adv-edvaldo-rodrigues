@@ -437,7 +437,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
             <h4 className="font-semibold text-white text-sm">
               Nenhuma pasta do Google Drive vinculada a este cliente
             </h4>
-            <p className="text-xs text-slate-400 max-w-md">
+            <p className="text-xs text-slate-300 max-w-md leading-relaxed">
               Vincule a pasta existente de <strong className="text-slate-200">{cliente.nome_razao_social}</strong> no Google Drive para navegar em tempo real por todas as subpastas, certidões e documentos de processos.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
@@ -445,7 +445,8 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
                 type="button"
                 onClick={handleCriarPastaDrive}
                 disabled={criandoPasta}
-                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold text-xs h-11 sm:h-9 gap-2 px-5 rounded-xl shadow-md transition-all"
+                aria-busy={criandoPasta}
+                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold text-xs h-11 sm:h-9 gap-2 px-5 rounded-xl shadow-md transition-all duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-secondary"
               >
                 {criandoPasta ? (
                   <>
@@ -467,7 +468,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
                   setModalVincularOpen(true);
                 }}
                 disabled={criandoPasta}
-                className="border-white/15 bg-white/5 hover:bg-white/10 text-slate-300 font-medium text-xs h-11 sm:h-9 gap-1.5 px-4 rounded-xl shadow-sm"
+                className="border-white/15 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white font-medium text-xs h-11 sm:h-9 gap-1.5 px-4 rounded-xl shadow-sm transition-all duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-secondary"
               >
                 <Link2 className="w-3.5 h-3.5" />
                 <span>Vincular Pasta Existente</span>
@@ -741,7 +742,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
                 placeholder="Ex.: 1A2b3C4d5E6f... ou https://drive.google.com/drive/folders/..."
                 className="bg-slate-950 border-white/10 text-white text-xs h-11 sm:h-9 font-mono"
               />
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-slate-300 mt-1">
                 Ao vincular, o sistema exibirá automaticamente todas as subpastas e documentos existentes do cliente.
               </p>
             </div>
@@ -760,7 +761,8 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
                 type="submit"
                 size="sm"
                 disabled={salvandoVinculo || !inputFolderId.trim()}
-                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium text-xs px-4"
+                aria-busy={salvandoVinculo}
+                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium text-xs px-4 active:scale-[0.98] transition-all duration-150"
               >
                 {salvandoVinculo ? (
                   <>

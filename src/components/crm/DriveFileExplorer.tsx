@@ -283,7 +283,7 @@ export function DriveFileExplorer({
             variant="outline"
             size="sm"
             onClick={() => setModalNovaPastaAberto(true)}
-            className="border-white/10 hover:bg-slate-800 text-slate-200 gap-1.5 h-8 text-xs"
+            className="border-white/10 hover:bg-slate-800 text-slate-200 gap-1.5 h-8 text-xs active:scale-[0.98] transition-all duration-150"
           >
             <FolderPlus className="w-3.5 h-3.5 text-secondary" />
             Nova Pasta
@@ -302,7 +302,8 @@ export function DriveFileExplorer({
             size="sm"
             disabled={uploadando}
             onClick={() => fileInputRef.current?.click()}
-            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium gap-1.5 h-8 text-xs shadow-sm"
+            aria-busy={uploadando}
+            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium gap-1.5 h-8 text-xs shadow-sm active:scale-[0.98] transition-all duration-150"
           >
             {uploadando ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -422,7 +423,7 @@ export function DriveFileExplorer({
           </Button>
         </div>
       ) : (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-5" aria-busy={loading || refreshing || uploadando}>
           {/* ─── Seção 1: Subpastas ─── */}
           {foldersFiltradas.length > 0 && (
             <div className="flex flex-col gap-2">
@@ -587,7 +588,8 @@ export function DriveFileExplorer({
                 type="submit"
                 size="sm"
                 disabled={salvandoPasta || !nomeNovaPasta.trim()}
-                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium text-xs"
+                aria-busy={salvandoPasta}
+                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium text-xs active:scale-[0.98] transition-all duration-150"
               >
                 {salvandoPasta ? (
                   <>
