@@ -3683,61 +3683,7 @@ export default function GerarDocumentos() {
             </div>
 
 
-            {/* Configuração de Arquivamento no Google Drive */}
-            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-[#C9A961]/25 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={salvarNoDrive}
-                    onCheckedChange={(chk) => setSalvarNoDrive(Boolean(chk))}
-                    id="chk-salvar-drive"
-                  />
-                  <span className="text-xs font-semibold text-slate-200 select-none flex items-center gap-1.5">
-                    <HardDrive className="w-3.5 h-3.5 text-[#C9A961]" />
-                    Salvar cópia no Google Drive
-                  </span>
-                </label>
-                {salvandoNoDrive && (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C9A961]" />
-                )}
-              </div>
 
-              {salvarNoDrive && (
-                <div className="space-y-2 pt-1 border-t border-white/5">
-                  <div>
-                    <label className="text-[11px] text-slate-400 block mb-1">
-                      Subpasta da Categoria:
-                    </label>
-                    <select
-                      value={categoriaDrive}
-                      onChange={(e) => setCategoriaDrive(e.target.value)}
-                      className="w-full h-8 bg-slate-950 border border-white/10 rounded-lg text-xs text-white px-2 focus:ring-1 focus:ring-[#C9A961] focus:border-[#C9A961]"
-                    >
-                      {CATEGORIAS_DRIVE_PADRAO.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {categoriaDrive === 'Outra' && (
-                    <div>
-                      <Input
-                        value={categoriaPersonalizada}
-                        onChange={(e) => setCategoriaPersonalizada(e.target.value)}
-                        placeholder="Nome da subpasta (ex: Inventário)"
-                        className="h-8 bg-slate-950 border-white/10 text-white rounded-lg text-xs"
-                      />
-                    </div>
-                  )}
-
-                  <p className="text-[10px] text-slate-400 leading-tight">
-                    O PDF será arquivado na pasta do cliente em <span className="text-[#C9A961]">/{categoriaDrive === 'Outra' ? (categoriaPersonalizada || '...') : categoriaDrive}/</span>
-                  </p>
-                </div>
-              )}
-            </div>
 
             {/* Botões de Ação */}
             <div className="space-y-3 pt-2">

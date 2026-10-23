@@ -379,7 +379,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
           onClick={() => setAbaDocumentos('drive')}
           className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
             abaDocumentos === 'drive'
-              ? 'bg-[#C9A961]/15 text-[#C9A961] border border-[#C9A961]/30 shadow-sm'
+              ? 'bg-secondary/15 text-secondary border border-secondary/30 shadow-sm'
               : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
           }`}
         >
@@ -431,7 +431,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
           </div>
         ) : (
           <div className="border border-dashed border-white/15 rounded-2xl p-10 text-center flex flex-col items-center justify-center gap-3 bg-slate-900/40">
-            <div className="w-12 h-12 rounded-full bg-[#C9A961]/10 border border-[#C9A961]/20 flex items-center justify-center text-[#C9A961]">
+            <div className="w-12 h-12 rounded-full bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary">
               <HardDrive className="w-6 h-6" />
             </div>
             <h4 className="font-semibold text-white text-sm">
@@ -445,7 +445,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
                 type="button"
                 onClick={handleCriarPastaDrive}
                 disabled={criandoPasta}
-                className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-semibold text-xs h-11 sm:h-9 gap-2 px-5 rounded-xl shadow-md transition-all"
+                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold text-xs h-11 sm:h-9 gap-2 px-5 rounded-xl shadow-md transition-all"
               >
                 {criandoPasta ? (
                   <>
@@ -724,7 +724,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
         <DialogContent className="bg-slate-900 border-white/10 text-slate-100 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold flex items-center gap-2 text-white">
-              <Link2 className="w-4 h-4 text-[#C9A961]" />
+              <Link2 className="w-4 h-4 text-secondary" />
               Vincular Pasta do Google Drive
             </DialogTitle>
           </DialogHeader>
@@ -760,7 +760,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
                 type="submit"
                 size="sm"
                 disabled={salvandoVinculo || !inputFolderId.trim()}
-                className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-medium text-xs px-4"
+                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium text-xs px-4"
               >
                 {salvandoVinculo ? (
                   <>

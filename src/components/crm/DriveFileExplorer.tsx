@@ -285,7 +285,7 @@ export function DriveFileExplorer({
             onClick={() => setModalNovaPastaAberto(true)}
             className="border-white/10 hover:bg-slate-800 text-slate-200 gap-1.5 h-8 text-xs"
           >
-            <FolderPlus className="w-3.5 h-3.5 text-[#C9A961]" />
+            <FolderPlus className="w-3.5 h-3.5 text-secondary" />
             Nova Pasta
           </Button>
 
@@ -302,7 +302,7 @@ export function DriveFileExplorer({
             size="sm"
             disabled={uploadando}
             onClick={() => fileInputRef.current?.click()}
-            className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-medium gap-1.5 h-8 text-xs shadow-sm"
+            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium gap-1.5 h-8 text-xs shadow-sm"
           >
             {uploadando ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -370,7 +370,7 @@ export function DriveFileExplorer({
                       : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                   }`}
                 >
-                  <Folder className={`w-3.5 h-3.5 ${isLast ? "text-[#C9A961]" : "text-slate-500"}`} />
+                  <Folder className={`w-3.5 h-3.5 ${isLast ? "text-secondary" : "text-slate-500"}`} />
                   <span className="truncate max-w-[160px]">{crumb.name}</span>
                 </button>
               </React.Fragment>
@@ -392,7 +392,7 @@ export function DriveFileExplorer({
 
       {/* ─── Zona Drag & Drop Feedback ─── */}
       {isDragOver && (
-        <div className="border-2 border-dashed border-[#C9A961] bg-[#C9A961]/10 rounded-lg p-6 text-center text-[#C9A961] flex flex-col items-center justify-center gap-2 animate-pulse">
+        <div className="border-2 border-dashed border-secondary bg-secondary/10 rounded-lg p-6 text-center text-secondary flex flex-col items-center justify-center gap-2 animate-pulse">
           <Upload className="w-8 h-8" />
           <p className="font-medium text-sm">Solte os arquivos aqui para fazer upload nesta pasta!</p>
         </div>
@@ -401,7 +401,7 @@ export function DriveFileExplorer({
       {/* ─── Conteúdo: Carregando, Erro ou Listagem ─── */}
       {loading ? (
         <div className="py-16 flex flex-col items-center justify-center gap-3 text-slate-400">
-          <Loader2 className="w-7 h-7 animate-spin text-[#C9A961]" />
+          <Loader2 className="w-7 h-7 animate-spin text-secondary" />
           <p className="text-xs">Sincronizando com o Google Drive...</p>
         </div>
       ) : errorMsg ? (
@@ -435,9 +435,9 @@ export function DriveFileExplorer({
                     key={pasta.id}
                     type="button"
                     onClick={() => entrarNaPasta(pasta)}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-slate-950/40 hover:bg-slate-800/60 border border-white/5 hover:border-[#C9A961]/40 transition-all text-left group"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-slate-950/40 hover:bg-slate-800/60 border border-white/5 hover:border-secondary/40 transition-all text-left group"
                   >
-                    <div className="w-8 h-8 rounded-md bg-[#C9A961]/10 flex items-center justify-center text-[#C9A961] group-hover:scale-110 transition-transform shrink-0">
+                    <div className="w-8 h-8 rounded-md bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform shrink-0">
                       <Folder className="w-4 h-4" />
                     </div>
                     <div className="truncate flex-1">
@@ -554,7 +554,7 @@ export function DriveFileExplorer({
         <DialogContent className="bg-slate-900 border-white/10 text-slate-100 max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold flex items-center gap-2">
-              <FolderPlus className="w-4 h-4 text-[#C9A961]" />
+              <FolderPlus className="w-4 h-4 text-secondary" />
               Nova Subpasta no Google Drive
             </DialogTitle>
           </DialogHeader>
@@ -587,7 +587,7 @@ export function DriveFileExplorer({
                 type="submit"
                 size="sm"
                 disabled={salvandoPasta || !nomeNovaPasta.trim()}
-                className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-medium text-xs"
+                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium text-xs"
               >
                 {salvandoPasta ? (
                   <>
