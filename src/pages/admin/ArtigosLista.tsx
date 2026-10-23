@@ -317,13 +317,13 @@ export default function ArtigosLista() {
 
                       {/* Ações */}
                       <td className="py-4 px-4 whitespace-nowrap text-right">
-                        <div className="inline-flex items-center gap-1">
+                        <div className="inline-flex items-center gap-1.5 sm:gap-1">
                           {/* Visualizar */}
                           <a
                             href={`/conteudo-juridico/${article.slug}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                            className="min-h-[44px] min-w-[44px] p-2.5 sm:p-2 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                             title="Visualizar artigo"
                           >
                             <ExternalLink className="size-4" />
@@ -332,7 +332,7 @@ export default function ArtigosLista() {
                           {/* Editar */}
                           <Link
                             to={`/admin/artigos/${article.id}/editar`}
-                            className="p-1.5 text-slate-400 hover:text-secondary hover:bg-white/10 rounded-md transition-colors"
+                            className="min-h-[44px] min-w-[44px] p-2.5 sm:p-2 flex items-center justify-center text-slate-400 hover:text-secondary hover:bg-white/10 rounded-lg transition-colors"
                             title="Editar artigo"
                           >
                             <Edit2 className="size-4" />
@@ -342,7 +342,7 @@ export default function ArtigosLista() {
                           <button
                             onClick={() => handleDuplicate(article.id)}
                             disabled={duplicatingId === article.id}
-                            className="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-white/10 rounded-md transition-colors disabled:opacity-50"
+                            className="min-h-[44px] min-w-[44px] p-2.5 sm:p-2 flex items-center justify-center text-slate-400 hover:text-sky-400 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
                             title="Duplicar artigo"
                           >
                             {duplicatingId === article.id ? (
@@ -355,7 +355,7 @@ export default function ArtigosLista() {
                           {/* Excluir */}
                           <button
                             onClick={() => setArticleToDelete(article)}
-                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
+                            className="min-h-[44px] min-w-[44px] p-2.5 sm:p-2 flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                             title="Excluir artigo"
                           >
                             <Trash2 className="size-4" />

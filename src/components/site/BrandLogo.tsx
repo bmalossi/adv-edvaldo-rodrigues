@@ -50,13 +50,13 @@ export function BrandLogo({
             <span
               className={cn(
                 "font-serif text-xs lg:text-[13px] font-semibold tracking-wide leading-tight uppercase truncate",
-                isDark ? "text-white" : "text-[#0D1B30]"
+                isDark ? "text-white" : "text-primary"
               )}
               title="Edvaldo Rodrigues Ferreira"
             >
               Edvaldo Rodrigues Ferreira
             </span>
-            <span className="text-[10px] uppercase tracking-wider text-[#C9A961] font-semibold leading-tight mt-0.5 truncate">
+            <span className="text-[10px] uppercase tracking-wider text-secondary font-semibold leading-tight mt-0.5 truncate">
               Advocacia
             </span>
             <span
@@ -74,14 +74,14 @@ export function BrandLogo({
             <span
               className={cn(
                 "font-serif text-[13px] sm:text-sm lg:text-base font-semibold tracking-wide sm:tracking-wider leading-tight uppercase whitespace-nowrap truncate",
-                isDark ? "text-white" : "text-[#0D1B30]"
+                isDark ? "text-white" : "text-primary"
               )}
             >
               Edvaldo Rodrigues Ferreira
             </span>
 
             {/* Versão Desktop: Exibe Sociedade Individual de Advocacia + OAB */}
-            <span className="hidden sm:block text-[9px] sm:text-[10px] uppercase tracking-[0.22em] text-[#C9A961] font-semibold leading-tight mt-0.5 whitespace-nowrap">
+            <span className="hidden sm:block text-[9px] sm:text-[10px] uppercase tracking-[0.22em] text-secondary font-semibold leading-tight mt-0.5 whitespace-nowrap">
               Sociedade Individual de Advocacia
             </span>
             <span
@@ -94,7 +94,7 @@ export function BrandLogo({
             </span>
 
             {/* Versão Mobile: Ajuste refinado em linha única */}
-            <span className="sm:hidden text-[9px] uppercase tracking-[0.16em] text-[#C9A961] font-semibold leading-tight mt-0.5 whitespace-nowrap">
+            <span className="sm:hidden text-[9px] uppercase tracking-[0.16em] text-secondary font-semibold leading-tight mt-0.5 whitespace-nowrap">
               Advocacia · OAB/SP 465.818
             </span>
           </div>

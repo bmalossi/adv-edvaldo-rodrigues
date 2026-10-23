@@ -645,16 +645,16 @@ export default function ArtigoEditor() {
             ) : (
               <div className="space-y-3">
                 {/* Opção Banco de Imagens */}
-                <div className="p-3 rounded-lg border border-[#C9A961]/30 bg-[#C9A961]/10 flex items-center justify-between gap-2">
+                <div className="p-3 rounded-lg border border-secondary/30 bg-secondary/10 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Images className="size-4 text-[#C9A961]" />
+                    <Images className="size-4 text-secondary" />
                     <span className="text-xs font-bold text-white">Banco de Imagens</span>
                   </div>
                   <Button
                     type="button"
                     size="sm"
                     onClick={() => setCoverLibraryOpen(true)}
-                    className="bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-bold text-xs h-7 px-3"
+                    className="bg-secondary text-secondary-foreground hover:bg-secondary/90 font-bold text-xs h-7 px-3"
                   >
                     Selecionar do Banco
                   </Button>

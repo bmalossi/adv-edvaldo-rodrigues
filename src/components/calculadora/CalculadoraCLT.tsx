@@ -511,7 +511,7 @@ export function CalculadoraCLT() {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="border-b bg-muted/50 text-left text-muted-foreground">
+                                        <tr className="border-b bg-muted/50 text-left text-muted-foreground min-h-[44px]">
                                             <th className="px-4 py-3 font-medium">Verba/Item</th>
                                             <th className="px-4 py-3 font-medium">Fórmula</th>
                                             <th className="px-4 py-3 font-medium text-right">Valor Extrato</th>
@@ -519,12 +519,12 @@ export function CalculadoraCLT() {
                                     </thead>
                                     <tbody>
                                         {resultado.itens.map((i, idx) => (
-                                            <tr key={idx} className="border-b last:border-0 hover:bg-muted/30">
-                                                <td className="px-4 py-3 font-medium">
+                                            <tr key={idx} className="border-b last:border-0 hover:bg-muted/30 min-h-[44px]">
+                                                <td className="px-4 py-3.5 font-medium min-h-[44px]">
                                                     {i.nome}
                                                 </td>
-                                                <td className="px-4 py-3 text-muted-foreground">{i.formula}</td>
-                                                <td className={`px-4 py-3 text-right font-medium ${i.tipo === '+' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                <td className="px-4 py-3.5 text-muted-foreground min-h-[44px]">{i.formula}</td>
+                                                <td className={`px-4 py-3.5 text-right font-medium min-h-[44px] ${i.tipo === '+' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                                     {i.tipo} {fmt(i.valor)}
                                                 </td>
                                             </tr>

@@ -46,7 +46,7 @@ export default function Calculadora() {
                 ]}
             />
             {/* Hero Section */}
-            <section className="relative overflow-hidden bg-[#0D1B30]">
+            <section className="relative overflow-hidden bg-primary">
                 <div className="relative">
                     <div className="absolute inset-0 bg-calculadora-photo opacity-60" aria-hidden="true" />
                     <div className="absolute inset-0 bg-hero" aria-hidden="true" />

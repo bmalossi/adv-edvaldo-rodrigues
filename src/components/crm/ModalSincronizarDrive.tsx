@@ -279,7 +279,7 @@ export function ModalSincronizarDrive({
       <DialogContent className="bg-slate-900 border-white/10 text-slate-100 max-w-4xl max-h-[90vh] flex flex-col p-6">
         <DialogHeader className="pb-3 border-b border-white/10">
           <DialogTitle className="text-lg font-semibold flex items-center gap-2.5 text-white">
-            <FolderSync className="w-5 h-5 text-[#C9A961]" />
+            <FolderSync className="w-5 h-5 text-secondary" />
             Sincronizador de Pastas do Google Drive ("Processos por área")
           </DialogTitle>
           <p className="text-xs text-slate-400">
@@ -305,7 +305,7 @@ export function ModalSincronizarDrive({
             type="button"
             disabled={escaneando || sincronizando}
             onClick={handleEscanear}
-            className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-medium text-xs h-9 gap-1.5 px-4 shrink-0 shadow-sm"
+            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold text-xs h-9 gap-1.5 px-4 shrink-0 shadow-sm"
           >
             {escaneando ? (
               <>
@@ -373,7 +373,7 @@ export function ModalSincronizarDrive({
                 >
                   Desmarcar Todos
                 </Button>
-                <span className="text-[#C9A961] font-semibold ml-2">
+                <span className="text-secondary font-semibold ml-2">
                   {totalSelecionados} selecionados
                 </span>
               </div>
@@ -402,11 +402,11 @@ export function ModalSincronizarDrive({
                           )
                         );
                       }}
-                      className="rounded border-white/20 bg-slate-900 text-[#C9A961] focus:ring-[#C9A961] shrink-0"
+                      className="rounded border-white/20 bg-slate-900 text-secondary focus:ring-secondary shrink-0"
                     />
 
                     <div className="w-7 h-7 rounded bg-slate-800/80 flex items-center justify-center text-slate-400 shrink-0">
-                      <Folder className="w-4 h-4 text-[#C9A961]" />
+                      <Folder className="w-4 h-4 text-secondary" />
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -465,7 +465,7 @@ export function ModalSincronizarDrive({
                         variant="ghost"
                         size="icon"
                         onClick={() => window.open(it.webViewLink!, "_blank", "noopener,noreferrer")}
-                        className="h-7 w-7 text-slate-400 hover:text-white"
+                        className="min-h-[44px] min-w-[44px] h-11 w-11 sm:h-8 sm:w-8 text-slate-400 hover:text-white"
                         title="Abrir no Google Drive"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -506,7 +506,7 @@ export function ModalSincronizarDrive({
                 size="sm"
                 disabled={sincronizando || totalSelecionados === 0}
                 onClick={handleExecutarSincronizacao}
-                className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-medium text-xs px-4"
+                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold text-xs px-4"
               >
                 {sincronizando ? (
                   <>

@@ -16,7 +16,7 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-[#0B1526] text-white border-t border-[#162846]">
+    <footer className="bg-primary text-white border-t border-border/40">
       <div className="container py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Coluna 1: Identidade Institucional */}
@@ -36,32 +36,32 @@ export function Footer() {
             </p>
             <ul className="space-y-2.5 text-xs text-slate-300">
               <li>
-                <Link to="/" className="hover:text-[#C9A961] transition-colors">
+                <Link to="/" className="hover:text-secondary transition-colors">
                   Início
                 </Link>
               </li>
               <li>
-                <a href="/#empresas" className="hover:text-[#C9A961] transition-colors">
+                <a href="/#empresas" className="hover:text-secondary transition-colors">
                   Empresas
                 </a>
               </li>
               <li>
-                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                <Link to="/areas-de-atuacao" className="hover:text-secondary transition-colors">
                   Áreas de Atuação
                 </Link>
               </li>
               <li>
-                <Link to="/conteudo-juridico" className="hover:text-[#C9A961] transition-colors">
+                <Link to="/conteudo-juridico" className="hover:text-secondary transition-colors">
                   Conteúdo Jurídico
                 </Link>
               </li>
               <li>
-                <Link to="/sobre" className="hover:text-[#C9A961] transition-colors">
+                <Link to="/sobre" className="hover:text-secondary transition-colors">
                   Sobre
                 </Link>
               </li>
               <li>
-                <Link to="/contato" className="hover:text-[#C9A961] transition-colors">
+                <Link to="/contato" className="hover:text-secondary transition-colors">
                   Contato
                 </Link>
               </li>
@@ -75,27 +75,27 @@ export function Footer() {
             </p>
             <ul className="space-y-2.5 text-xs text-slate-300">
               <li>
-                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                <Link to="/areas-de-atuacao" className="hover:text-secondary transition-colors">
                   Empresarial
                 </Link>
               </li>
               <li>
-                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                <Link to="/areas-de-atuacao" className="hover:text-secondary transition-colors">
                   Civil
                 </Link>
               </li>
               <li>
-                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                <Link to="/areas-de-atuacao" className="hover:text-secondary transition-colors">
                   Família
                 </Link>
               </li>
               <li>
-                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                <Link to="/areas-de-atuacao" className="hover:text-secondary transition-colors">
                   Trabalhista
                 </Link>
               </li>
               <li>
-                <Link to="/areas-de-atuacao" className="hover:text-[#C9A961] transition-colors">
+                <Link to="/areas-de-atuacao" className="hover:text-secondary transition-colors">
                   Criminal
                 </Link>
               </li>
@@ -109,25 +109,25 @@ export function Footer() {
             </p>
             <ul className="space-y-3.5 text-xs text-slate-300">
               <li className="flex items-center gap-2.5">
-                <Phone className="size-4 text-[#C9A961] shrink-0" aria-hidden="true" />
+                <Phone className="size-4 text-secondary shrink-0" aria-hidden="true" />
                 <a
                   href={`tel:${site.contact.phoneDisplay.replace(/\D/g, "")}`}
-                  className="hover:text-[#C9A961] transition-colors"
+                  className="hover:text-secondary transition-colors"
                 >
                   {site.contact.phoneDisplay}
                 </a>
               </li>
               <li className="flex items-center gap-2.5">
-                <Mail className="size-4 text-[#C9A961] shrink-0" aria-hidden="true" />
+                <Mail className="size-4 text-secondary shrink-0" aria-hidden="true" />
                 <a
                   href={`mailto:${site.contact.email}`}
-                  className="hover:text-[#C9A961] transition-colors break-all"
+                  className="hover:text-secondary transition-colors break-all"
                 >
                   {site.contact.email}
                 </a>
               </li>
               <li className="flex items-start gap-2.5">
-                <MapPin className="size-4 text-[#C9A961] shrink-0 mt-0.5" aria-hidden="true" />
+                <MapPin className="size-4 text-secondary shrink-0 mt-0.5" aria-hidden="true" />
                 <span>{site.contact.addressLine}</span>
               </li>
             </ul>
@@ -139,7 +139,7 @@ export function Footer() {
                   href={site.social.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="grid size-9 place-items-center rounded-full border border-[#C9A961]/40 bg-[#C9A961]/10 text-[#C9A961] hover:bg-[#C9A961] hover:text-[#0D1B30] transition-all duration-200"
+                  className="grid size-9 place-items-center rounded-full border border-secondary/40 bg-secondary/10 text-secondary hover:bg-secondary hover:text-secondary-foreground transition-all duration-200"
                   aria-label="Instagram"
                 >
                   <Instagram className="size-4" aria-hidden="true" />
@@ -150,7 +150,7 @@ export function Footer() {
                   href={site.social.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="grid size-9 place-items-center rounded-full border border-[#C9A961]/40 bg-[#C9A961]/10 text-[#C9A961] hover:bg-[#C9A961] hover:text-[#0D1B30] transition-all duration-200"
+                  className="grid size-9 place-items-center rounded-full border border-secondary/40 bg-secondary/10 text-secondary hover:bg-secondary hover:text-secondary-foreground transition-all duration-200"
                   aria-label="LinkedIn"
                 >
                   <Linkedin className="size-4" aria-hidden="true" />
@@ -162,7 +162,7 @@ export function Footer() {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="grid size-9 place-items-center rounded-full border border-[#C9A961]/40 bg-[#C9A961]/10 text-[#C9A961] hover:bg-[#C9A961] hover:text-[#0D1B30] transition-all duration-200"
+                className="grid size-9 place-items-center rounded-full border border-secondary/40 bg-secondary/10 text-secondary hover:bg-secondary hover:text-secondary-foreground transition-all duration-200"
                 aria-label="WhatsApp"
               >
                 <WhatsAppIcon className="size-4" />
@@ -172,15 +172,15 @@ export function Footer() {
         </div>
 
         {/* Linha Final de Copyright */}
-        <div className="mt-14 pt-8 border-t border-[#162846] flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        <div className="mt-14 pt-8 border-t border-border/40 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <p>
             © {currentYear} Edvaldo Rodrigues Ferreira Sociedade Individual de Advocacia. Todos os direitos reservados.
           </p>
           <div className="flex items-center gap-6">
-            <Link to="/politica-de-privacidade" className="hover:text-[#C9A961] transition-colors">
+            <Link to="/politica-de-privacidade" className="hover:text-secondary transition-colors">
               Política de Privacidade
             </Link>
-            <Link to="/termos-de-uso" className="hover:text-[#C9A961] transition-colors">
+            <Link to="/termos-de-uso" className="hover:text-secondary transition-colors">
               Termos de Uso
             </Link>
           </div>

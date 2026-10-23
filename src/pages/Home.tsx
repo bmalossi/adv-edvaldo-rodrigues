@@ -127,7 +127,7 @@ export default function Home() {
   )}`;
 
   return (
-    <div className="w-full bg-[#FAF9F6] text-[#0D1B30] overflow-hidden">
+    <div className="w-full bg-background text-primary overflow-hidden">
       <SEOHead
         title="Edvaldo Rodrigues | Advogado em Praia Grande/SP — Assessoria Jurídica"
         description="Advogado em Praia Grande/SP especializado em Direito Civil, Empresarial, Trabalhista, Previdenciário, Criminal e Família. OAB/SP nº 465.818. Atendimento presencial e online."
@@ -181,7 +181,7 @@ export default function Home() {
       {/* ========================================================================= */}
       {/* 2. HERO SECTION (Imagem hero-bg.svg estendida em todo o hero)             */}
       {/* ========================================================================= */}
-      <section className="relative min-h-[90vh] lg:min-h-screen flex items-center bg-[#0D1B30] text-white pt-24 pb-16 lg:pt-28 lg:pb-20 overflow-hidden">
+      <section className="relative min-h-[90vh] lg:min-h-screen flex items-center bg-primary text-white pt-24 pb-16 lg:pt-28 lg:pb-20 overflow-hidden">
         {/* Imagem hero-bg.svg estendida em todo hero como background */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           <img
@@ -198,12 +198,12 @@ export default function Home() {
             {/* Título Principal H1 em 3 Linhas */}
             <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-bold tracking-tight leading-[1.05]">
               <span className="block text-white">ASSESSORIA</span>
-              <span className="block text-[#C9A961]">JURÍDICA</span>
-              <span className="block text-[#C9A961]">EMPRESARIAL</span>
+              <span className="block text-secondary">JURÍDICA</span>
+              <span className="block text-secondary">EMPRESARIAL</span>
             </h1>
 
             {/* 1. Separador Moderno Dourado entre H1 e Subtítulo */}
-            <div className="w-20 sm:w-28 h-[2px] bg-[#C9A961] my-4 rounded-full" aria-hidden="true" />
+            <div className="w-20 sm:w-28 h-[2px] bg-secondary my-4 rounded-full" aria-hidden="true" />
 
             {/* Subtítulo */}
             <p className="text-base sm:text-lg font-semibold text-white tracking-wide">
@@ -219,10 +219,10 @@ export default function Home() {
             <div className="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
               <Button
                 asChild
-                className="bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-semibold text-xs sm:text-sm uppercase tracking-wider h-12 px-7 rounded-md shadow-md transition-all duration-200"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/90 font-semibold text-xs sm:text-sm uppercase tracking-wider h-12 px-7 rounded-md shadow-md transition-all duration-200"
               >
                 <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                  <Scale className="size-4 mr-2 text-[#0D1B30]" aria-hidden="true" />
+                  <Scale className="size-4 mr-2 text-secondary-foreground" aria-hidden="true" />
                   Fale com um advogado
                 </a>
               </Button>
@@ -230,7 +230,7 @@ export default function Home() {
               <Button
                 asChild
                 variant="outline"
-                className="border border-white/40 bg-[#0D1B30]/40 backdrop-blur-sm text-white hover:bg-white/10 hover:border-white font-medium text-xs sm:text-sm uppercase tracking-wider h-12 px-6 rounded-md transition-all duration-200"
+                className="border border-white/40 bg-primary/40 backdrop-blur-sm text-white hover:bg-white/10 hover:border-white font-medium text-xs sm:text-sm uppercase tracking-wider h-12 px-6 rounded-md transition-all duration-200"
               >
                 <a href="#empresas">
                   Conheça nossa atuação
@@ -250,13 +250,13 @@ export default function Home() {
           {/* Cabeçalho da Seção */}
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
             <div className="flex items-center justify-center gap-3">
-              <span className="h-[1px] w-8 bg-[#C9A961]" aria-hidden="true" />
-              <p className="text-xs uppercase tracking-[0.25em] font-semibold text-[#C9A961]">
+              <span className="h-[1px] w-8 bg-secondary" aria-hidden="true" />
+              <p className="text-xs uppercase tracking-[0.25em] font-semibold text-secondary">
                 SOLUÇÕES JURÍDICAS PARA EMPRESAS
               </p>
-              <span className="h-[1px] w-8 bg-[#C9A961]" aria-hidden="true" />
+              <span className="h-[1px] w-8 bg-secondary" aria-hidden="true" />
             </div>
-            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#0D1B30] tracking-tight">
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-primary tracking-tight">
               Como podemos ajudar sua empresa
             </h2>
           </div>
@@ -270,10 +270,10 @@ export default function Home() {
                   key={item.id}
                   className="flex flex-col items-center text-center px-4 py-6 sm:py-8 group"
                 >
-                  <div className="mb-4 text-[#C9A961] group-hover:scale-110 transition-transform duration-300">
+                  <div className="mb-4 text-secondary group-hover:scale-110 transition-transform duration-300">
                     <Icon className="size-9 stroke-[1.5]" aria-hidden="true" />
                   </div>
-                  <h3 className="font-sans text-xs sm:text-[13px] font-bold tracking-wider text-[#0D1B30] uppercase mb-2 min-h-[32px] flex items-center justify-center">
+                  <h3 className="font-sans text-xs sm:text-[13px] font-bold tracking-wider text-primary uppercase mb-2 min-h-[32px] flex items-center justify-center">
                     {item.title}
                   </h3>
                   <p className="text-xs text-slate-500 leading-relaxed max-w-[200px]">
@@ -289,12 +289,12 @@ export default function Home() {
       {/* ========================================================================= */}
       {/* 4. "POR QUE TER ASSESSORIA JURÍDICA?" (Sem Box + Separador Central)        */}
       {/* ========================================================================= */}
-      <section className="py-20 lg:py-28 bg-[#0D1B30] text-white relative">
+      <section className="py-20 lg:py-28 bg-primary text-white relative">
         <div className="container">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             {/* Coluna Esquerda: Textos e Botão */}
             <div className="lg:col-span-5 space-y-6 lg:pr-6">
-              <p className="text-xs uppercase tracking-[0.25em] font-semibold text-[#C9A961]">
+              <p className="text-xs uppercase tracking-[0.25em] font-semibold text-secondary">
                 POR QUE TER ASSESSORIA JURÍDICA?
               </p>
               <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-white tracking-tight">
@@ -323,7 +323,7 @@ export default function Home() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
                 {checklistItems.map((text, idx) => (
                   <div key={idx} className="flex items-center gap-3">
-                    <div className="size-5 rounded-full border border-[#C9A961] bg-[#C9A961]/10 flex items-center justify-center text-[#C9A961] shrink-0">
+                    <div className="size-5 rounded-full border border-secondary bg-secondary/10 flex items-center justify-center text-secondary shrink-0">
                       <Check className="size-3 stroke-[2.5]" aria-hidden="true" />
                     </div>
                     <span className="text-xs sm:text-sm font-medium text-slate-100 leading-snug">
@@ -338,20 +338,20 @@ export default function Home() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 5. "ÁREAS DE ATUAÇÃO" (Fundo Off-White #FAF9F6)                           */}
+      {/* 5. "ÁREAS DE ATUAÇÃO"                                                    */}
       {/* ========================================================================= */}
-      <section className="py-20 lg:py-28 bg-[#FAF9F6] border-b border-slate-200/80">
+      <section className="py-20 lg:py-28 bg-background border-b border-slate-200/80">
         <div className="container">
           {/* Cabeçalho da Seção */}
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
             <div className="flex items-center justify-center gap-3">
-              <span className="h-[1px] w-8 bg-[#C9A961]" aria-hidden="true" />
-              <p className="text-xs uppercase tracking-[0.25em] font-semibold text-[#C9A961]">
+              <span className="h-[1px] w-8 bg-secondary" aria-hidden="true" />
+              <p className="text-xs uppercase tracking-[0.25em] font-semibold text-secondary">
                 ATUAÇÃO COMPLETA
               </p>
-              <span className="h-[1px] w-8 bg-[#C9A961]" aria-hidden="true" />
+              <span className="h-[1px] w-8 bg-secondary" aria-hidden="true" />
             </div>
-            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#0D1B30] tracking-tight">
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-primary tracking-tight">
               Áreas de Atuação
             </h2>
           </div>
@@ -364,12 +364,12 @@ export default function Home() {
                 <div
                   key={area.key}
                   onClick={() => handleOpenAreaModal(area.key)}
-                  className="group cursor-pointer bg-white p-6 rounded-xl border border-slate-200/90 shadow-sm hover:shadow-md hover:border-[#C9A961]/70 transition-all duration-300 flex flex-col items-center text-center"
+                  className="group cursor-pointer bg-white p-6 rounded-xl border border-slate-200/90 shadow-sm hover:shadow-md hover:border-secondary/70 transition-all duration-300 flex flex-col items-center text-center"
                 >
-                  <div className="size-12 rounded-lg bg-[#FAF9F6] border border-[#C9A961]/30 flex items-center justify-center text-[#C9A961] mb-4 group-hover:bg-[#C9A961] group-hover:text-[#0D1B30] transition-colors duration-300">
+                  <div className="size-12 rounded-lg bg-background border border-secondary/30 flex items-center justify-center text-secondary mb-4 group-hover:bg-secondary group-hover:text-secondary-foreground transition-colors duration-300">
                     <Icon className="size-6 stroke-[1.75]" aria-hidden="true" />
                   </div>
-                  <h3 className="font-sans text-xs font-bold tracking-wider text-[#0D1B30] uppercase mb-2">
+                  <h3 className="font-sans text-xs font-bold tracking-wider text-primary uppercase mb-2">
                     {area.title}
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
@@ -384,7 +384,7 @@ export default function Home() {
             <Button
               asChild
               variant="outline"
-              className="border border-[#0D1B30] text-[#0D1B30] hover:bg-[#0D1B30] hover:text-white font-medium text-xs uppercase tracking-wider h-11 px-8 rounded-md transition-all duration-200"
+              className="border border-primary text-primary hover:bg-primary hover:text-primary-foreground font-medium text-xs uppercase tracking-wider h-11 px-8 rounded-md transition-all duration-200"
             >
               <Link to="/areas-de-atuacao">
                 Ver todas as áreas de atuação
@@ -396,14 +396,14 @@ export default function Home() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 6. "SOBRE O ADVOGADO" (Fundo Azul-Marinho #0D1B30, Layout Dividido)       */}
+      {/* 6. "SOBRE O ADVOGADO" (Layout Dividido)                                  */}
       {/* ========================================================================= */}
-      <section className="py-20 lg:py-28 bg-[#0D1B30] text-white">
+      <section className="py-20 lg:py-28 bg-primary text-white">
         <div className="container">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             {/* Foto do Advogado à Esquerda */}
             <div className="lg:col-span-5 flex justify-center">
-              <div className="w-full max-w-[420px] rounded-2xl overflow-hidden shadow-2xl border border-[#162846]">
+              <div className="w-full max-w-[420px] rounded-2xl overflow-hidden shadow-2xl border border-border/40">
                 <img
                   src={fotoSobre}
                   alt="Dr. Edvaldo Rodrigues Ferreira no escritório"
@@ -415,7 +415,7 @@ export default function Home() {
 
             {/* Conteúdo Textual à Direita */}
             <div className="lg:col-span-7 space-y-6">
-              <p className="text-xs uppercase tracking-[0.25em] font-semibold text-[#C9A961]">
+              <p className="text-xs uppercase tracking-[0.25em] font-semibold text-secondary">
                 SOBRE O ADVOGADO
               </p>
               <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-white tracking-tight">
@@ -431,9 +431,9 @@ export default function Home() {
               </p>
 
               {/* Linha de 3 Informações com Ícones Dourados */}
-              <div className="pt-4 border-t border-[#162846] grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="pt-4 border-t border-border/40 grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-full bg-[#162846] border border-[#C9A961]/40 flex items-center justify-center text-[#C9A961] shrink-0">
+                  <div className="size-10 rounded-full bg-primary border border-secondary/40 flex items-center justify-center text-secondary shrink-0">
                     <Shield className="size-5" aria-hidden="true" />
                   </div>
                   <div>
@@ -444,7 +444,7 @@ export default function Home() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-full bg-[#162846] border border-[#C9A961]/40 flex items-center justify-center text-[#C9A961] shrink-0">
+                  <div className="size-10 rounded-full bg-primary border border-secondary/40 flex items-center justify-center text-secondary shrink-0">
                     <MapPin className="size-5" aria-hidden="true" />
                   </div>
                   <div>
@@ -455,7 +455,7 @@ export default function Home() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-full bg-[#162846] border border-[#C9A961]/40 flex items-center justify-center text-[#C9A961] shrink-0">
+                  <div className="size-10 rounded-full bg-primary border border-secondary/40 flex items-center justify-center text-secondary shrink-0">
                     <Headphones className="size-5" aria-hidden="true" />
                   </div>
                   <div>
@@ -469,7 +469,7 @@ export default function Home() {
               <div className="pt-2">
                 <Button
                   asChild
-                  className="bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-semibold text-xs uppercase tracking-wider h-11 px-7 rounded-md transition-all duration-200"
+                  className="bg-secondary text-secondary-foreground hover:bg-secondary/90 font-semibold text-xs uppercase tracking-wider h-11 px-7 rounded-md transition-all duration-200"
                 >
                   <Link to="/sobre">Conheça a trajetória completa</Link>
                 </Button>
@@ -485,21 +485,21 @@ export default function Home() {
       <ArticlesSection />
 
       {/* ========================================================================= */}
-      {/* 7. FAIXA DE CTA FINAL (Fundo Dourado #C9A961)                              */}
+      {/* 7. FAIXA DE CTA FINAL                                                    */}
       {/* ========================================================================= */}
-      <section className="bg-[#C9A961] text-[#0D1B30] py-10 lg:py-12">
+      <section className="bg-secondary text-secondary-foreground py-10 lg:py-12">
         <div className="container">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
             {/* Lado Esquerdo: Ícone e Textos */}
             <div className="flex items-center gap-5">
-              <div className="size-14 rounded-xl bg-[#0D1B30] text-white flex items-center justify-center shrink-0 shadow-md">
-                <Phone className="size-6 fill-current text-[#C9A961]" aria-hidden="true" />
+              <div className="size-14 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-md">
+                <Phone className="size-6 fill-current text-secondary" aria-hidden="true" />
               </div>
               <div>
-                <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#0D1B30] leading-tight">
+                <h3 className="font-serif text-xl sm:text-2xl font-bold text-secondary-foreground leading-tight">
                   Precisando de orientação jurídica para sua empresa?
                 </h3>
-                <p className="text-xs sm:text-sm font-medium text-[#1E293B] mt-1">
+                <p className="text-xs sm:text-sm font-medium text-secondary-foreground/80 mt-1">
                   Fale com o escritório e descubra como podemos ajudar.
                 </p>
               </div>
@@ -509,11 +509,11 @@ export default function Home() {
             <div className="shrink-0 w-full sm:w-auto text-center">
               <Button
                 asChild
-                className="w-full sm:w-auto bg-[#0D1B30] text-white hover:bg-[#081220] font-semibold text-xs uppercase tracking-wider h-12 px-8 rounded-lg shadow-md transition-all duration-200"
+                className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-xs uppercase tracking-wider h-12 px-8 rounded-lg shadow-md transition-all duration-200"
               >
                 <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
                   Fale com um advogado
-                  <ArrowRight className="size-4 ml-2 text-[#C9A961]" aria-hidden="true" />
+                  <ArrowRight className="size-4 ml-2 text-secondary" aria-hidden="true" />
                 </a>
               </Button>
             </div>

@@ -537,3 +537,41 @@ All colors MUST be HSL.
     margin: 1.5cm;
   }
 }
+
+
+/* ========================================================================= */
+/* ADAPTAÇÃO: ÁREA DE TOQUE MÍNIMA (44px) EM TELAS SENSÍVEIS AO TOQUE        */
+/* Conforme WCAG 2.5.5 / 2.5.8 e Apple Human Interface Guidelines             */
+/* ========================================================================= */
+@media (pointer: coarse) {
+  /* Botões e controles de ação interativos */
+  button:not(.touch-target-exempt),
+  [role="button"]:not(.touch-target-exempt),
+  .touch-target-44 {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+  }
+
+  /* Em tabelas: linhas, células e botões de ação */
+  table tr {
+    min-height: 44px;
+  }
+
+  table td,
+  table th {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  table button,
+  table [role="button"],
+  table a[title],
+  table a[href].btn-action {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

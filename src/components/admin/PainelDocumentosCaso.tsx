@@ -199,9 +199,9 @@ export function PainelDocumentosCaso({ caso, cliente }: PainelDocumentosCasoProp
               <button
                 type="button"
                 onClick={() => setModoVisualizacao('explorador')}
-                className={`px-3 py-1 rounded-lg font-medium transition-colors ${
+                className={`px-3 py-1 rounded-lg font-semibold transition-colors ${
                   modoVisualizacao === 'explorador'
-                    ? 'bg-[#C9A961] text-slate-950 shadow-sm'
+                    ? 'bg-secondary text-secondary-foreground shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -210,9 +210,9 @@ export function PainelDocumentosCaso({ caso, cliente }: PainelDocumentosCasoProp
               <button
                 type="button"
                 onClick={() => setModoVisualizacao('lista')}
-                className={`px-3 py-1 rounded-lg font-medium transition-colors ${
+                className={`px-3 py-1 rounded-lg font-semibold transition-colors ${
                   modoVisualizacao === 'lista'
-                    ? 'bg-[#C9A961] text-slate-950 shadow-sm'
+                    ? 'bg-secondary text-secondary-foreground shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -377,7 +377,7 @@ export function PainelDocumentosCaso({ caso, cliente }: PainelDocumentosCasoProp
                           href={doc.google_drive_view_link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+                          className="min-h-[44px] min-w-[44px] p-2.5 sm:p-2 flex items-center justify-center rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
                           title="Abrir no Google Drive"
                         >
                           <ExternalLink className="w-4 h-4" />
@@ -387,7 +387,7 @@ export function PainelDocumentosCaso({ caso, cliente }: PainelDocumentosCasoProp
                       {(papel === 'advogado' || doc.criado_por === user?.id) && (
                         <button
                           onClick={() => handleExcluir(doc.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          className="min-h-[44px] min-w-[44px] p-2.5 sm:p-2 flex items-center justify-center rounded-lg text-slate-400 hover:text-destructive hover:bg-destructive/10 transition-colors"
                           title="Excluir documento"
                         >
                           <Trash2 className="w-4 h-4" />

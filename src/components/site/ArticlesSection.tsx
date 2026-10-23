@@ -34,15 +34,15 @@ export function ArticlesSection() {
   }
 
   return (
-    <section className="py-20 lg:py-24 bg-[#FAF9F6] border-t border-slate-200/80">
+    <section className="py-20 lg:py-24 bg-background border-t border-slate-200/80">
       <div className="container">
         {/* Cabeçalho da Seção */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.25em] font-semibold text-[#C9A961]">
+            <p className="text-xs uppercase tracking-[0.25em] font-semibold text-secondary">
               CONTEÚDO JURÍDICO
             </p>
-            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#0D1B30] tracking-tight">
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-primary tracking-tight">
               Artigos recentes
             </h2>
           </div>
@@ -50,7 +50,7 @@ export function ArticlesSection() {
           <Button
             asChild
             variant="outline"
-            className="border-slate-300 text-slate-700 hover:text-[#0D1B30] hover:border-[#0D1B30] rounded-lg text-xs sm:text-sm font-medium h-10 px-5 transition-all self-start sm:self-auto"
+            className="border-slate-300 text-slate-700 hover:text-primary hover:border-primary rounded-lg text-xs sm:text-sm font-medium h-10 px-5 transition-all self-start sm:self-auto"
           >
             <Link to="/conteudo-juridico">
               Ver todos os artigos
@@ -88,7 +88,7 @@ export function ArticlesSection() {
               return (
                 <article
                   key={article.id}
-                  className="group bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-sm hover:shadow-lg hover:border-[#C9A961]/70 transition-all duration-300 flex flex-col"
+                  className="group bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-sm hover:shadow-lg hover:border-secondary/70 transition-all duration-300 flex flex-col"
                 >
                   <Link
                     to={`/conteudo-juridico/${article.slug}`}
@@ -115,7 +115,7 @@ export function ArticlesSection() {
                       </time>
                     )}
 
-                    <h3 className="font-serif text-lg sm:text-xl font-bold text-[#0D1B30] leading-snug mb-5 line-clamp-2 group-hover:text-[#C9A961] transition-colors">
+                    <h3 className="font-serif text-lg sm:text-xl font-bold text-primary leading-snug mb-5 line-clamp-2 group-hover:text-secondary transition-colors">
                       <Link to={`/conteudo-juridico/${article.slug}`}>
                         {article.title}
                       </Link>
@@ -124,7 +124,7 @@ export function ArticlesSection() {
                     <div className="mt-auto pt-2">
                       <Link
                         to={`/conteudo-juridico/${article.slug}`}
-                        className="inline-flex items-center text-xs sm:text-sm font-semibold text-[#0D1B30] group-hover:text-[#C9A961] transition-colors"
+                        className="inline-flex items-center text-xs sm:text-sm font-semibold text-primary group-hover:text-secondary transition-colors"
                       >
                         Ler artigo
                         <ArrowRight

@@ -102,7 +102,7 @@ export default function Clientes() {
               onClick={() => setModalSincronizarDriveOpen(true)}
               className="border-white/15 text-slate-200 hover:text-white hover:bg-slate-800 rounded-xl"
             >
-              <FolderSync className="w-4 h-4 mr-2 text-[#C9A961]" />
+              <FolderSync className="w-4 h-4 mr-2 text-secondary" />
               Sincronizar Google Drive
             </Button>
           </PermissionGuard>
@@ -250,7 +250,7 @@ export default function Clientes() {
                     </td>
 
                     <td className="px-6 py-4 text-right">
-                      <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-slate-300 hover:text-white">
+                      <Button asChild variant="ghost" size="sm" className="min-h-[44px] min-w-[44px] sm:h-9 px-3 text-slate-300 hover:text-white">
                         <Link to={`/admin/crm/clientes/${cliente.id}`}>
                           <Eye className="w-4 h-4 mr-1" />
                           Ficha

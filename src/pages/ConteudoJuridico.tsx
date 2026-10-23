@@ -84,7 +84,7 @@ export default function ConteudoJuridico() {
   )}`
 
   return (
-    <div className="w-full bg-[#FAF9F6] text-[#0D1B30] min-h-screen flex flex-col">
+    <div className="w-full bg-background text-primary min-h-screen flex flex-col">
       <SEOHead
         title="Conteúdo Jurídico | Artigos e Orientações — Dr. Edvaldo Rodrigues Ferreira"
         description="Artigos e orientações jurídicas sobre Direito Empresarial, Civil, Família, Trabalhista, Criminal, Previdenciário e Militar. Informação clara para tomada de decisões seguras."
@@ -99,9 +99,9 @@ export default function ConteudoJuridico() {
       />
 
       {/* Hero Header */}
-      <section className="bg-[#0D1B30] text-white pt-32 pb-20 lg:pt-36 lg:pb-24 border-b border-[#162846]">
+      <section className="bg-primary text-white pt-32 pb-20 lg:pt-36 lg:pb-24 border-b border-border/40">
         <div className="container max-w-4xl text-center space-y-4">
-          <div className="inline-flex items-center gap-2 border border-[#C9A961]/40 bg-[#0D1B30]/90 px-3.5 py-1 rounded-full text-[11px] uppercase tracking-[0.2em] text-[#C9A961] font-semibold">
+          <div className="inline-flex items-center gap-2 border border-secondary/40 bg-primary/90 px-3.5 py-1 rounded-full text-[11px] uppercase tracking-[0.2em] text-secondary font-semibold">
             <span>ARTIGOS & ORIENTAÇÕES JURÍDICAS</span>
           </div>
           <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
@@ -122,8 +122,8 @@ export default function ConteudoJuridico() {
               onClick={() => handleCategoryChange('todos')}
               className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold tracking-wide transition-all shrink-0 cursor-pointer ${
                 activeCategory === 'todos'
-                  ? 'bg-[#C9A961] text-[#0D1B30] shadow-md shadow-[#C9A961]/20 font-bold'
-                  : 'bg-white text-slate-700 hover:text-[#0D1B30] hover:bg-slate-100 border border-slate-200'
+                  ? 'bg-secondary text-secondary-foreground shadow-md shadow-secondary/20 font-bold'
+                  : 'bg-white text-slate-700 hover:text-primary hover:bg-slate-100 border border-slate-200'
               }`}
             >
               Todos os artigos
@@ -135,8 +135,8 @@ export default function ConteudoJuridico() {
                 onClick={() => handleCategoryChange(cat.slug)}
                 className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold tracking-wide transition-all shrink-0 cursor-pointer ${
                   activeCategory === cat.slug
-                    ? 'bg-[#C9A961] text-[#0D1B30] shadow-md shadow-[#C9A961]/20 font-bold'
-                    : 'bg-white text-slate-700 hover:text-[#0D1B30] hover:bg-slate-100 border border-slate-200'
+                    ? 'bg-secondary text-secondary-foreground shadow-md shadow-secondary/20 font-bold'
+                    : 'bg-white text-slate-700 hover:text-primary hover:bg-slate-100 border border-slate-200'
                 }`}
               >
                 {cat.name}
@@ -164,10 +164,10 @@ export default function ConteudoJuridico() {
           </div>
         ) : articles.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 max-w-xl mx-auto p-8 shadow-sm">
-            <div className="size-14 rounded-full bg-[#FAF9F6] border border-[#C9A961]/40 flex items-center justify-center text-[#C9A961] mx-auto mb-4">
+            <div className="size-14 rounded-full bg-background border border-secondary/40 flex items-center justify-center text-secondary mx-auto mb-4">
               <BookOpen className="size-6" />
             </div>
-            <h3 className="font-serif text-xl font-bold text-[#0D1B30] mb-2">
+            <h3 className="font-serif text-xl font-bold text-primary mb-2">
               Nenhum artigo encontrado nesta categoria
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 mb-6">
@@ -175,7 +175,7 @@ export default function ConteudoJuridico() {
             </p>
             <Button
               onClick={() => handleCategoryChange('todos')}
-              className="bg-[#0D1B30] text-white hover:bg-[#162846] text-xs font-semibold uppercase tracking-wider"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold uppercase tracking-wider"
             >
               Ver todos os artigos
             </Button>
@@ -192,7 +192,7 @@ export default function ConteudoJuridico() {
               return (
                 <article
                   key={article.id}
-                  className="group bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-sm hover:shadow-lg hover:border-[#C9A961]/70 transition-all duration-300 flex flex-col"
+                  className="group bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-sm hover:shadow-lg hover:border-secondary/70 transition-all duration-300 flex flex-col"
                 >
                   <Link
                     to={`/conteudo-juridico/${article.slug}`}
@@ -208,7 +208,7 @@ export default function ConteudoJuridico() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     {article.category && (
-                      <span className="absolute top-4 left-4 bg-[#C9A961] text-[#0D1B30] text-[10px] font-bold px-2.5 py-1 rounded-sm uppercase tracking-wider shadow-sm">
+                      <span className="absolute top-4 left-4 bg-secondary text-secondary-foreground text-[10px] font-bold px-2.5 py-1 rounded-sm uppercase tracking-wider shadow-sm">
                         {article.category.name}
                       </span>
                     )}
@@ -224,7 +224,7 @@ export default function ConteudoJuridico() {
                       </time>
                     )}
 
-                    <h2 className="font-serif text-lg sm:text-xl font-bold text-[#0D1B30] leading-snug mb-3 line-clamp-2 group-hover:text-[#C9A961] transition-colors">
+                    <h2 className="font-serif text-lg sm:text-xl font-bold text-primary leading-snug mb-3 line-clamp-2 group-hover:text-secondary transition-colors">
                       <Link to={`/conteudo-juridico/${article.slug}`}>
                         {article.title}
                       </Link>
@@ -239,7 +239,7 @@ export default function ConteudoJuridico() {
                     <div className="mt-auto pt-2">
                       <Link
                         to={`/conteudo-juridico/${article.slug}`}
-                        className="inline-flex items-center text-xs sm:text-sm font-semibold text-[#0D1B30] group-hover:text-[#C9A961] transition-colors"
+                        className="inline-flex items-center text-xs sm:text-sm font-semibold text-primary group-hover:text-secondary transition-colors"
                       >
                         Ler artigo completo
                         <ArrowRight
@@ -263,7 +263,7 @@ export default function ConteudoJuridico() {
               size="sm"
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage <= 1}
-              className="border-slate-300 text-slate-700 hover:text-[#0D1B30] disabled:opacity-40"
+              className="border-slate-300 text-slate-700 hover:text-primary disabled:opacity-40"
             >
               <ChevronLeft className="size-4 mr-1" />
               Anterior
@@ -278,7 +278,7 @@ export default function ConteudoJuridico() {
               size="sm"
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage >= totalPages}
-              className="border-slate-300 text-slate-700 hover:text-[#0D1B30] disabled:opacity-40"
+              className="border-slate-300 text-slate-700 hover:text-primary disabled:opacity-40"
             >
               Próxima
               <ChevronRight className="size-4 ml-1" />
@@ -288,14 +288,14 @@ export default function ConteudoJuridico() {
       </main>
 
       {/* Faixa CTA Institucional */}
-      <section className="bg-[#C9A961] text-[#0D1B30] py-10 lg:py-12 mt-12">
+      <section className="bg-secondary text-secondary-foreground py-10 lg:py-12 mt-12">
         <div className="container">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
             <div>
-              <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#0D1B30] leading-tight">
+              <h3 className="font-serif text-xl sm:text-2xl font-bold text-secondary-foreground leading-tight">
                 Precisando de orientação jurídica para sua empresa?
               </h3>
-              <p className="text-xs sm:text-sm font-medium text-[#1E293B] mt-1">
+              <p className="text-xs sm:text-sm font-medium text-secondary-foreground/80 mt-1">
                 Fale com o Dr. Edvaldo Rodrigues Ferreira e descubra como podemos ajudar seu negócio.
               </p>
             </div>
@@ -303,11 +303,11 @@ export default function ConteudoJuridico() {
             <div className="shrink-0 w-full sm:w-auto text-center">
               <Button
                 asChild
-                className="w-full sm:w-auto bg-[#0D1B30] text-white hover:bg-[#081220] font-semibold text-xs uppercase tracking-wider h-12 px-8 rounded-lg shadow-md transition-all duration-200"
+                className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-xs uppercase tracking-wider h-12 px-8 rounded-lg shadow-md transition-all duration-200"
               >
                 <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
                   Fale com um advogado
-                  <ArrowRight className="size-4 ml-2 text-[#C9A961]" aria-hidden="true" />
+                  <ArrowRight className="size-4 ml-2 text-secondary" aria-hidden="true" />
                 </a>
               </Button>
             </div>

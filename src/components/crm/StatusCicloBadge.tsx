@@ -23,8 +23,8 @@ export const STATUS_CICLO_THEME: Record<
   },
   lead: {
     label: 'Lead / Prospecção',
-    container: 'bg-[#C9A961]/10 text-[#DFC78E] border-[#C9A961]/30 hover:border-[#C9A961]/50',
-    dot: 'bg-[#C9A961] shadow-[0_0_8px_rgba(201,169,97,0.5)]',
+    container: 'bg-secondary/10 text-secondary border-secondary/30 hover:border-secondary/50',
+    dot: 'bg-secondary shadow-[0_0_8px_rgba(201,169,97,0.5)]',
   },
   consulta: {
     label: 'Consulta / Reunião',

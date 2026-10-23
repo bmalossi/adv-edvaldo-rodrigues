@@ -310,7 +310,7 @@ export function TabUsuarios() {
                                   setUsuarioEmEdicao(u);
                                   setModalOpen(true);
                                 }}
-                                className="h-8 w-8 p-0 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg"
+                                className="min-h-[44px] min-w-[44px] h-11 w-11 sm:h-9 sm:w-9 p-0 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 rounded-lg"
                                 title="Editar dados e perfil"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
@@ -320,7 +320,7 @@ export function TabUsuarios() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleResetSenha(u)}
-                                className="h-8 w-8 p-0 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg"
+                                className="min-h-[44px] min-w-[44px] h-11 w-11 sm:h-9 sm:w-9 p-0 flex items-center justify-center text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg"
                                 title="Exigir troca de senha no próximo login"
                               >
                                 <KeyRound className="w-3.5 h-3.5" />
@@ -331,7 +331,7 @@ export function TabUsuarios() {
                                 size="sm"
                                 disabled={alternandoStatusId === u.id}
                                 onClick={() => handleAlternarStatus(u)}
-                                className={`h-8 w-8 p-0 rounded-lg ${
+                                className={`min-h-[44px] min-w-[44px] h-11 w-11 sm:h-9 sm:w-9 p-0 flex items-center justify-center rounded-lg ${
                                   u.ativo
                                     ? 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'
                                     : 'text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10'

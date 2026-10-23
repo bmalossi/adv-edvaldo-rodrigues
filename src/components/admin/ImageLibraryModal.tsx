@@ -114,7 +114,7 @@ export function ImageLibraryModal({
       <DialogContent className="max-w-4xl bg-slate-900 border border-white/10 text-white p-6 sm:rounded-2xl max-h-[90vh] flex flex-col">
         <DialogHeader className="flex flex-row items-center justify-between pb-4 border-b border-white/10 pr-6">
           <DialogTitle className="font-serif text-xl font-bold flex items-center gap-2.5 text-white">
-            <ImageIcon className="size-5 text-[#C9A961]" />
+            <ImageIcon className="size-5 text-secondary" />
             {title}
           </DialogTitle>
           <div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export function ImageLibraryModal({
                 className="hidden"
                 disabled={uploading}
               />
-              <span className="inline-flex items-center gap-1.5 bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-bold text-xs px-3 py-1.5 rounded-md transition-colors h-8">
+              <span className="inline-flex items-center gap-1.5 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-bold text-xs px-3 py-1.5 rounded-md transition-colors h-8">
                 {uploading ? (
                   <Loader2 className="size-3.5 animate-spin" />
                 ) : (
@@ -170,7 +170,7 @@ export function ImageLibraryModal({
         <div className="flex-1 overflow-y-auto min-h-[300px] max-h-[50vh] p-2 bg-slate-950/50 rounded-xl border border-white/5">
           {loading ? (
             <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-slate-400 gap-3">
-              <Loader2 className="size-8 text-[#C9A961] animate-spin" />
+              <Loader2 className="size-8 text-secondary animate-spin" />
               <p className="text-xs">Carregando catálogo de imagens...</p>
             </div>
           ) : filteredImages.length === 0 ? (
@@ -193,7 +193,7 @@ export function ImageLibraryModal({
                     onClick={() => setSelectedUrl(img.url)}
                     className={`group relative aspect-video rounded-lg overflow-hidden border-2 cursor-pointer bg-slate-900 transition-all ${
                       isSelected
-                        ? 'border-[#C9A961] shadow-lg shadow-[#C9A961]/20 scale-[1.02]'
+                        ? 'border-secondary shadow-lg shadow-secondary/20 scale-[1.02]'
                         : 'border-white/10 hover:border-white/30'
                     }`}
                   >
@@ -211,7 +211,7 @@ export function ImageLibraryModal({
 
                     {/* Ícone de Seleção */}
                     {isSelected && (
-                      <div className="absolute top-2 left-2 bg-[#C9A961] text-[#0D1B30] p-1 rounded-full shadow-md">
+                      <div className="absolute top-2 left-2 bg-secondary text-secondary-foreground p-1 rounded-full shadow-md">
                         <Check className="size-3.5 stroke-[3]" />
                       </div>
                     )}
@@ -262,7 +262,7 @@ export function ImageLibraryModal({
               size="sm"
               disabled={!selectedUrl}
               onClick={handleConfirmSelection}
-              className="bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-bold text-xs px-5 shadow-sm"
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/90 font-bold text-xs px-5 shadow-sm"
             >
               Usar Imagem
             </Button>

@@ -83,7 +83,7 @@ export default function ArtigoDetalhe() {
   // Estado de carregamento
   if (loading) {
     return (
-      <div className="w-full bg-[#FAF9F6] min-h-screen pt-32 pb-20">
+      <div className="w-full bg-background min-h-screen pt-32 pb-20">
         <div className="container max-w-4xl space-y-8 animate-pulse">
           <div className="h-4 w-32 bg-slate-200 rounded" />
           <div className="h-10 w-full bg-slate-200 rounded" />
@@ -102,14 +102,14 @@ export default function ArtigoDetalhe() {
   // Se não encontrou artigo
   if (!article) {
     return (
-      <div className="w-full bg-[#FAF9F6] min-h-screen pt-36 pb-20 flex items-center justify-center">
+      <div className="w-full bg-background min-h-screen pt-36 pb-20 flex items-center justify-center">
         <div className="container max-w-md text-center bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-          <BookOpen className="size-12 text-[#C9A961] mx-auto mb-4" />
-          <h1 className="font-serif text-2xl font-bold text-[#0D1B30] mb-2">Artigo não encontrado</h1>
+          <BookOpen className="size-12 text-secondary mx-auto mb-4" />
+          <h1 className="font-serif text-2xl font-bold text-primary mb-2">Artigo não encontrado</h1>
           <p className="text-xs sm:text-sm text-slate-500 mb-6">
             O conteúdo que você tentou acessar não existe ou foi removido.
           </p>
-          <Button asChild className="bg-[#0D1B30] text-white hover:bg-[#162846] text-xs font-semibold uppercase tracking-wider">
+          <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold uppercase tracking-wider">
             <Link to="/conteudo-juridico">Voltar para Conteúdo Jurídico</Link>
           </Button>
         </div>
@@ -122,14 +122,14 @@ export default function ArtigoDetalhe() {
   // Proteção de Rascunho / Agendado: se o usuário não for admin, responde como 404
   if (articleStatus !== 'published' && !user) {
     return (
-      <div className="w-full bg-[#FAF9F6] min-h-screen pt-36 pb-20 flex items-center justify-center">
+      <div className="w-full bg-background min-h-screen pt-36 pb-20 flex items-center justify-center">
         <div className="container max-w-md text-center bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-          <BookOpen className="size-12 text-[#C9A961] mx-auto mb-4" />
-          <h1 className="font-serif text-2xl font-bold text-[#0D1B30] mb-2">Artigo indisponível</h1>
+          <BookOpen className="size-12 text-secondary mx-auto mb-4" />
+          <h1 className="font-serif text-2xl font-bold text-primary mb-2">Artigo indisponível</h1>
           <p className="text-xs sm:text-sm text-slate-500 mb-6">
             Esta publicação não está acessível publicamente no momento.
           </p>
-          <Button asChild className="bg-[#0D1B30] text-white hover:bg-[#162846] text-xs font-semibold uppercase tracking-wider">
+          <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold uppercase tracking-wider">
             <Link to="/conteudo-juridico">Ver artigos disponíveis</Link>
           </Button>
         </div>
@@ -150,7 +150,7 @@ export default function ArtigoDetalhe() {
   )}`
 
   return (
-    <div className="w-full bg-[#FAF9F6] text-[#0D1B30] min-h-screen flex flex-col">
+    <div className="w-full bg-background text-foreground min-h-screen flex flex-col">
       <SEOHead
         title={`${article.seo_title || article.title} | Dr. Edvaldo Rodrigues Ferreira`}
         description={article.seo_description || article.excerpt || ''}
@@ -185,10 +185,10 @@ export default function ArtigoDetalhe() {
 
       {/* Fallback semântico para motores de busca e crawlers de IA sem suporte a JavaScript */}
       <noscript>
-        <div className="container max-w-4xl py-6 my-4 bg-amber-50 border border-amber-200 rounded-lg text-slate-800">
+        <div className="container max-w-4xl py-6 my-4 bg-amber-50/90 border border-amber-200/80 rounded-lg text-amber-950">
           <h1 className="font-serif text-2xl font-bold mb-2">{article.title}</h1>
-          {article.excerpt && <p className="text-slate-600 mb-4">{article.excerpt}</p>}
-          <p className="text-xs text-slate-500">
+          {article.excerpt && <p className="text-amber-900/80 mb-4">{article.excerpt}</p>}
+          <p className="text-xs text-amber-800/80">
             Publicação jurídica por {article.author_name} ({article.author_oab || 'OAB/SP nº 465.818'}).
           </p>
         </div>
@@ -198,11 +198,11 @@ export default function ArtigoDetalhe() {
       {articleStatus !== 'published' && user && (
         <aside
           aria-label="Aviso de pré-visualização"
-          className="bg-amber-500 text-slate-950 px-4 py-3 sticky top-20 z-40 shadow-md flex items-center justify-between text-xs sm:text-sm font-semibold"
+          className="bg-amber-400 text-amber-950 px-4 py-3 sticky top-20 z-40 shadow-md flex items-center justify-between text-xs sm:text-sm font-semibold border-b border-amber-500/30"
         >
           <div className="container flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="bg-slate-950 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+              <span className="bg-amber-950 text-amber-200 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
                 {articleStatus === 'draft' ? 'Rascunho' : 'Agendado'}
               </span>
               <span>
@@ -228,11 +228,11 @@ export default function ArtigoDetalhe() {
       )}
 
       {/* Cabeçalho do Artigo */}
-      <header className="bg-[#0D1B30] text-white pt-24 pb-10 lg:pt-28 lg:pb-12 border-b border-[#162846]">
+      <header className="bg-primary text-white pt-24 pb-10 lg:pt-28 lg:pb-12 border-b border-primary/40">
         <div className="container max-w-4xl space-y-4">
           <Link
             to="/conteudo-juridico"
-            className="inline-flex items-center text-xs text-slate-300 hover:text-[#C9A961] transition-colors"
+            className="inline-flex items-center text-xs text-slate-300 hover:text-secondary transition-colors"
           >
             <ArrowLeft className="size-3.5 mr-1.5" />
             Voltar para Conteúdo Jurídico
@@ -241,7 +241,7 @@ export default function ArtigoDetalhe() {
           {/* Categoria Badge */}
           {article.category && (
             <div>
-              <span className="inline-flex items-center bg-[#C9A961] text-[#0D1B30] text-[11px] font-bold px-3 py-1 rounded-sm uppercase tracking-wider shadow-sm">
+              <span className="inline-flex items-center bg-secondary text-secondary-foreground text-[11px] font-bold px-3 py-1 rounded-sm uppercase tracking-wider shadow-sm">
                 {article.category.name}
               </span>
             </div>
@@ -256,14 +256,14 @@ export default function ArtigoDetalhe() {
           <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs sm:text-sm text-slate-300">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
-                <div className="size-8 rounded-full bg-[#C9A961] text-[#0D1B30] font-bold flex items-center justify-center text-xs">
+                <div className="size-8 rounded-full bg-secondary text-secondary-foreground font-bold flex items-center justify-center text-xs">
                   {article.author_name.charAt(0)}
                 </div>
                 <div>
                   <p className="font-bold text-white text-xs sm:text-sm leading-tight">
                     {article.author_name}
                   </p>
-                  <p className="text-[11px] text-[#C9A961] leading-tight font-medium">
+                  <p className="text-[11px] text-secondary leading-tight font-medium">
                     {article.author_oab || 'OAB/SP nº 465.818'}
                   </p>
                 </div>
@@ -272,14 +272,14 @@ export default function ArtigoDetalhe() {
               <span className="text-white/20 hidden sm:inline">•</span>
 
               <div className="flex items-center gap-1.5 text-slate-300 text-xs">
-                <Calendar className="size-3.5 text-[#C9A961]" />
+                <Calendar className="size-3.5 text-secondary" />
                 <time dateTime={article.published_at || undefined}>{formattedDate}</time>
               </div>
 
               <span className="text-white/20 hidden sm:inline">•</span>
 
               <div className="flex items-center gap-1.5 text-slate-300 text-xs">
-                <Clock className="size-3.5 text-[#C9A961]" />
+                <Clock className="size-3.5 text-secondary" />
                 <span>{article.reading_time_minutes || 4} min de leitura</span>
               </div>
             </div>
@@ -319,11 +319,11 @@ export default function ArtigoDetalhe() {
         <article
           className="prose prose-slate lg:prose-lg max-w-none text-slate-700 leading-relaxed
             [&_p]:min-h-[1.5em] [&_p:empty]:min-h-[1.5em] [&_p]:my-4 [&_p]:leading-relaxed
-            prose-headings:font-serif prose-headings:text-[#0D1B30] prose-headings:tracking-tight prose-headings:font-bold
+            prose-headings:font-serif prose-headings:text-primary prose-headings:tracking-tight prose-headings:font-bold
             prose-h2:text-2xl prose-h2:sm:text-3xl prose-h2:mt-8 prose-h2:mb-4
             prose-h3:text-xl prose-h3:sm:text-2xl prose-h3:mt-6 prose-h3:mb-3
-            prose-a:text-[#C9A961] prose-a:font-semibold prose-a:underline hover:prose-a:text-[#B8935A]
-            prose-blockquote:border-l-4 prose-blockquote:border-[#C9A961] prose-blockquote:bg-amber-50/60 prose-blockquote:py-3 prose-blockquote:px-5 prose-blockquote:rounded-r-lg prose-blockquote:my-6
+            prose-a:text-secondary prose-a:font-semibold prose-a:underline hover:prose-a:text-secondary/80
+            prose-blockquote:border-l-2 prose-blockquote:border-secondary prose-blockquote:bg-secondary/5 prose-blockquote:py-3 prose-blockquote:px-5 prose-blockquote:rounded-r-lg prose-blockquote:my-6
             prose-ul:list-disc prose-ol:list-decimal prose-li:my-1
             prose-img:rounded-xl prose-img:shadow-md prose-img:my-8"
           dangerouslySetInnerHTML={{ __html: sanitizedContent }}
@@ -348,15 +348,15 @@ export default function ArtigoDetalhe() {
 
         {/* Caixa de Autoria ao Final */}
         <div className="mt-14 p-8 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          <div className="size-16 rounded-full bg-[#0D1B30] text-[#C9A961] border-2 border-[#C9A961] flex items-center justify-center font-serif text-2xl font-bold shrink-0">
+          <div className="size-16 rounded-full bg-primary text-secondary border-2 border-secondary flex items-center justify-center font-serif text-2xl font-bold shrink-0">
             {article.author_name.charAt(0)}
           </div>
           <div className="space-y-2 text-center sm:text-left">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              <h3 className="font-serif text-lg font-bold text-[#0D1B30]">
+              <h3 className="font-serif text-lg font-bold text-primary">
                 {article.author_name}
               </h3>
-              <span className="text-xs text-[#C9A961] font-semibold bg-[#0D1B30] px-2.5 py-0.5 rounded">
+              <span className="text-xs text-secondary font-semibold bg-primary px-2.5 py-0.5 rounded">
                 {article.author_oab || 'OAB/SP nº 465.818'}
               </span>
             </div>
@@ -370,12 +370,12 @@ export default function ArtigoDetalhe() {
         {relatedArticles.length > 0 && (
           <section className="mt-16 pt-12 border-t border-slate-200">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="font-serif text-2xl font-bold text-[#0D1B30]">
+              <h2 className="font-serif text-2xl font-bold text-primary">
                 Artigos relacionados
               </h2>
               <Link
                 to={`/conteudo-juridico?categoria=${article.category?.slug}`}
-                className="text-xs sm:text-sm font-semibold text-[#C9A961] hover:underline"
+                className="text-xs sm:text-sm font-semibold text-secondary hover:underline"
               >
                 Ver mais em {article.category?.name} →
               </Link>
@@ -386,7 +386,7 @@ export default function ArtigoDetalhe() {
                 <Link
                   key={rel.id}
                   to={`/conteudo-juridico/${rel.slug}`}
-                  className="group bg-white p-5 rounded-xl border border-slate-200 hover:border-[#C9A961]/70 hover:shadow-md transition-all flex flex-col"
+                  className="group bg-white p-5 rounded-xl border border-slate-200 hover:border-secondary/70 hover:shadow-md transition-all flex flex-col"
                 >
                   <div className="aspect-[16/10] w-full rounded-lg overflow-hidden mb-3 bg-slate-100">
                     <img
@@ -399,7 +399,7 @@ export default function ArtigoDetalhe() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
-                  <h4 className="font-serif text-sm font-bold text-[#0D1B30] group-hover:text-[#C9A961] transition-colors line-clamp-2 mb-2">
+                  <h4 className="font-serif text-sm font-bold text-primary group-hover:text-secondary transition-colors line-clamp-2 mb-2">
                     {rel.title}
                   </h4>
                   <span className="text-[11px] text-slate-400 mt-auto">
@@ -413,14 +413,14 @@ export default function ArtigoDetalhe() {
       </main>
 
       {/* Faixa CTA Institucional Final */}
-      <section className="bg-[#C9A961] text-[#0D1B30] py-10 lg:py-12 mt-8">
+      <section className="bg-secondary text-secondary-foreground py-10 lg:py-12 mt-8">
         <div className="container">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
             <div>
-              <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#0D1B30] leading-tight">
+              <h3 className="font-serif text-xl sm:text-2xl font-bold text-secondary-foreground leading-tight">
                 Precisando de orientação jurídica para sua empresa?
               </h3>
-              <p className="text-xs sm:text-sm font-medium text-[#1E293B] mt-1">
+              <p className="text-xs sm:text-sm font-medium text-secondary-foreground/80 mt-1">
                 Fale com o escritório e descubra como podemos ajudar.
               </p>
             </div>
@@ -428,11 +428,11 @@ export default function ArtigoDetalhe() {
             <div className="shrink-0 w-full sm:w-auto text-center">
               <Button
                 asChild
-                className="w-full sm:w-auto bg-[#0D1B30] text-white hover:bg-[#081220] font-semibold text-xs uppercase tracking-wider h-12 px-8 rounded-lg shadow-md transition-all duration-200"
+                className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-xs uppercase tracking-wider h-12 px-8 rounded-lg shadow-md transition-all duration-200"
               >
                 <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
                   Fale com um advogado
-                  <ArrowRight className="size-4 ml-2 text-[#C9A961]" aria-hidden="true" />
+                  <ArrowRight className="size-4 ml-2 text-secondary" aria-hidden="true" />
                 </a>
               </Button>
             </div>

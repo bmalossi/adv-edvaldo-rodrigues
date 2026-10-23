@@ -244,7 +244,7 @@ export default function Casos() {
                       </td>
 
                       <td className="px-6 py-4 text-right">
-                        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-slate-300 hover:text-white">
+                        <Button asChild variant="ghost" size="sm" className="min-h-[44px] min-w-[44px] sm:h-9 px-3 text-slate-300 hover:text-white">
                           <Link to={`/admin/crm/casos/${caso.id}`}>
                             <Eye className="w-4 h-4 mr-1" />
                             Dossiê

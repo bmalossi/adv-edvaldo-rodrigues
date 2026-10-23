@@ -233,7 +233,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           onClick={() => cmd(() => editor.chain().toggleBold().run())}
           className={`p-2 rounded transition-colors ${
             editor.isActive('bold')
-              ? 'bg-[#C9A961] text-[#0D1B30] font-bold'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Negrito (Ctrl+B)"
@@ -246,7 +246,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           onClick={() => cmd(() => editor.chain().toggleItalic().run())}
           className={`p-2 rounded transition-colors ${
             editor.isActive('italic')
-              ? 'bg-[#C9A961] text-[#0D1B30] font-bold'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Itálico (Ctrl+I)"
@@ -259,7 +259,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           onClick={() => cmd(() => editor.chain().toggleUnderline().run())}
           className={`p-2 rounded transition-colors ${
             editor.isActive('underline')
-              ? 'bg-[#C9A961] text-[#0D1B30] font-bold'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Sublinhado (Ctrl+U)"
@@ -276,7 +276,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           onClick={() => cmd(() => editor.chain().toggleHeading({ level: 2 }).run())}
           className={`p-2 rounded transition-colors text-xs font-bold ${
             editor.isActive('heading', { level: 2 })
-              ? 'bg-[#C9A961] text-[#0D1B30]'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Título H2"
@@ -289,7 +289,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           onClick={() => cmd(() => editor.chain().toggleHeading({ level: 3 }).run())}
           className={`p-2 rounded transition-colors text-xs font-bold ${
             editor.isActive('heading', { level: 3 })
-              ? 'bg-[#C9A961] text-[#0D1B30]'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Subtítulo H3"
@@ -306,7 +306,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           onClick={() => cmd(() => editor.chain().setTextAlign('left').run())}
           className={`p-2 rounded transition-colors ${
             editor.isActive({ textAlign: 'left' })
-              ? 'bg-[#C9A961] text-[#0D1B30] font-bold'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Alinhar à Esquerda"
@@ -319,7 +319,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           onClick={() => cmd(() => editor.chain().setTextAlign('center').run())}
           className={`p-2 rounded transition-colors ${
             editor.isActive({ textAlign: 'center' })
-              ? 'bg-[#C9A961] text-[#0D1B30] font-bold'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Centralizar Texto"
@@ -332,7 +332,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           onClick={() => cmd(() => editor.chain().setTextAlign('right').run())}
           className={`p-2 rounded transition-colors ${
             editor.isActive({ textAlign: 'right' })
-              ? 'bg-[#C9A961] text-[#0D1B30] font-bold'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Alinhar à Direita"
@@ -349,7 +349,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           onClick={() => cmd(() => editor.chain().toggleBulletList().run())}
           className={`p-2 rounded transition-colors ${
             editor.isActive('bulletList')
-              ? 'bg-[#C9A961] text-[#0D1B30] font-bold'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Lista com Marcadores"
@@ -362,7 +362,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           onClick={() => cmd(() => editor.chain().toggleOrderedList().run())}
           className={`p-2 rounded transition-colors ${
             editor.isActive('orderedList')
-              ? 'bg-[#C9A961] text-[#0D1B30] font-bold'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Lista Numerada"
@@ -375,7 +375,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           onClick={() => cmd(() => editor.chain().toggleBlockquote().run())}
           className={`p-2 rounded transition-colors ${
             editor.isActive('blockquote')
-              ? 'bg-[#C9A961] text-[#0D1B30] font-bold'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Citação / Destaque"
@@ -396,7 +396,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
           }}
           className={`p-2 rounded transition-colors ${
             editor.isActive('link')
-              ? 'bg-[#C9A961] text-[#0D1B30] font-bold'
+              ? 'bg-secondary text-secondary-foreground font-bold'
               : 'hover:bg-white/10 text-slate-300'
           }`}
           title="Inserir / Editar Link"
@@ -455,7 +455,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
                     onClick={() => cmd(() => editor.chain().updateAttributes('image', { width: size.val }).run())}
                     className={`px-2 py-0.5 text-xs rounded transition-colors font-medium ${
                       isCurrent
-                        ? 'bg-[#C9A961] text-[#0D1B30] font-bold'
+                        ? 'bg-secondary text-secondary-foreground font-bold'
                         : 'text-slate-300 hover:text-white hover:bg-white/10'
                     }`}
                     title={`Definir largura da imagem em ${size.val}`}
@@ -486,9 +486,9 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
 
           <div className="space-y-4 py-2">
             {/* Opção 1: Selecionar do Banco de Imagens */}
-            <div className="p-3.5 rounded-xl border border-[#C9A961]/30 bg-[#C9A961]/10 flex items-center justify-between gap-3">
+            <div className="p-3.5 rounded-xl border border-secondary/30 bg-secondary/10 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <Images className="size-5 text-[#C9A961]" />
+                <Images className="size-5 text-secondary" />
                 <div>
                   <p className="text-xs font-bold text-white">Banco de Imagens do Escritório</p>
                   <p className="text-[11px] text-slate-300">Reutilize imagens já hospedadas no R2</p>
@@ -501,7 +501,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
                   setImageDialogOpen(false)
                   setLibraryOpen(true)
                 }}
-                className="bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-bold text-xs h-8 px-3.5"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/90 font-bold text-xs h-8 px-3.5"
               >
                 Explorar Banco
               </Button>
@@ -582,7 +582,7 @@ export function TipTapEditor({ initialContent, onChange }: TipTapEditorProps) {
                       onClick={() => setImageWidthInput(size.val)}
                       className={`py-1 px-2 text-xs rounded border transition-all text-center ${
                         imageWidthInput === size.val
-                          ? 'border-[#C9A961] bg-[#C9A961] text-[#0D1B30] font-bold shadow-sm'
+                          ? 'border-secondary bg-secondary text-secondary-foreground font-bold shadow-sm'
                           : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
                       }`}
                     >

@@ -246,7 +246,7 @@ export function ModalNovaCobrancaAsaas({
         onOpenChange(v);
       }}
     >
-      <DialogContent className="dark sm:max-w-xl !bg-[#0D1B30] text-slate-100 border border-white/10 shadow-2xl rounded-2xl max-h-[92vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="dark sm:max-w-xl !bg-primary text-slate-100 border border-white/10 shadow-2xl rounded-2xl max-h-[92vh] overflow-hidden flex flex-col p-0">
         {/* Header Elegante */}
         <DialogHeader className="p-6 pb-4 border-b border-white/10 bg-[#091322] flex flex-row items-center justify-between text-left space-y-0">
           <div className="flex items-center gap-3.5">
@@ -291,7 +291,7 @@ export function ModalNovaCobrancaAsaas({
                   <Button
                     size="sm"
                     onClick={() => copiarParaTransferencia(cobrancaCriada.invoice_url, 'link')}
-                    className="h-8 text-xs bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-lg shadow-sm"
+                    className="h-8 text-xs bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-lg shadow-sm"
                   >
                     {copiadoLink ? (
                       <>
@@ -308,7 +308,7 @@ export function ModalNovaCobrancaAsaas({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <Button
                     asChild
-                    className="w-full h-10 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl text-xs shadow-md"
+                    className="w-full h-10 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-xl text-xs shadow-md"
                   >
                     <a href={cobrancaCriada.invoice_url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Abrir Checkout do Cliente
@@ -340,7 +340,7 @@ export function ModalNovaCobrancaAsaas({
                   <Button
                     size="sm"
                     onClick={() => copiarParaTransferencia(cobrancaCriada.pix_copia_cola, 'pix')}
-                    className="h-8 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg shadow-sm"
+                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg shadow-sm"
                   >
                     {copiadoPix ? (
                       <>

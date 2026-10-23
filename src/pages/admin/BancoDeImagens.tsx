@@ -88,7 +88,7 @@ export default function BancoDeImagens() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
         <div>
           <h1 className="text-2xl font-serif font-bold text-white tracking-tight flex items-center gap-2.5">
-            <ImageIcon className="size-6 text-[#C9A961]" />
+            <ImageIcon className="size-6 text-secondary" />
             Banco de Imagens (Cloudflare R2)
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -117,7 +117,7 @@ export default function BancoDeImagens() {
               className="hidden"
               disabled={uploading}
             />
-            <span className="inline-flex items-center gap-2 bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-bold text-xs px-4 py-2 rounded-md transition-all shadow-md h-9">
+            <span className="inline-flex items-center gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-bold text-xs px-4 py-2 rounded-md transition-all shadow-md h-9">
               {uploading ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
@@ -148,7 +148,7 @@ export default function BancoDeImagens() {
       {/* Grid de Fotos */}
       {loading ? (
         <div className="py-24 flex flex-col items-center justify-center text-slate-400 gap-3">
-          <Loader2 className="size-8 text-[#C9A961] animate-spin" />
+          <Loader2 className="size-8 text-secondary animate-spin" />
           <p className="text-sm">Carregando catálogo de imagens do R2...</p>
         </div>
       ) : filteredImages.length === 0 ? (
@@ -166,7 +166,7 @@ export default function BancoDeImagens() {
           {filteredImages.map((img) => (
             <div
               key={img.id}
-              className="group bg-slate-900/70 rounded-xl border border-white/10 overflow-hidden hover:border-[#C9A961]/50 hover:shadow-lg transition-all flex flex-col"
+              className="group bg-slate-900/70 rounded-xl border border-white/10 overflow-hidden hover:border-secondary/50 hover:shadow-lg transition-all flex flex-col"
             >
               <div className="aspect-video w-full bg-slate-950 overflow-hidden relative">
                 <img

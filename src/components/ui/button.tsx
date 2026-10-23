@@ -5,26 +5,26 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 touch-manipulation select-none",
   {
     variants: {
       variant: {
-        default: "bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-semibold transition-all duration-200 shadow-sm",
+        default: "bg-secondary text-secondary-foreground hover:bg-secondary/90 font-semibold transition-all duration-200 shadow-sm",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline: "border border-input bg-transparent hover:bg-accent/10 hover:text-accent-foreground font-medium transition-all duration-200",
-        "outline-gold": "border border-[#C9A961] text-[#C9A961] hover:bg-[#C9A961]/10 font-medium transition-all duration-200",
+        "outline-gold": "border border-secondary text-secondary hover:bg-secondary/10 font-medium transition-all duration-200",
         "outline-white": "border border-white/40 text-white hover:bg-white/10 hover:border-white font-medium transition-all duration-200",
-        dark: "bg-[#0D1B30] text-white hover:bg-[#081220] font-semibold shadow-sm transition-all duration-200",
-        gold: "bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-semibold shadow-sm transition-all duration-200",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        dark: "bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-sm transition-all duration-200",
+        gold: "bg-secondary text-secondary-foreground hover:bg-secondary/90 font-semibold shadow-sm transition-all duration-200",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/90",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        default: "h-11 sm:h-10 px-4 py-2 min-h-[44px] sm:min-h-0",
+        sm: "h-11 sm:h-9 rounded-md px-3 min-h-[44px] sm:min-h-0 text-xs sm:text-sm",
+        lg: "h-12 sm:h-11 rounded-md px-8 min-h-[44px]",
+        icon: "h-11 w-11 sm:h-10 sm:w-10 min-h-[44px] min-w-[44px]",
       },
     },
     defaultVariants: {

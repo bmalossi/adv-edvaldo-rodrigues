@@ -40,10 +40,10 @@ export function AsaasSyncBadge({
             type="button"
             onClick={onSync}
             disabled={loading}
-            className="text-slate-500 hover:text-[#C9A961] disabled:opacity-50 transition-colors p-0.5 rounded hover:bg-white/5 ml-0.5"
+            className="text-slate-500 hover:text-secondary disabled:opacity-50 transition-colors p-0.5 rounded hover:bg-white/5 ml-0.5"
             title="Re-sincronizar cadastro no Asaas"
           >
-            <RefreshCw className={cn('w-3 h-3', loading && 'animate-spin text-[#C9A961]')} />
+            <RefreshCw className={cn('w-3 h-3', loading && 'animate-spin text-secondary')} />
           </button>
         )}
       </div>
@@ -58,12 +58,12 @@ export function AsaasSyncBadge({
       onClick={onSync}
       disabled={loading}
       className={cn(
-        'h-7 px-3 text-xs font-medium rounded-md border border-white/15 bg-white/[0.03] hover:bg-[#C9A961]/10 text-slate-300 hover:text-[#C9A961] hover:border-[#C9A961]/40 transition-all gap-1.5 shadow-sm',
+        'h-7 px-3 text-xs font-medium rounded-md border border-white/15 bg-white/[0.03] hover:bg-secondary/10 text-slate-300 hover:text-secondary hover:border-secondary/40 transition-all gap-1.5 shadow-sm',
         className
       )}
       title="Sincronizar cadastro do cliente com a API do Asaas"
     >
-      <RefreshCw className={cn('w-3 h-3 text-[#C9A961]', loading && 'animate-spin')} />
+      <RefreshCw className={cn('w-3 h-3 text-secondary', loading && 'animate-spin')} />
       <span>{loading ? 'Sincronizando...' : 'Sincronizar com Asaas'}</span>
     </Button>
   );

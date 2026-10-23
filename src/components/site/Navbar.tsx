@@ -45,8 +45,8 @@ export function Navbar() {
         className={cn(
           "w-full transition-all duration-300 border-b",
           isScrolled
-            ? "bg-[#0D1B30]/95 backdrop-blur-md border-[#162846] shadow-lg shadow-black/20"
-            : "bg-[#0D1B30] border-[#162846]/60"
+            ? "bg-primary/95 backdrop-blur-md border-border/40 shadow-lg shadow-black/20"
+            : "bg-primary border-border/40"
         )}
       >
         <div className="container flex h-20 items-center justify-between">
@@ -71,8 +71,8 @@ export function Navbar() {
                   className={cn(
                     "text-xs uppercase tracking-wider font-medium transition-colors py-2 relative",
                     isActive
-                      ? "text-[#C9A961] font-semibold after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-[#C9A961]"
-                      : "text-slate-200 hover:text-[#C9A961]"
+                      ? "text-secondary font-semibold after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-secondary"
+                      : "text-slate-200 hover:text-secondary"
                   )}
                 >
                   {l.label}
@@ -85,7 +85,7 @@ export function Navbar() {
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <Button
               asChild
-              className="hidden sm:inline-flex bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-semibold text-xs uppercase tracking-wider h-10 px-5 rounded-md shadow-sm transition-all duration-200"
+              className="hidden sm:inline-flex bg-secondary text-secondary-foreground hover:bg-secondary/90 font-semibold text-xs uppercase tracking-wider h-10 px-5 rounded-md shadow-sm transition-all duration-200"
             >
               <a
                 href={`https://wa.me/${site.contact.whatsappNumber}?text=${encodeURIComponent(
@@ -101,7 +101,7 @@ export function Navbar() {
 
             <Link
               to="/admin"
-              className="hidden sm:inline-flex text-slate-400/40 hover:text-[#C9A961] transition-colors p-1"
+              className="hidden sm:inline-flex text-slate-400/40 hover:text-secondary transition-colors p-1"
               title="Acesso Administrativo"
             >
               <Settings className="size-4" />
@@ -119,7 +119,7 @@ export function Navbar() {
                   <Menu className="size-6" aria-hidden="true" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] bg-[#0D1B30] border-l border-[#162846] text-white">
+              <SheetContent side="right" className="w-[300px] bg-primary border-l border-[#162846] text-white">
                 <SheetHeader className="border-b border-[#162846] pb-4">
                   <SheetTitle className="text-left font-serif text-white">
                     <BrandLogo variant="dark" />
@@ -131,7 +131,7 @@ export function Navbar() {
                       key={l.to}
                       variant="ghost"
                       asChild
-                      className="justify-start text-sm uppercase tracking-wider text-slate-200 hover:text-[#C9A961] hover:bg-white/5"
+                      className="justify-start text-sm uppercase tracking-wider text-slate-200 hover:text-secondary hover:bg-white/5"
                     >
                       <NavLink to={l.to} onClick={() => handleNavClick(l.to)}>
                         {l.label}
@@ -139,7 +139,7 @@ export function Navbar() {
                     </Button>
                   ))}
                   <div className="pt-4 mt-2 border-t border-[#162846]">
-                    <Button asChild className="w-full bg-[#C9A961] text-[#0D1B30] hover:bg-[#B8935A] font-semibold text-xs uppercase tracking-wider">
+                    <Button asChild className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 font-semibold text-xs uppercase tracking-wider">
                       <a
                         href={`https://wa.me/${site.contact.whatsappNumber}?text=${encodeURIComponent(
                           "Olá! Gostaria de falar com o escritório Edvaldo Rodrigues Ferreira Advocacia."
@@ -154,7 +154,7 @@ export function Navbar() {
                     <div className="pt-2 text-center">
                       <Link
                         to="/admin"
-                        className="text-[11px] text-slate-400 hover:text-[#C9A961] transition-colors inline-flex items-center gap-1.5"
+                        className="text-[11px] text-slate-400 hover:text-secondary transition-colors inline-flex items-center gap-1.5"
                       >
                         <Settings className="size-3.5" />
                         Painel Administrativo

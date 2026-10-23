@@ -190,12 +190,12 @@ export default function Processos() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-1 justify-end opacity-40 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center gap-1.5 sm:gap-1 justify-end opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-opacity">
                                                 {p.tem_novidade && (
                                                     <button
                                                         title="Marcar visualizado"
                                                         onClick={() => handleMarcarVisualizado(p.id)}
-                                                        className="p-2 text-green-400/70 hover:text-green-400 hover:bg-green-400/10 rounded-xl transition-all"
+                                                        className="min-h-[44px] min-w-[44px] p-2.5 sm:p-2 flex items-center justify-center text-green-400/70 hover:text-green-400 hover:bg-green-400/10 rounded-xl transition-all"
                                                     >
                                                         <CheckCircle className="w-4 h-4" />
                                                     </button>
@@ -203,20 +203,20 @@ export default function Processos() {
                                                 <button
                                                     title={p.ativo ? 'Pausar monitoramento' : 'Ativar monitoramento'}
                                                     onClick={() => handleToggleAtivo(p.id, p.ativo)}
-                                                    className="p-2 text-slate-400 hover:text-secondary hover:bg-secondary/10 rounded-xl transition-all"
+                                                    className="min-h-[44px] min-w-[44px] p-2.5 sm:p-2 flex items-center justify-center text-slate-400 hover:text-secondary hover:bg-secondary/10 rounded-xl transition-all"
                                                 >
                                                     {p.ativo ? <ToggleRight className="w-5 h-5 text-secondary" /> : <ToggleLeft className="w-5 h-5" />}
                                                 </button>
                                                 <Link
                                                     to={`/admin/processos/${p.id}`}
-                                                    className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all"
+                                                    className="min-h-[44px] min-w-[44px] p-2.5 sm:p-2 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </Link>
                                                 <button
                                                     title="Excluir"
                                                     onClick={() => handleExcluirProcesso(p.id)}
-                                                    className="p-2 text-red-400/50 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
+                                                    className="min-h-[44px] min-w-[44px] p-2.5 sm:p-2 flex items-center justify-center text-red-400/50 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
