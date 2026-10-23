@@ -3619,34 +3619,37 @@ export default function GerarDocumentos() {
 
 
             {/* Configuração de Arquivamento no Google Drive */}
-            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-[#C9A961]/25 space-y-2.5">
+            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-secondary/30 space-y-2.5">
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label htmlFor="chk-salvar-drive" className="flex items-center gap-2 cursor-pointer">
                   <Checkbox
+                    id="chk-salvar-drive"
+                    aria-label="Salvar cópia do documento no Google Drive"
                     checked={salvarNoDrive}
                     onCheckedChange={(chk) => setSalvarNoDrive(Boolean(chk))}
-                    id="chk-salvar-drive"
                   />
                   <span className="text-xs font-semibold text-slate-200 select-none flex items-center gap-1.5">
-                    <HardDrive className="w-3.5 h-3.5 text-[#C9A961]" />
+                    <HardDrive className="w-3.5 h-3.5 text-secondary" />
                     Salvar cópia no Google Drive
                   </span>
                 </label>
                 {salvandoNoDrive && (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C9A961]" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-secondary" aria-hidden="true" />
                 )}
               </div>
 
               {salvarNoDrive && (
-                <div className="space-y-2 pt-1 border-t border-white/5">
+                <div className="space-y-2.5 pt-1.5 border-t border-white/5">
                   <div>
-                    <label className="text-[11px] text-slate-400 block mb-1">
+                    <label htmlFor="select-categoria-drive" className="text-xs text-slate-300 block mb-1 font-medium">
                       Subpasta da Categoria:
                     </label>
                     <select
+                      id="select-categoria-drive"
+                      aria-label="Selecione a subpasta temática da categoria no Google Drive"
                       value={categoriaDrive}
                       onChange={(e) => setCategoriaDrive(e.target.value)}
-                      className="w-full h-8 bg-slate-950 border border-white/10 rounded-lg text-xs text-white px-2 focus:ring-1 focus:ring-[#C9A961] focus:border-[#C9A961]"
+                      className="w-full h-9 bg-slate-950 border border-white/10 rounded-lg text-xs text-white px-2.5 focus:ring-1 focus:ring-secondary focus:border-secondary transition-colors"
                     >
                       {CATEGORIAS_DRIVE_PADRAO.map((cat) => (
                         <option key={cat} value={cat}>
@@ -3658,17 +3661,22 @@ export default function GerarDocumentos() {
 
                   {categoriaDrive === 'Outra' && (
                     <div>
+                      <label htmlFor="input-categoria-personalizada" className="text-[11px] text-slate-400 block mb-1">
+                        Nome da Categoria Personalizada:
+                      </label>
                       <Input
+                        id="input-categoria-personalizada"
+                        aria-label="Nome da subpasta personalizada no Google Drive"
                         value={categoriaPersonalizada}
                         onChange={(e) => setCategoriaPersonalizada(e.target.value)}
-                        placeholder="Nome da subpasta (ex: Inventário)"
-                        className="h-8 bg-slate-950 border-white/10 text-white rounded-lg text-xs"
+                        placeholder="Ex: Inventário Extrajudicial"
+                        className="h-9 bg-slate-950 border-white/10 text-white rounded-lg text-xs focus-visible:ring-secondary"
                       />
                     </div>
                   )}
 
-                  <p className="text-[10px] text-slate-400 leading-tight">
-                    O PDF será arquivado na pasta do cliente em <span className="text-[#C9A961]">/{categoriaDrive === 'Outra' ? (categoriaPersonalizada || '...') : categoriaDrive}/</span>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    O PDF será arquivado automaticamente em: <strong className="text-secondary font-mono">/{categoriaDrive === 'Outra' ? (categoriaPersonalizada.trim() || 'Nome_da_Pasta') : categoriaDrive}/</strong>
                   </p>
                 </div>
               )}
