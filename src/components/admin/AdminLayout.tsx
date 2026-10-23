@@ -21,7 +21,8 @@ import {
     Lock,
     AlertTriangle,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { AdminLoadingFallback } from './AdminLoadingFallback'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
@@ -117,7 +118,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                                     onClick={() => setSidebarOpen(false)}
                                     className={({ isActive }) =>
                                         cn(
-                                            'flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200',
+                                            'flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60',
                                             isActive
                                                 ? 'bg-secondary text-primary shadow-md shadow-secondary/10 font-bold'
                                                 : 'text-slate-300 hover:text-white hover:bg-white/10'
@@ -163,7 +164,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                                     onClick={() => setSidebarOpen(false)}
                                     className={({ isActive }) =>
                                         cn(
-                                            'flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200',
+                                            'flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60',
                                             isActive
                                                 ? 'bg-secondary text-primary shadow-md shadow-secondary/10 font-bold'
                                                 : 'text-slate-300 hover:text-white hover:bg-white/10'
@@ -281,7 +282,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                     </div>
                     <button
                         onClick={() => setSidebarOpen(!sidebarOpen)}
-                        className="p-2 text-slate-300 hover:text-white bg-white/5 rounded-lg transition-colors shrink-0"
+                        className="min-h-[44px] min-w-[44px] p-2 flex items-center justify-center text-slate-300 hover:text-white bg-white/5 rounded-lg transition-colors shrink-0"
                     >
                         {sidebarOpen ? <X className="size-5" /> : <Menu className="size-5" />}
                     </button>
@@ -289,7 +290,9 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
                 {/* Conteúdo */}
                 <main className="flex-1 px-4 py-6 lg:px-8">
-                    {children}
+                    <Suspense fallback={<AdminLoadingFallback />}>
+                        {children}
+                    </Suspense>
                 </main>
             </div>
         </div>

@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as ToasterSonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,32 +19,34 @@ import ConteudoJuridico from "./pages/ConteudoJuridico";
 import ArtigoDetalhe from "./pages/ArtigoDetalhe";
 import NotFound from "./pages/NotFound";
 
-// Área administrativa
-import Login from "./pages/Login";
+// Área administrativa (Code-Splitting com React.lazy)
 import { ProtectedRoute } from "@/components/admin/ProtectedRoute";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import Dashboard from "./pages/admin/Dashboard";
-import Processos from "./pages/admin/Processos";
-import ProcessoNovo from "./pages/admin/ProcessoNovo";
-import ProcessoDetalhe from "./pages/admin/ProcessoDetalhe";
-import Configuracoes from "./pages/admin/Configuracoes";
-import Notificacoes from "./pages/admin/Notificacoes";
-import ArtigosLista from "./pages/admin/ArtigosLista";
-import ArtigoEditor from "./pages/admin/ArtigoEditor";
-import BancoDeImagens from "./pages/admin/BancoDeImagens";
-import Clientes from "./pages/admin/Clientes";
-import ClienteForm from "./pages/admin/ClienteForm";
-import ClienteDetalhe from "./pages/admin/ClienteDetalhe";
-import FunilProcessual from "./pages/admin/FunilProcessual";
-import Casos from "./pages/admin/Casos";
-import CasoForm from "./pages/admin/CasoForm";
-import CasoDetalhe from "./pages/admin/CasoDetalhe";
-import Agenda from "./pages/admin/Agenda";
-import PendenciaForm from "./pages/admin/PendenciaForm";
-import ModelosMinutas from "./pages/admin/ModelosMinutas";
-import BackupCentral from "./pages/admin/BackupCentral";
-import GerarDocumentos from "./pages/admin/GerarDocumentos";
-import TrocarSenha from "./pages/admin/TrocarSenha";
+import { AdminLoadingFallback } from "@/components/admin/AdminLoadingFallback";
+
+const Login = lazy(() => import("./pages/Login"));
+const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
+const Processos = lazy(() => import("./pages/admin/Processos"));
+const ProcessoNovo = lazy(() => import("./pages/admin/ProcessoNovo"));
+const ProcessoDetalhe = lazy(() => import("./pages/admin/ProcessoDetalhe"));
+const Configuracoes = lazy(() => import("./pages/admin/Configuracoes"));
+const Notificacoes = lazy(() => import("./pages/admin/Notificacoes"));
+const ArtigosLista = lazy(() => import("./pages/admin/ArtigosLista"));
+const ArtigoEditor = lazy(() => import("./pages/admin/ArtigoEditor"));
+const BancoDeImagens = lazy(() => import("./pages/admin/BancoDeImagens"));
+const Clientes = lazy(() => import("./pages/admin/Clientes"));
+const ClienteForm = lazy(() => import("./pages/admin/ClienteForm"));
+const ClienteDetalhe = lazy(() => import("./pages/admin/ClienteDetalhe"));
+const FunilProcessual = lazy(() => import("./pages/admin/FunilProcessual"));
+const Casos = lazy(() => import("./pages/admin/Casos"));
+const CasoForm = lazy(() => import("./pages/admin/CasoForm"));
+const CasoDetalhe = lazy(() => import("./pages/admin/CasoDetalhe"));
+const Agenda = lazy(() => import("./pages/admin/Agenda"));
+const PendenciaForm = lazy(() => import("./pages/admin/PendenciaForm"));
+const ModelosMinutas = lazy(() => import("./pages/admin/ModelosMinutas"));
+const BackupCentral = lazy(() => import("./pages/admin/BackupCentral"));
+const GerarDocumentos = lazy(() => import("./pages/admin/GerarDocumentos"));
+const TrocarSenha = lazy(() => import("./pages/admin/TrocarSenha"));
 
 const queryClient = new QueryClient();
 
@@ -68,14 +71,14 @@ const App = () => (
           </Route>
 
           {/* ─── Autenticação ─── */}
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Suspense fallback={<AdminLoadingFallback />}><Login /></Suspense>} />
 
           {/* ─── Área administrativa (protegida) ─── */}
           <Route
             path="/admin/trocar-senha"
             element={
               <ProtectedRoute>
-                <TrocarSenha />
+                <Suspense fallback={<AdminLoadingFallback />}><TrocarSenha /></Suspense>
               </ProtectedRoute>
             }
           />

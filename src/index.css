@@ -621,3 +621,39 @@ All colors MUST be HSL.
     scroll-behavior: auto !important;
   }
 }
+
+
+/* ========================================================================= */
+/* POLISH: SUPERFÍCIES DO NAVEGADOR, SELEÇÃO E FOCO ACESSÍVEL               */
+/* ========================================================================= */
+::selection {
+  background-color: hsl(var(--secondary) / 0.28);
+  color: hsl(var(--secondary-foreground));
+}
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.22);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--secondary) / 0.6);
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid hsl(var(--secondary) / 0.85);
+  outline-offset: 2px;
+}
