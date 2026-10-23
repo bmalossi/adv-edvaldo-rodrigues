@@ -21,7 +21,7 @@ export function ParallaxCard({ children, className, amplitude = 12, disabled }: 
   });
 
   const yRaw = useTransform(scrollYProgress, [0, 1], [amplitude, -amplitude]);
-  const y = useSpring(yRaw, { stiffness: 120, damping: 22, mass: 0.7 });
+  const y = useSpring(yRaw, { stiffness: 90, damping: 30, mass: 0.6 });
 
   if (reduce || disabled) {
     return (

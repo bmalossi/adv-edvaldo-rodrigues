@@ -67,7 +67,7 @@ const AIChatbot = ({ language = "pt" }: AIChatbotProps) => {
                     {/* Notification badge */}
                     {!isOpen && (
                         <span className="absolute -right-1 -top-1 flex h-3 w-3">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-highlight opacity-75" />
+                            <span className="absolute inline-flex h-full w-full animate-ping motion-reduce:animate-none rounded-full bg-highlight opacity-75" />
                             <span className="relative inline-flex h-3 w-3 rounded-full bg-highlight" />
                         </span>
                     )}

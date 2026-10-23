@@ -91,7 +91,7 @@ export default function Calculadora() {
                 </div>
 
                 <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 text-primary-foreground/60">
-                    <ChevronDown className="size-6 animate-bounce" aria-hidden="true" />
+                    <ChevronDown className="size-6 animate-float-gentle motion-reduce:animate-none" aria-hidden="true" />
                 </div>
             </section>
 

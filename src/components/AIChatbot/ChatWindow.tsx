@@ -147,9 +147,9 @@ const ChatWindow = ({
                         <div className="flex items-center gap-3 animate-fade-in">
                             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
                                 <div className="flex gap-1">
-                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "0ms" }} />
-                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "150ms" }} />
-                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "300ms" }} />
+                                    <div className="h-1.5 w-1.5 animate-typing-dot motion-reduce:animate-none rounded-full bg-primary" style={{ animationDelay: "0ms" }} />
+                                    <div className="h-1.5 w-1.5 animate-typing-dot motion-reduce:animate-none rounded-full bg-primary" style={{ animationDelay: "200ms" }} />
+                                    <div className="h-1.5 w-1.5 animate-typing-dot motion-reduce:animate-none rounded-full bg-primary" style={{ animationDelay: "400ms" }} />
                                 </div>
                             </div>
                             <span className="text-xs text-muted-foreground">

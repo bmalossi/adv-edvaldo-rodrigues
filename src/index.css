@@ -575,3 +575,49 @@ All colors MUST be HSL.
     justify-content: center;
   }
 }
+
+
+/* ========================================================================= */
+/* ANIMAÇÕES REFINADAS E ACESSIBILIDADE MOTORA (WCAG 2.3.3 / WCAG 2.2.2)     */
+/* Substitui animações elásticas (bounce) por desacelerações físicas suaves  */
+/* ========================================================================= */
+@keyframes float-gentle {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(6px);
+    opacity: 0.95;
+  }
+}
+
+@keyframes typing-dot {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(0.88);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-float-gentle {
+  animation: float-gentle 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.animate-typing-dot {
+  animation: typing-dot 1.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
