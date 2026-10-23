@@ -60,6 +60,11 @@ export function DriveFileExplorer({
   ]);
   const currentFolder = breadcrumbs[breadcrumbs.length - 1];
 
+  useEffect(() => {
+    setBreadcrumbs([{ id: initialFolderId, name: initialFolderName }]);
+    setSearchQuery("");
+  }, [initialFolderId, initialFolderName]);
+
   const [currentFolderViewLink, setCurrentFolderViewLink] = useState<string | null>(null);
   const [folders, setFolders] = useState<DriveItem[]>([]);
   const [files, setFiles] = useState<DriveItem[]>([]);

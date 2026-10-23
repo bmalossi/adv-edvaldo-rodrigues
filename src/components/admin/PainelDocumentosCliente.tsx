@@ -145,7 +145,8 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
 
   useEffect(() => {
     carregarDocumentos();
-  }, [cliente.id]);
+    setDriveFolderId(cliente.google_drive_folder_id || null);
+  }, [cliente.id, cliente.google_drive_folder_id]);
 
   const formatarTamanho = (bytes?: number | null) => {
     if (!bytes) return '0 B';
@@ -424,6 +425,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
               </Button>
             </div>
             <DriveFileExplorer
+              key={`${cliente.id}_${driveFolderId}`}
               initialFolderId={driveFolderId}
               initialFolderName={cliente.nome_razao_social}
               tituloPersonalizado={`Google Drive — ${cliente.nome_razao_social}`}

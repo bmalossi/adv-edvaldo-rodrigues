@@ -487,7 +487,7 @@ export default function ClienteDetalhe() {
               </h2>
               <span className="text-xs text-slate-400">Armazenamento em nuvem</span>
             </div>
-            <PainelDocumentosCliente cliente={cliente} />
+            <PainelDocumentosCliente key={cliente.id} cliente={cliente} />
           </div>
 
           {/* Timeline de Interações (Issue #3) */}

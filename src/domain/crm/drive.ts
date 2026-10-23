@@ -196,6 +196,12 @@ export function normalizarNomeComparacao(texto: string): string {
     .trim();
 }
 
+const STOPWORDS_COMPARACAO = new Set([
+  'de', 'da', 'do', 'das', 'dos', 'e', 'para', 'com', 'em', 'por', 'a', 'o',
+  'processo', 'processos', 'pasta', 'pastas', 'acao', 'acoes', 'documento', 'documentos',
+  'cliente', 'clientes', 'geral', 'comum', 'novo', 'nova'
+]);
+
 /**
  * Extrai somente dígitos de um texto para busca de CPF ou CNPJ
  */
@@ -205,7 +211,7 @@ export function extrairDigitos(texto: string): string {
 
 /**
  * Compara o nome da pasta do Google Drive com a lista de clientes cadastrados no CRM
- * e pontua a melhor correspondência.
+ * e pontua a melhor correspondência com proteção estrita contra colisões e falsos positivos.
  */
 export function encontrarMelhorCorrespondenciaCliente(
   folderName: string,
@@ -217,11 +223,14 @@ export function encontrarMelhorCorrespondenciaCliente(
 
   const digitsInFolder = extrairDigitos(folderName);
   const normFolder = normalizarNomeComparacao(folderName);
+  if (!normFolder) return { score: 0 };
+
+  const tokensFolder = normFolder.split(' ').filter((t) => t.length > 2 && !STOPWORDS_COMPARACAO.has(t));
 
   let bestMatch: { clienteId?: string; clienteNome?: string; score: number } = { score: 0 };
 
   for (const c of clientes) {
-    // 1. Busca por CPF/CNPJ no nome da pasta
+    // 1. Busca por CPF/CNPJ no nome da pasta (precisão máxima)
     const digitsInCpf = extrairDigitos(c.cpf_cnpj || '');
     if (digitsInCpf.length >= 11 && digitsInFolder.includes(digitsInCpf)) {
       return { clienteId: c.id, clienteNome: c.nome_razao_social, score: 1.0 };
@@ -235,27 +244,40 @@ export function encontrarMelhorCorrespondenciaCliente(
       return { clienteId: c.id, clienteNome: c.nome_razao_social, score: 0.95 };
     }
 
-    // 3. Contém nome completo
-    if (normFolder.includes(normCliente) || normCliente.includes(normFolder)) {
-      const score = 0.85;
+    const tokensCliente = normCliente.split(' ').filter((t) => t.length > 2 && !STOPWORDS_COMPARACAO.has(t));
+
+    // 3. Contém nome completo do cliente dentro do nome da pasta (ex: "Dr. Ivan Teodoro Damasceno - Inventário")
+    if (normFolder.includes(normCliente) && normCliente.length >= 6) {
+      const score = 0.88;
       if (score > bestMatch.score) {
         bestMatch = { clienteId: c.id, clienteNome: c.nome_razao_social, score };
       }
       continue;
     }
 
-    // 4. Correspondência de múltiplos termos (tokens)
-    const tokensFolder = normFolder.split(' ').filter((t) => t.length > 2);
-    const tokensCliente = normCliente.split(' ').filter((t) => t.length > 2);
+    // 3b. Contém nome da pasta no nome do cliente (apenas se a pasta tiver 2+ termos e >= 8 caracteres)
+    if (tokensFolder.length >= 2 && normFolder.length >= 8 && normCliente.includes(normFolder)) {
+      const score = 0.80;
+      if (score > bestMatch.score) {
+        bestMatch = { clienteId: c.id, clienteNome: c.nome_razao_social, score };
+      }
+      continue;
+    }
 
-    if (tokensFolder.length > 0 && tokensCliente.length > 0) {
+    // 4. Correspondência de múltiplos termos significativos (exige >= 2 termos coincidentes)
+    if (tokensFolder.length >= 2 && tokensCliente.length >= 2) {
       let hits = 0;
       for (const tf of tokensFolder) {
         if (tokensCliente.includes(tf)) hits++;
       }
-      const ratio = hits / Math.max(tokensFolder.length, tokensCliente.length);
-      if (ratio >= 0.6 && ratio > bestMatch.score) {
-        bestMatch = { clienteId: c.id, clienteNome: c.nome_razao_social, score: parseFloat((ratio * 0.8).toFixed(2)) };
+      if (hits >= 2) {
+        const ratio = hits / Math.max(tokensFolder.length, tokensCliente.length);
+        if (ratio >= 0.6) {
+          const score = parseFloat((ratio * 0.8).toFixed(2));
+          if (score > bestMatch.score) {
+            bestMatch = { clienteId: c.id, clienteNome: c.nome_razao_social, score };
+          }
+        }
       }
     }
   }

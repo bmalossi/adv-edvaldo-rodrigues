@@ -127,6 +127,41 @@ describe('Google Drive Sync & Documentos do Caso - Domínio', () => {
       expect(match.score).toBe(0);
       expect(match.clienteId).toBeUndefined();
     });
+
+    it('protege contra correspondência indevida de termo único (ex.: pasta ADILSON não casa com ADILSON LUIZ GARCIA JUNIOR)', () => {
+      const clientes = [
+        { id: 'c1', nome_razao_social: 'ADILSON LUIZ GARCIA JUNIOR', cpf_cnpj: null },
+        { id: 'c2', nome_razao_social: 'SILVIA ROCHA XAVIER', cpf_cnpj: null },
+      ];
+
+      const matchAdilsonUnico = encontrarMelhorCorrespondenciaCliente('ADILSON', clientes);
+      expect(matchAdilsonUnico.score).toBe(0);
+      expect(matchAdilsonUnico.clienteId).toBeUndefined();
+
+      const matchSilviaUnica = encontrarMelhorCorrespondenciaCliente('SILVIA', clientes);
+      expect(matchSilviaUnica.score).toBe(0);
+      expect(matchSilviaUnica.clienteId).toBeUndefined();
+    });
+
+    it('faz correspondência exata perfeita e imune a case/acentuação para Jadya Nassa de Abreo e Rita de Cássia', () => {
+      const clientes = [
+        { id: 'c1', nome_razao_social: 'JADYA NASSA DE ABREO', cpf_cnpj: null },
+        { id: 'c2', nome_razao_social: 'RITA DE CÁSSIA CHAGAS DINIZ', cpf_cnpj: null },
+        { id: 'c3', nome_razao_social: 'SILVIA ROCHA XAVIER', cpf_cnpj: null },
+      ];
+
+      const matchJadya = encontrarMelhorCorrespondenciaCliente('Jadya Nassa de Abreo', clientes);
+      expect(matchJadya.clienteId).toBe('c1');
+      expect(matchJadya.score).toBe(0.95);
+
+      const matchRita = encontrarMelhorCorrespondenciaCliente('RITA DE CASSIA CHAGAS DINIZ', clientes);
+      expect(matchRita.clienteId).toBe('c2');
+      expect(matchRita.score).toBe(0.95);
+
+      const matchSilvia = encontrarMelhorCorrespondenciaCliente('SILVIA ROCHA XAVIER', clientes);
+      expect(matchSilvia.clienteId).toBe('c3');
+      expect(matchSilvia.score).toBe(0.95);
+    });
   });
 
   describe('Categorias e Subpastas do Google Drive', () => {

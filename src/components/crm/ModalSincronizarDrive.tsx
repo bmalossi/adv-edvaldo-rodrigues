@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -165,6 +165,31 @@ export function ModalSincronizarDrive({
         }
       }
 
+      // Deduplicação inteligente de correspondências para evitar que múltiplas pastas disputem o mesmo cliente:
+      // Se um cliente for correspondido a mais de uma pasta, apenas a de maior score (e correspondência mais precisa)
+      // mantém a ação de vincular selecionada. As demais pastas conflitantes viram "criar" (novo cliente)
+      // e ficam desmarcadas por padrão para segurança total contra sobrescritas.
+      const melhorScorePorCliente = new Map<string, { folderId: string; score: number }>();
+
+      for (const item of listaItens) {
+        if (item.matchedClienteId && item.acaoSugerida === "vincular") {
+          const existente = melhorScorePorCliente.get(item.matchedClienteId);
+          if (!existente || item.score > existente.score) {
+            melhorScorePorCliente.set(item.matchedClienteId, { folderId: item.folderId, score: item.score });
+          }
+        }
+      }
+
+      for (const item of listaItens) {
+        if (item.matchedClienteId && item.acaoSugerida === "vincular") {
+          const melhor = melhorScorePorCliente.get(item.matchedClienteId);
+          if (melhor && melhor.folderId !== item.folderId) {
+            item.acaoSugerida = "criar";
+            item.selecionado = false;
+          }
+        }
+      }
+
       setAreasEncontradas(todasAreas);
       setItens(listaItens);
 
@@ -197,6 +222,7 @@ export function ModalSincronizarDrive({
     let vinculados = 0;
     let criados = 0;
     let falhas = 0;
+    const clientesJaVinculadosNoLote = new Set<string>();
 
     for (let i = 0; i < selecionados.length; i++) {
       const it = selecionados[i];
@@ -204,7 +230,12 @@ export function ModalSincronizarDrive({
 
       try {
         if (it.acaoSugerida === "vincular" && it.matchedClienteId) {
+          if (clientesJaVinculadosNoLote.has(it.matchedClienteId)) {
+            console.warn(`[Sincronização] O cliente "${it.matchedClienteNome}" já foi vinculado a outra pasta neste lote. Ignorando sobrescrita.`);
+            continue;
+          }
           await vincularPastaClienteCRM(it.matchedClienteId, it.folderId);
+          clientesJaVinculadosNoLote.add(it.matchedClienteId);
           vinculados++;
         } else if (it.acaoSugerida === "criar") {
           await cadastrarClienteAPartirDePasta(it.folderName, it.folderId, it.areaName, user?.id);
