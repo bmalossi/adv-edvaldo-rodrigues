@@ -3621,7 +3621,7 @@ export default function GerarDocumentos() {
             {/* Configuração de Arquivamento no Google Drive */}
             <div className="p-3.5 rounded-xl bg-slate-900/90 border border-secondary/30 space-y-2.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="chk-salvar-drive" className="flex items-center gap-2 cursor-pointer">
+                <label htmlFor="chk-salvar-drive" className="flex items-center gap-2 cursor-pointer py-1 min-h-[44px] sm:min-h-0">
                   <Checkbox
                     id="chk-salvar-drive"
                     aria-label="Salvar cópia do documento no Google Drive"
@@ -3649,7 +3649,7 @@ export default function GerarDocumentos() {
                       aria-label="Selecione a subpasta temática da categoria no Google Drive"
                       value={categoriaDrive}
                       onChange={(e) => setCategoriaDrive(e.target.value)}
-                      className="w-full h-9 bg-slate-950 border border-white/10 rounded-lg text-xs text-white px-2.5 focus:ring-1 focus:ring-secondary focus:border-secondary transition-colors"
+                      className="w-full h-11 sm:h-9 bg-slate-950 border border-white/10 rounded-lg text-xs text-white px-2.5 focus:ring-1 focus:ring-secondary focus:border-secondary transition-colors"
                     >
                       {CATEGORIAS_DRIVE_PADRAO.map((cat) => (
                         <option key={cat} value={cat}>
@@ -3670,7 +3670,7 @@ export default function GerarDocumentos() {
                         value={categoriaPersonalizada}
                         onChange={(e) => setCategoriaPersonalizada(e.target.value)}
                         placeholder="Ex: Inventário Extrajudicial"
-                        className="h-9 bg-slate-950 border-white/10 text-white rounded-lg text-xs focus-visible:ring-secondary"
+                        className="h-11 sm:h-9 bg-slate-950 border-white/10 text-white rounded-lg text-xs focus-visible:ring-secondary"
                       />
                     </div>
                   )}

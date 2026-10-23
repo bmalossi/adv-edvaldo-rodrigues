@@ -445,7 +445,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
                 type="button"
                 onClick={handleCriarPastaDrive}
                 disabled={criandoPasta}
-                className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-semibold text-xs h-9 gap-2 px-5 rounded-xl shadow-md transition-all"
+                className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-semibold text-xs h-11 sm:h-9 gap-2 px-5 rounded-xl shadow-md transition-all"
               >
                 {criandoPasta ? (
                   <>
@@ -467,7 +467,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
                   setModalVincularOpen(true);
                 }}
                 disabled={criandoPasta}
-                className="border-white/15 bg-white/5 hover:bg-white/10 text-slate-300 font-medium text-xs h-9 gap-1.5 px-4 rounded-xl shadow-sm"
+                className="border-white/15 bg-white/5 hover:bg-white/10 text-slate-300 font-medium text-xs h-11 sm:h-9 gap-1.5 px-4 rounded-xl shadow-sm"
               >
                 <Link2 className="w-3.5 h-3.5" />
                 <span>Vincular Pasta Existente</span>
@@ -739,7 +739,7 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
                 value={inputFolderId}
                 onChange={(e) => setInputFolderId(e.target.value)}
                 placeholder="Ex.: 1A2b3C4d5E6f... ou https://drive.google.com/drive/folders/..."
-                className="bg-slate-950 border-white/10 text-white text-xs h-9 font-mono"
+                className="bg-slate-950 border-white/10 text-white text-xs h-11 sm:h-9 font-mono"
               />
               <p className="text-[11px] text-slate-400 mt-1">
                 Ao vincular, o sistema exibirá automaticamente todas as subpastas e documentos existentes do cliente.
