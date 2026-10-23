@@ -302,10 +302,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    const DEFAULT_ROOT_PROCESSOS_ID = "1GiYmbzgbK-0VPXzCfU4vPWZvOqqf218K";
+    const ID_DRIVE_LEGADO_INVALIDO = "1EgnPlqIsiCIAmOJPBh4k4YL5e9QuOuOd";
+
     if (action === "criar_pasta") {
       let parentFolderId = body.parent_folder_id;
-      if (!parentFolderId || parentFolderId === "root") {
-        parentFolderId = Deno.env.get("GOOGLE_DRIVE_ROOT_FOLDER_ID") || "root";
+      if (
+        !parentFolderId ||
+        parentFolderId === "root" ||
+        parentFolderId === ID_DRIVE_LEGADO_INVALIDO
+      ) {
+        parentFolderId =
+          Deno.env.get("GOOGLE_DRIVE_ROOT_FOLDER_ID") || DEFAULT_ROOT_PROCESSOS_ID;
       }
       const nomePasta = (body.nome_pasta || "").trim();
       if (!nomePasta) throw new Error("nome_pasta é obrigatório.");
@@ -318,13 +326,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "escanear_processos_por_area") {
-      const rootFolderId =
+      let rootFolderId =
         body.root_folder_id || Deno.env.get("GOOGLE_DRIVE_ROOT_FOLDER_ID");
 
-      if (!rootFolderId) {
-        throw new Error(
-          "ID da pasta raiz 'Processos por área' não informado nem configurado em GOOGLE_DRIVE_ROOT_FOLDER_ID."
-        );
+      if (!rootFolderId || rootFolderId === ID_DRIVE_LEGADO_INVALIDO) {
+        rootFolderId = DEFAULT_ROOT_PROCESSOS_ID;
       }
 
       const result = await escanearProcessosPorArea(token, rootFolderId);

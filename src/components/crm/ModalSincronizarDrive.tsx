@@ -61,7 +61,8 @@ export function ModalSincronizarDrive({
   const { user } = useAuth();
 
   const [rootFolderInput, setRootFolderInput] = useState(() => {
-    return localStorage.getItem("erf_drive_root_area_id") || "";
+    const stored = localStorage.getItem("erf_drive_root_area_id");
+    return stored && stored !== "1EgnPlqIsiCIAmOJPBh4k4YL5e9QuOuOd" ? stored : "1GiYmbzgbK-0VPXzCfU4vPWZvOqqf218K";
   });
 
   const [escaneando, setEscaneando] = useState(false);

@@ -163,16 +163,36 @@ export async function vincularPastaCasoCRM(
 }
 
 /**
+ * ID padrão da pasta raiz "Processos por área" do Google Drive do escritório
+ */
+export const ROOT_PROCESSOS_DRIVE_ID_PADRAO = "1GiYmbzgbK-0VPXzCfU4vPWZvOqqf218K";
+
+/**
+ * ID da pasta legada desativada no Drive (para descarte automático e migração suave)
+ */
+export const ID_DRIVE_LEGADO_INVALIDO = "1EgnPlqIsiCIAmOJPBh4k4YL5e9QuOuOd";
+
+/**
  * Obtém a pasta raiz de processos do Google Drive configurada no CRM ou no ambiente
  */
 export async function obterPastaRaizProcessosDrive(): Promise<string> {
-  // 1. LocalStorage (salvo anteriormente pelo operador)
+  // 1. Variável de ambiente Vite (se configurada)
   try {
-    const localRoot = localStorage.getItem("erf_drive_root_area_id");
-    if (localRoot && localRoot.trim()) return localRoot.trim();
+    const envFolderId = (import.meta.env.VITE_GOOGLE_DRIVE_ROOT_FOLDER_ID as string)?.trim();
+    if (envFolderId && envFolderId !== ID_DRIVE_LEGADO_INVALIDO) {
+      return envFolderId;
+    }
   } catch {}
 
-  // 2. Configurações de backup/drive no Supabase
+  // 2. LocalStorage (salvo anteriormente pelo operador)
+  try {
+    const localRoot = localStorage.getItem("erf_drive_root_area_id");
+    if (localRoot && localRoot.trim() && localRoot !== ID_DRIVE_LEGADO_INVALIDO) {
+      return localRoot.trim();
+    }
+  } catch {}
+
+  // 3. Configurações de backup/drive no Supabase
   try {
     const { data } = await supabase
       .from("configuracoes_backup_drive")
@@ -181,22 +201,29 @@ export async function obterPastaRaizProcessosDrive(): Promise<string> {
       .limit(1)
       .maybeSingle();
 
-    if (data?.google_drive_folder_id && data.google_drive_folder_id.trim()) {
+    if (
+      data?.google_drive_folder_id &&
+      data.google_drive_folder_id.trim() &&
+      data.google_drive_folder_id !== ID_DRIVE_LEGADO_INVALIDO
+    ) {
       return data.google_drive_folder_id.trim();
     }
   } catch (err) {
     console.warn("Aviso ao buscar pasta raiz de backup:", err);
   }
 
-  // 3. Fallback: "root" (raiz padrão do Google Drive)
-  return "root";
+  // 4. Fallback: Pasta raiz padrão do escritório ("Processos por área")
+  return ROOT_PROCESSOS_DRIVE_ID_PADRAO;
 }
 
 /**
  * Verifica se uma pasta do Google Drive ainda existe e é acessível pela conta configurada.
- * Retorna true se acessível, false se o Drive retornar 404/403.
+ * Retorna true se acessível, false se o Drive retornar 404/403 ou se for o ID legado.
  */
 async function verificarPastaExisteDrive(folderId: string): Promise<boolean> {
+  if (!folderId || folderId.trim() === "" || folderId === ID_DRIVE_LEGADO_INVALIDO) {
+    return false;
+  }
   try {
     await buscarConteudoPastaDrive(folderId);
     return true;
@@ -224,6 +251,9 @@ export async function obterOuCriarPastaClienteDrive(
 ): Promise<string> {
   // 1. Candidato a partir do parâmetro ou do banco
   let candidatoId = googleDriveFolderIdExistente?.trim() || null;
+  if (candidatoId === ID_DRIVE_LEGADO_INVALIDO) {
+    candidatoId = null;
+  }
 
   if (!candidatoId) {
     // Consulta banco se não veio pelo parâmetro
@@ -238,6 +268,9 @@ export async function obterOuCriarPastaClienteDrive(
     }
 
     candidatoId = cliente?.google_drive_folder_id?.trim() || null;
+    if (candidatoId === ID_DRIVE_LEGADO_INVALIDO) {
+      candidatoId = null;
+    }
 
     if (!candidatoId) {
       // Não tem pasta cadastrada: cria uma nova
