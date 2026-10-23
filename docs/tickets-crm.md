@@ -121,3 +121,40 @@ umero_processo\, etc.) sem envio de dados para servidores terceiros.
 - [ ] Ticket 4: Webhook de Liquidação e Transição Automática de Etapas no Funil
 - [ ] Ticket 5: Hardening de Formulários, Máscaras e Gestão de Ambiente Sandbox
 
+
+
+---
+
+## [#9 - 9. Criação de Pastas e Arquivamento por Categoria no Google Drive](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/9)
+
+**What to build:** Permitir a criação direta de pastas de clientes no Google Drive quando ainda não vinculadas, e automatizar o arquivamento de PDFs emitidos em subpastas temáticas por área jurídica (*Criminal, Previdenciário, Trabalhista, Cível, etc.*) sob demanda na tela de Gerar Documentos.
+
+**Especificação detalhada:** [docs/spec-google-drive-pastas-e-subpastas.md](./spec-google-drive-pastas-e-subpastas.md)  
+**Blocked by:** [#8](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/8)  
+**Labels:** `ready-for-agent`
+
+### [#10 - feat(crm): Criar pasta do cliente no Google Drive a partir da ficha no CRM](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/10)
+- **What to build:** Botão 'Criar Nova Pasta no Google Drive' na aba de documentos do cliente, criação automática na raiz de processos, persistência no Supabase e transição imediata para o `DriveFileExplorer`.
+- **Blocked by:** None — can start immediately.
+- [ ] Botão estilizado no estado vazio da aba de documentos.
+- [ ] Criação da pasta com `cliente.nome_razao_social` na pasta-raiz.
+- [ ] Persistência de `google_drive_folder_id` na tabela `clientes`.
+- [ ] Transição visual reativa para o `DriveFileExplorer`.
+- [ ] Testes unitários do orquestrador no domínio.
+
+### [#11 - feat(crm): Resolucao e criacao idempotente de subpastas tematicas por categoria no Drive](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/11)
+- **What to build:** Orquestrador de subpastas por categoria jurídica (Criminal, Trabalhista, etc.) com verificação prévia case-insensitive e criação idempotente sem duplicatas.
+- **Blocked by:** [#10](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/10)
+- [ ] Resolução ou criação de subpasta de categoria no Google Drive.
+- [ ] Busca prévia case-insensitive e normalizada para evitar duplicidades.
+- [ ] Sanitização de caracteres especiais/barras em nomes de categorias.
+- [ ] Testes unitários com Vitest cobrindo resolução, criação e sanitização.
+
+### [#12 - feat(crm): Arquivamento automatico do PDF gerado na subpasta tematica do Google Drive](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/12)
+- **What to build:** Card de configuração do Google Drive na tela de Gerar Documentos com checkbox e dropdown de categorias. Envio automático e não-bloqueante do PDF para a subpasta do cliente no Google Drive no momento do download ou emissão.
+- **Blocked by:** [#11](https://github.com/bmalossi/adv-edvaldo-rodrigues/issues/11)
+- [ ] Checkbox 'Salvar cópia no Google Drive' e seletor de categorias na UI de Gerar Documentos.
+- [ ] Pré-seleção da categoria conforme área de direito do caso vinculado.
+- [ ] Envio assíncrono do PDF sem travar o download local do usuário.
+- [ ] Notificações toast com status da operação.
+- [ ] Testes de integração cobrindo a orquestração do despacho do PDF.
