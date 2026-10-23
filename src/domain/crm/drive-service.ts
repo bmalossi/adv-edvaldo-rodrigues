@@ -1,10 +1,9 @@
-﻿import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import {
   DriveFolderContent,
   DriveItem,
-  encontrarMelhorCorrespondenciaCliente,
-  ScanClienteFolderMatch,
-  AreaScanSummary,
+  sanitizarNomeCategoriaDrive,
+  encontrarSubpastaPorCategoria,
 } from "./drive";
 
 /**
@@ -161,6 +160,147 @@ export async function vincularPastaCasoCRM(
   if (error) {
     throw new Error(`Erro ao salvar pasta no caso: ${error.message}`);
   }
+}
+
+/**
+ * Obtém a pasta raiz de processos do Google Drive configurada no CRM ou no ambiente
+ */
+export async function obterPastaRaizProcessosDrive(): Promise<string> {
+  // 1. LocalStorage (salvo anteriormente pelo operador)
+  try {
+    const localRoot = localStorage.getItem("erf_drive_root_area_id");
+    if (localRoot && localRoot.trim()) return localRoot.trim();
+  } catch {}
+
+  // 2. Configurações de backup/drive no Supabase
+  try {
+    const { data } = await supabase
+      .from("configuracoes_backup_drive")
+      .select("google_drive_folder_id")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data?.google_drive_folder_id && data.google_drive_folder_id.trim()) {
+      return data.google_drive_folder_id.trim();
+    }
+  } catch (err) {
+    console.warn("Aviso ao buscar pasta raiz de backup:", err);
+  }
+
+  // 3. Fallback: "root" (raiz padrão do Google Drive)
+  return "root";
+}
+
+/**
+ * Obtém a pasta existente do cliente ou cria uma nova na raiz de processos do Google Drive,
+ * persistindo o vínculo na tabela clientes do Supabase.
+ */
+export async function obterOuCriarPastaClienteDrive(
+  clienteId: string,
+  nomeCliente: string,
+  googleDriveFolderIdExistente?: string | null
+): Promise<string> {
+  // Se já tiver pasta informada no estado
+  if (googleDriveFolderIdExistente && googleDriveFolderIdExistente.trim()) {
+    return googleDriveFolderIdExistente.trim();
+  }
+
+  // Consulta se o cliente já possui pasta gravada no banco
+  const { data: cliente, error: cliError } = await supabase
+    .from("clientes")
+    .select("id, nome_razao_social, google_drive_folder_id")
+    .eq("id", clienteId)
+    .single();
+
+  if (cliError) {
+    throw new Error(`Erro ao consultar dados do cliente: ${cliError.message}`);
+  }
+
+  if (cliente?.google_drive_folder_id && cliente.google_drive_folder_id.trim()) {
+    return cliente.google_drive_folder_id.trim();
+  }
+
+  const nomePasta = (nomeCliente || cliente?.nome_razao_social || "Cliente Sem Nome").trim();
+  const rootFolderId = await obterPastaRaizProcessosDrive();
+
+  // Cria a nova pasta no Google Drive
+  const pastaCriada = await criarSubpastaDrive(rootFolderId, nomePasta);
+  if (!pastaCriada?.id) {
+    throw new Error(`Falha ao obter ID da pasta criada para o cliente "${nomePasta}".`);
+  }
+
+  // Persiste o vínculo no CRM
+  await vincularPastaClienteCRM(clienteId, pastaCriada.id);
+
+  return pastaCriada.id;
+}
+
+/**
+ * Localiza ou cria de forma idempotente uma subpasta por categoria (ex.: Criminal, Previdenciário)
+ * dentro da pasta pai do cliente no Google Drive.
+ */
+export async function obterOuCriarSubpastaCategoria(
+  parentFolderId: string,
+  categoria: string
+): Promise<{ id: string; name: string }> {
+  const nomeCategoriaSanitizada = sanitizarNomeCategoriaDrive(categoria);
+
+  // 1. Busca conteúdo atual da pasta pai
+  const conteudo = await buscarConteudoPastaDrive(parentFolderId);
+  const subpastaExistente = encontrarSubpastaPorCategoria(
+    conteudo.folders,
+    nomeCategoriaSanitizada
+  );
+
+  if (subpastaExistente) {
+    return subpastaExistente;
+  }
+
+  // 2. Se não existir, cria a nova subpasta
+  const novaSubpasta = await criarSubpastaDrive(
+    parentFolderId,
+    nomeCategoriaSanitizada
+  );
+
+  return {
+    id: novaSubpasta.id,
+    name: novaSubpasta.name || nomeCategoriaSanitizada,
+  };
+}
+
+/**
+ * Orquestra o salvamento e arquivamento de um documento PDF gerado na subpasta temática do cliente no Google Drive
+ */
+export async function salvarDocumentoGeradoNoDrive(params: {
+  clienteId: string;
+  nomeCliente: string;
+  googleDriveFolderId?: string | null;
+  categoria: string;
+  pdfBlob: Blob;
+  nomeArquivo: string;
+}): Promise<{ fileId: string; folderId: string; subpastaId: string }> {
+  const { clienteId, nomeCliente, googleDriveFolderId, categoria, pdfBlob, nomeArquivo } = params;
+
+  // 1. Garante a pasta principal do cliente
+  const clientFolderId = await obterOuCriarPastaClienteDrive(
+    clienteId,
+    nomeCliente,
+    googleDriveFolderId
+  );
+
+  // 2. Garante a subpasta da categoria
+  const subpasta = await obterOuCriarSubpastaCategoria(clientFolderId, categoria);
+
+  // 3. Converte Blob em File se necessário e faz upload
+  const file = new File([pdfBlob], nomeArquivo, { type: "application/pdf" });
+  const uploaded = await uploadArquivoDrive(subpasta.id, file, nomeArquivo);
+
+  return {
+    fileId: uploaded.id,
+    folderId: clientFolderId,
+    subpastaId: subpasta.id,
+  };
 }
 
 /**

@@ -389,3 +389,48 @@ export function imprimirDocumento(htmlContent: string, titulo: string): void {
 
   w.document.close()
 }
+
+
+/**
+ * Converte o conteúdo HTML estilizado do documento em um Blob PDF pronto para upload
+ */
+export async function gerarPdfBlobDocumento(htmlContent: string, titulo: string): Promise<Blob> {
+  const html2pdfModule = await import('html2pdf.js');
+  const html2pdf = html2pdfModule.default || html2pdfModule;
+
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+  container.style.width = '210mm';
+  container.innerHTML = `
+    <style>
+      ${estilosDocumentoCss()}
+      .doc-page {
+        box-shadow: none !important;
+        margin: 0 !important;
+        width: 210mm !important;
+        min-height: 297mm !important;
+        padding: 12mm 17mm 18mm 17mm !important;
+      }
+    </style>
+    ${htmlContent}
+  `;
+  document.body.appendChild(container);
+
+  try {
+    const opt = {
+      margin: 0,
+      filename: `${safeFileName(titulo)}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    const blob: Blob = await html2pdf().set(opt).from(container).output('blob');
+    return blob;
+  } finally {
+    if (container.parentNode) {
+      container.parentNode.removeChild(container);
+    }
+  }
+}

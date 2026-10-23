@@ -26,7 +26,9 @@ import {
   Sparkles,
   ArrowUp,
   ArrowDown,
-  Users
+  Users,
+  HardDrive,
+  Loader2
 } from 'lucide-react'
 import { supabase, Cliente, Advogado } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -88,7 +90,8 @@ import {
   obterTextoPadraoRecibo,
   obterTextoPadraoResidencia
 } from '@/domain/crm/documentos/templates'
-import { downloadWord, imprimirDocumento, estilosDocumentoCss } from '@/domain/crm/documentos/exportacao'
+import { downloadWord, imprimirDocumento, estilosDocumentoCss, gerarPdfBlobDocumento, safeFileName } from '@/domain/crm/documentos/exportacao'
+import { salvarDocumentoGeradoNoDrive } from '@/domain/crm/drive-service'
 import {
   TIPO_NOMES,
   dateShort,
@@ -293,6 +296,22 @@ function AbaTextoMinuta({
   )
 }
 
+
+const CATEGORIAS_DRIVE_PADRAO = [
+  'Criminal',
+  'Previdenciário',
+  'Trabalhista',
+  'Cível',
+  'Família & Sucessões',
+  'Tributário',
+  'Administrativo',
+  'Geral / Diversos',
+  'Outra'
+]
+
+
+
+
 export default function GerarDocumentos() {
   const [searchParams] = useSearchParams()
   const clienteIdUrl = searchParams.get('clienteId')
@@ -308,6 +327,72 @@ export default function GerarDocumentos() {
   const [buscaClienteAdicional, setBuscaClienteAdicional] = useState('')
   const [mostrarBuscaAdicional, setMostrarBuscaAdicional] = useState(false)
   const [modalImportarOpen, setModalImportarOpen] = useState(false)
+
+  // Configurações de Arquivamento no Google Drive
+  const [salvarNoDrive, setSalvarNoDrive] = useState(true)
+  const [categoriaDrive, setCategoriaDrive] = useState('Criminal')
+  const [categoriaPersonalizada, setCategoriaPersonalizada] = useState('')
+  const [salvandoNoDrive, setSalvandoNoDrive] = useState(false)
+
+  // Auto-selecionar categoria a partir do caso mais recente do cliente
+  useEffect(() => {
+    if (clienteSelecionado?.id) {
+      supabase
+        .from('casos')
+        .select('area_direito')
+        .eq('cliente_id', clienteSelecionado.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.area_direito) {
+            const area = data.area_direito.trim()
+            const encontrada = CATEGORIAS_DRIVE_PADRAO.find(
+              cat => cat.toLowerCase() === area.toLowerCase()
+            )
+            if (encontrada) {
+              setCategoriaDrive(encontrada)
+            } else if (area) {
+              setCategoriaDrive('Outra')
+              setCategoriaPersonalizada(area)
+            }
+          }
+        })
+    }
+  }, [clienteSelecionado?.id])
+
+  const executarUploadDriveSeHabilitado = async (docHtml: string, docTitulo: string) => {
+    if (!salvarNoDrive || !clienteSelecionado) return
+
+    const categoriaFinal = categoriaDrive === 'Outra'
+      ? (categoriaPersonalizada.trim() || 'Geral')
+      : categoriaDrive
+
+    setSalvandoNoDrive(true)
+    const toastId = toast.loading(`Enviando cópia em PDF para a subpasta "${categoriaFinal}" no Google Drive...`)
+
+    try {
+      const pdfBlob = await gerarPdfBlobDocumento(docHtml, docTitulo)
+      const nomeArquivo = `${safeFileName(docTitulo)}.pdf`
+
+      await salvarDocumentoGeradoNoDrive({
+        clienteId: clienteSelecionado.id,
+        nomeCliente: clienteSelecionado.nome_razao_social,
+        googleDriveFolderId: clienteSelecionado.google_drive_folder_id,
+        categoria: categoriaFinal,
+        pdfBlob,
+        nomeArquivo
+      })
+
+      toast.success(`Documento arquivado com sucesso na subpasta "${categoriaFinal}" do cliente no Google Drive!`, { id: toastId })
+    } catch (err: any) {
+      console.error('Erro ao arquivar no Google Drive:', err)
+      toast.error(`Download gerado, mas o envio ao Google Drive falhou: ${err.message || 'Erro de comunicação'}`, { id: toastId })
+    } finally {
+      setSalvandoNoDrive(false)
+    }
+  }
+
 
   // Lista unificada de todos os clientes selecionados (principal + adicionais)
   const todosClientesSelecionados = useMemo(() => {
@@ -809,6 +894,7 @@ export default function GerarDocumentos() {
       imprimirDocumento(doc.html, doc.titulo)
       await salvarHistorico(doc)
       toast.success('Janela de impressão gerada.')
+      executarUploadDriveSeHabilitado(doc.html, doc.titulo)
     } catch (e: any) {
       toast.error(e.message || 'Erro ao imprimir')
     }
@@ -829,6 +915,7 @@ export default function GerarDocumentos() {
       await salvarHistorico(previewDoc)
     }
     toast.success('Janela de impressão gerada.')
+    executarUploadDriveSeHabilitado(previewHtml, previewTitulo)
   }
 
   // Ações do Histórico
@@ -3528,6 +3615,120 @@ export default function GerarDocumentos() {
                   ))}
                 </div>
               </div>
+            </div>
+
+
+            {/* Configuração de Arquivamento no Google Drive */}
+            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-[#C9A961]/25 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={salvarNoDrive}
+                    onCheckedChange={(chk) => setSalvarNoDrive(Boolean(chk))}
+                    id="chk-salvar-drive"
+                  />
+                  <span className="text-xs font-semibold text-slate-200 select-none flex items-center gap-1.5">
+                    <HardDrive className="w-3.5 h-3.5 text-[#C9A961]" />
+                    Salvar cópia no Google Drive
+                  </span>
+                </label>
+                {salvandoNoDrive && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C9A961]" />
+                )}
+              </div>
+
+              {salvarNoDrive && (
+                <div className="space-y-2 pt-1 border-t border-white/5">
+                  <div>
+                    <label className="text-[11px] text-slate-400 block mb-1">
+                      Subpasta da Categoria:
+                    </label>
+                    <select
+                      value={categoriaDrive}
+                      onChange={(e) => setCategoriaDrive(e.target.value)}
+                      className="w-full h-8 bg-slate-950 border border-white/10 rounded-lg text-xs text-white px-2 focus:ring-1 focus:ring-[#C9A961] focus:border-[#C9A961]"
+                    >
+                      {CATEGORIAS_DRIVE_PADRAO.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {categoriaDrive === 'Outra' && (
+                    <div>
+                      <Input
+                        value={categoriaPersonalizada}
+                        onChange={(e) => setCategoriaPersonalizada(e.target.value)}
+                        placeholder="Nome da subpasta (ex: Inventário)"
+                        className="h-8 bg-slate-950 border-white/10 text-white rounded-lg text-xs"
+                      />
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    O PDF será arquivado na pasta do cliente em <span className="text-[#C9A961]">/{categoriaDrive === 'Outra' ? (categoriaPersonalizada || '...') : categoriaDrive}/</span>
+                  </p>
+                </div>
+              )}
+            </div>
+
+
+            {/* Configuração de Arquivamento no Google Drive */}
+            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-[#C9A961]/25 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={salvarNoDrive}
+                    onCheckedChange={(chk) => setSalvarNoDrive(Boolean(chk))}
+                    id="chk-salvar-drive"
+                  />
+                  <span className="text-xs font-semibold text-slate-200 select-none flex items-center gap-1.5">
+                    <HardDrive className="w-3.5 h-3.5 text-[#C9A961]" />
+                    Salvar cópia no Google Drive
+                  </span>
+                </label>
+                {salvandoNoDrive && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C9A961]" />
+                )}
+              </div>
+
+              {salvarNoDrive && (
+                <div className="space-y-2 pt-1 border-t border-white/5">
+                  <div>
+                    <label className="text-[11px] text-slate-400 block mb-1">
+                      Subpasta da Categoria:
+                    </label>
+                    <select
+                      value={categoriaDrive}
+                      onChange={(e) => setCategoriaDrive(e.target.value)}
+                      className="w-full h-8 bg-slate-950 border border-white/10 rounded-lg text-xs text-white px-2 focus:ring-1 focus:ring-[#C9A961] focus:border-[#C9A961]"
+                    >
+                      {CATEGORIAS_DRIVE_PADRAO.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {categoriaDrive === 'Outra' && (
+                    <div>
+                      <Input
+                        value={categoriaPersonalizada}
+                        onChange={(e) => setCategoriaPersonalizada(e.target.value)}
+                        placeholder="Nome da subpasta (ex: Inventário)"
+                        className="h-8 bg-slate-950 border-white/10 text-white rounded-lg text-xs"
+                      />
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    O PDF será arquivado na pasta do cliente em <span className="text-[#C9A961]">/{categoriaDrive === 'Outra' ? (categoriaPersonalizada || '...') : categoriaDrive}/</span>
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Botões de Ação */}

@@ -303,10 +303,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "criar_pasta") {
-      const parentFolderId = body.parent_folder_id;
+      let parentFolderId = body.parent_folder_id;
+      if (!parentFolderId || parentFolderId === "root") {
+        parentFolderId = Deno.env.get("GOOGLE_DRIVE_ROOT_FOLDER_ID") || "root";
+      }
       const nomePasta = (body.nome_pasta || "").trim();
-
-      if (!parentFolderId) throw new Error("parent_folder_id é obrigatório.");
       if (!nomePasta) throw new Error("nome_pasta é obrigatório.");
 
       const result = await criarSubpasta(token, parentFolderId, nomePasta);

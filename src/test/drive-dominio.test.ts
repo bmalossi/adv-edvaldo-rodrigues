@@ -8,6 +8,8 @@ import {
   normalizarNomeComparacao,
   extrairDigitos,
   encontrarMelhorCorrespondenciaCliente,
+  sanitizarNomeCategoriaDrive,
+  encontrarSubpastaPorCategoria,
   type DocumentoCasoInput,
 } from '@/domain/crm/drive';
 
@@ -124,6 +126,31 @@ describe('Google Drive Sync & Documentos do Caso - Domínio', () => {
       const match = encontrarMelhorCorrespondenciaCliente('ROBERTO SILVA DE SOUZA', clientes);
       expect(match.score).toBe(0);
       expect(match.clienteId).toBeUndefined();
+    });
+  });
+
+  describe('Categorias e Subpastas do Google Drive', () => {
+    it('sanitiza adequadamente nomes de categorias com barras e caracteres especiais', () => {
+      expect(sanitizarNomeCategoriaDrive('Família / Sucessões')).toBe('Família & Sucessões');
+      expect(sanitizarNomeCategoriaDrive('Civil\\Consumidor')).toBe('Civil & Consumidor');
+      expect(sanitizarNomeCategoriaDrive('Direito: Previdenciário*?')).toBe('Direito Previdenciário');
+      expect(sanitizarNomeCategoriaDrive('   Trabalhista   ')).toBe('Trabalhista');
+      expect(sanitizarNomeCategoriaDrive('')).toBe('Geral');
+      expect(sanitizarNomeCategoriaDrive(null)).toBe('Geral');
+    });
+
+    it('encontra subpasta de categoria existente de forma case-insensitive e normalizada', () => {
+      const pastasExistentes = [
+        { id: 'f1', name: 'Criminal' },
+        { id: 'f2', name: 'Previdenciário' },
+        { id: 'f3', name: 'Família & Sucessões' },
+      ];
+
+      expect(encontrarSubpastaPorCategoria(pastasExistentes, 'criminal')).toEqual({ id: 'f1', name: 'Criminal' });
+      expect(encontrarSubpastaPorCategoria(pastasExistentes, 'CRIMINAL')).toEqual({ id: 'f1', name: 'Criminal' });
+      expect(encontrarSubpastaPorCategoria(pastasExistentes, 'previdenciario')).toEqual({ id: 'f2', name: 'Previdenciário' });
+      expect(encontrarSubpastaPorCategoria(pastasExistentes, 'Família / Sucessões')).toEqual({ id: 'f3', name: 'Família & Sucessões' });
+      expect(encontrarSubpastaPorCategoria(pastasExistentes, 'Trabalhista')).toBeNull();
     });
   });
 });

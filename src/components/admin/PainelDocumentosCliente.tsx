@@ -19,14 +19,15 @@ import {
   X,
   Plus,
   HardDrive,
-  FolderOpen
+  FolderOpen,
+  FolderPlus
 } from 'lucide-react';
 import { supabase, DocumentoCliente, Cliente } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DriveFileExplorer } from '@/components/crm/DriveFileExplorer';
-import { vincularPastaClienteCRM } from '@/domain/crm/drive-service';
+import { vincularPastaClienteCRM, obterOuCriarPastaClienteDrive } from '@/domain/crm/drive-service';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +64,25 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
   const [modalVincularOpen, setModalVincularOpen] = useState(false);
   const [inputFolderId, setInputFolderId] = useState('');
   const [salvandoVinculo, setSalvandoVinculo] = useState(false);
+  const [criandoPasta, setCriandoPasta] = useState(false);
+
+  const handleCriarPastaDrive = async () => {
+    setCriandoPasta(true);
+    try {
+      const novaPastaId = await obterOuCriarPastaClienteDrive(
+        cliente.id,
+        cliente.nome_razao_social,
+        driveFolderId
+      );
+      setDriveFolderId(novaPastaId);
+      toast.success(`Pasta de "${cliente.nome_razao_social}" criada com sucesso no Google Drive!`);
+    } catch (err: any) {
+      console.error('Erro ao criar pasta no Drive:', err);
+      toast.error(err.message || 'Erro ao criar pasta do cliente no Google Drive.');
+    } finally {
+      setCriandoPasta(false);
+    }
+  };
 
   // Modal Renomear
   const [docParaRenomear, setDocParaRenomear] = useState<DocumentoCliente | null>(null);
@@ -420,17 +440,39 @@ export function PainelDocumentosCliente({ cliente }: PainelDocumentosClienteProp
             <p className="text-xs text-slate-400 max-w-md">
               Vincule a pasta existente de <strong className="text-slate-200">{cliente.nome_razao_social}</strong> no Google Drive para navegar em tempo real por todas as subpastas, certidões e documentos de processos.
             </p>
-            <Button
-              type="button"
-              onClick={() => {
-                setInputFolderId('');
-                setModalVincularOpen(true);
-              }}
-              className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-medium text-xs h-8 gap-1.5 px-4 shadow-sm mt-1"
-            >
-              <Link2 className="w-3.5 h-3.5" />
-              Vincular Pasta do Google Drive
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+              <Button
+                type="button"
+                onClick={handleCriarPastaDrive}
+                disabled={criandoPasta}
+                className="bg-[#C9A961] hover:bg-[#b09352] text-slate-950 font-semibold text-xs h-9 gap-2 px-5 rounded-xl shadow-md transition-all"
+              >
+                {criandoPasta ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Criando pasta no Drive...</span>
+                  </>
+                ) : (
+                  <>
+                    <FolderPlus className="w-4 h-4" />
+                    <span>Criar Nova Pasta no Google Drive</span>
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setInputFolderId('');
+                  setModalVincularOpen(true);
+                }}
+                disabled={criandoPasta}
+                className="border-white/15 bg-white/5 hover:bg-white/10 text-slate-300 font-medium text-xs h-9 gap-1.5 px-4 rounded-xl shadow-sm"
+              >
+                <Link2 className="w-3.5 h-3.5" />
+                <span>Vincular Pasta Existente</span>
+              </Button>
+            </div>
           </div>
         )
       ) : (

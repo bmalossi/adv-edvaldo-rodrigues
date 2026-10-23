@@ -263,3 +263,47 @@ export function encontrarMelhorCorrespondenciaCliente(
   return bestMatch;
 }
 
+
+/**
+ * Sanitiza o nome de uma categoria para criação de subpasta no Google Drive.
+ * Converte barras e caracteres proibidos em conectivos seguros e remove espaços extras.
+ */
+export function sanitizarNomeCategoriaDrive(categoria?: string | null): string {
+  if (!categoria || !categoria.trim()) {
+    return 'Geral';
+  }
+
+  let limpo = categoria.trim();
+  // Substitui barras e pipes por ' & '
+  limpo = limpo.replace(/[/\\|]/g, ' & ');
+  // Remove caracteres proibidos no Google Drive e sistemas de arquivos (* ? : " < >)
+  limpo = limpo.replace(/[*?:"<>]/g, '');
+  // Normaliza espaços múltiplos
+  limpo = limpo.replace(/\s+/g, ' ').trim();
+
+  return limpo || 'Geral';
+}
+
+/**
+ * Localiza uma subpasta existente por categoria de forma insensível a maiúsculas/minúsculas e acentos.
+ */
+export function encontrarSubpastaPorCategoria(
+  folders: Array<{ id: string; name: string }>,
+  categoria: string
+): { id: string; name: string } | null {
+  if (!folders || folders.length === 0 || !categoria) {
+    return null;
+  }
+
+  const catSanitizada = sanitizarNomeCategoriaDrive(categoria);
+  const catNorm = normalizarNomeComparacao(catSanitizada);
+
+  for (const f of folders) {
+    const folderNorm = normalizarNomeComparacao(f.name);
+    if (folderNorm === catNorm) {
+      return f;
+    }
+  }
+
+  return null;
+}
