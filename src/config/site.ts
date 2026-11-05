@@ -9,7 +9,7 @@ export const site = {
     // Use apenas dígitos: 55 + DDD + número
     whatsappNumber: "5513996824364",
     phoneDisplay: "(13) 99682-4364",
-    email: "edvaldorodrigues.advocacia@gmail.com",
+    email: "advocacia@edvaldorodrigues.com.br",
     city: "Praia Grande, SP",
     addressLine: "Av. Pres. Costa e Silva, 733 - Sl 21 - Boqueirão, Praia Grande - SP, 11701-005",
     hours: "Seg–Sex, 09:00–18:00",

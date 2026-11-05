@@ -8,7 +8,7 @@ export const SEO = {
   defaultImage: "https://edvaldorodrigues.com.br/og-image.png",
   phone: "+5513996824364",
   phoneDisplay: "(13) 99682-4364",
-  email: "edvaldorodrigues.advocacia@gmail.com",
+  email: "advocacia@edvaldorodrigues.com.br",
   address: {
     street: "Av. Pres. Costa e Silva, 733 - Sl 21",
     neighborhood: "Boqueirão",
